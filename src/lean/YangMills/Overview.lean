@@ -4,6 +4,14 @@
 Project structure, references, and current status for the Yang-Mills
 formalization effort.
 
+## Current Status (Phase 3: Formal Problem Definition)
+
+Completed:
+- OS Axioms skeleton (OSAxioms.lean)
+- Gauge Theory foundations (GaugeTheory.lean)
+- Lattice Gauge Theory (Lattice.lean)
+- Mass Gap definition (MassGap.lean)
+
 ## References
 
 - A. Jaffe, E. Witten, "Quantum Yang-Mills Theory" (Clay Millennium Problem)
@@ -14,18 +22,7 @@ formalization effort.
 - M. Hairer, "A theory of regularity structures"
 - S. Chatterjee, "Yang-Mills for probabilists"
 - K. Wilson, "Confinement of quarks"
-- E. Seiler, "Gauge Theories as a Problem of Constructive Quantum Field Theory and Statistical Mechanics"
-
-## Definitions needed (future work)
-
-- Euclidean gauge fields / connections on principal bundles
-- Yang-Mills action and Wilson action (lattice)
-- Wightman/Osterwalder-Schrader axioms
-- Mass gap (exponential decay of correlations)
-- Functional integration and stochastic quantization
-- Regularity structures and renormalization
 -/
-
 namespace YangMills
 
 def description : String :=
