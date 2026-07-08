@@ -5,24 +5,9 @@ Formalization of principal G-bundles, connections, curvature, and the
 Yang-Mills action functional.
 -/
 
+import YangMills.SpecialUnitary
+
 namespace YangMills
-
-/--
-A compact Lie group. For Yang-Mills theory, G is typically SU(N).
--/
-structure CompactLieGroup : Type 1 where
-  carrier : Type
-  mul : carrier → carrier → carrier
-  inv : carrier → carrier
-  one : carrier
-
-/--
-SU(N): the special unitary group of N×N matrices (definition sketch).
--/
-structure SU (N : Nat) : Type where
-  matrix : Unit -- placeholder for Matrix (Fin N) (Fin N) ℂ
-  unitary : True -- U† U = I placeholder
-  special : True -- det(U) = 1 placeholder
 
 /--
 A principal G-bundle over a manifold M.
