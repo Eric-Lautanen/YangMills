@@ -1,0 +1,31 @@
+# Lean 4
+build/
+lake-packages/
+.lean/
+.lake/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Coq
+*.vo
+*.glob
+*.v.d
+
+# Z3 / SMT
+*.smt2
+
+# General
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+.env
+
+# Autocode agent
+.autocode/
