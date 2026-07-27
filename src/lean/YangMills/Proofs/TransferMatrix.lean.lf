@@ -1,0 +1,2200 @@
+﻿/-
+
+# Transfer Matrix: Corrected Approach
+
+
+
+This file provides definitions and lemmas toward a transfer matrix proof
+
+of the Osterwalder-Seiler reflection positivity for the periodic lattice.
+
+
+
+## Mathematical Setup
+
+
+
+Let μ₀ = μ⁺ ⊗ μ⁻ ⊗ μ⁰ be the factorization of the product Haar measure on
+
+the finite periodic lattice into positive-time, negative-time, and interface
+
+links (via `measure_factorization'`).
+
+
+
+For an observable f depending only on links in the positive-time and interface
+
+regions (`dependsOnlyOnPosInterface N T L f`), define:
+
+
+
+    G(U) = f(U)�exp(-β�S_OS⁺(U))�exp(-β�S_OS_int(U)/2)
+
+    g(u) = f(u)�exp(-β�S_OS⁺(u)/2)   for u ∈ PosInterfaceConfig
+
+
+
+The reflection positivity lemma `gibbsExpectationPeriodic_reflection_positive`
+
+reduces to proving:
+
+
+
+    ∫ G(U)�G(θU) dμ₀(U) ≥ 0
+
+
+
+## The Correct Transfer Matrix
+
+
+
+Define the transfer matrix T acting on functions ψ : PosInterfaceConfig → ℝ by:
+
+
+
+    (T ψ)(U⁺,U⁰) = ∫ ψ(θ⁻⁰(U⁻,U⁰))
+
+                     � exp(-β�(S_OS⁻(U⁻)+S_OS_int(U⁺,U⁻,U⁰))/2)
+
+                     dμ⁻(U⁻)
+
+
+
+where θ⁻⁰(U⁻,U⁰) is the restriction of θ(merge(U⁻,U⁰)) to positive+interface
+
+sites (i.e., reflecting the negative links to the positive side).
+
+
+
+## Key Identity
+
+
+
+    ∫ G(U)�G(θU) dμ₀(U) = ∫_{PosInt} g(u)�(T g)(u) dμ⁺⁰(u)
+
+
+
+This holds because:
+
+1. G(U)�G(θU) = g(U⁺,U⁰)�g(θ⁻⁰(U⁻,U⁰))
+
+                � exp(-β�(S_OS⁻(U⁻)+S_OS_int(U⁺,U⁻,U⁰))/2)
+
+2. The factorization μ₀ ≅ μ⁺ � μ⁻ � μ⁰ turns the LHS into an integral
+
+   over U⁺,U⁻,U⁰ of this expression.
+
+3. Integrating out U⁻ gives (T g)(U⁺,U⁰) by definition.
+
+
+
+## Positivity
+
+
+
+The operator T is POSITIVE because its integral kernel is a positive-definite
+
+function on (SU(N)ⁿ � SU(N)ⁿ). This follows from the Peter-Weyl theorem on
+
+SU(N) (Osterwalder-Seiler 1979, Theorem 3.1). Therefore ⟨g, T�g⟩ ≥ 0.
+
+
+
+## Previous (Incorrect) Approach
+
+
+
+A previous version of this file defined a different transfer matrix that acted
+
+trivially (as a multiplication operator) because it did not apply the reflection
+
+θ⁻⁰ in the kernel.  This made the identity `transferMatrix_identity` false for
+
+general f.  The current approach corrects this by applying the reflection.
+
+
+
+## References
+
+
+
+- K. Osterwalder, E. Seiler, "Gauge Field Theories on a Lattice"
+
+  (Ann. Phys. 110, 1978, pp 440�471), �3.
+
+- J. Glimm, A. Jaffe, "Quantum Physics" (2nd ed.), �6.1.
+
+- M. L�scher, "Some analytic results concerning the mass spectrum
+
+  of Yang-Mills gauge theories on a torus" (1983)
+
+- M. Salmhofer, "Construction of a Higgs field" (thesis, 1990).
+
+-/
+
+
+
+import YangMills.Proofs.ReflectionPositivity
+
+import Mathlib.MeasureTheory.Measure.MeasureSpaceDef
+
+import Mathlib.MeasureTheory.Constructions.Pi
+
+import Mathlib.Analysis.SpecialFunctions.Exp
+
+import Mathlib.MeasureTheory.Measure.Haar.Basic
+
+import Mathlib.MeasureTheory.Integral.Prod
+
+
+
+open Set
+
+open Matrix
+
+open scoped BigOperators
+
+open MeasureTheory
+
+
+
+namespace YangMills
+
+namespace Lattice
+
+
+
+section TransferMatrix
+
+
+
+variable (N T L : ℕ) [NeZero T] [NeZero L] (hT : Odd T) (β : ℝ)
+
+
+
+lemma measurable_reflectLinkVariable (N : ℕ) (T L : ℕ) [NeZero T] [NeZero L] :
+
+    Measurable (reflectLinkVariable N : LinkVariable (SU N) (PeriodicSite T L) → LinkVariable (SU N) (PeriodicSite T L)) := by
+
+  -- Use measurable_comap_iff to reduce to the value map:
+
+  -- reflectLinkVariable N is measurable into the comap space iff its value map is measurable
+
+  -- into the product space.
+
+  refine (measurable_comap_iff (g := fun (U' : LinkVariable (SU N) (PeriodicSite T L)) => U'.value)).mpr ?_
+
+  rw [measurable_pi_iff]
+
+  intro n
+
+  rw [measurable_pi_iff]
+
+  intro μ
+
+  simp [reflectLinkVariable]
+
+  by_cases hμ : μ = 0
+
+  � subst hμ
+
+    -- Need to show Measurable (λ U => (U.value (ReflectSite.reflectSite n) 0)⁻�)
+
+    have h_val : Measurable (λ (U : LinkVariable (SU N) (PeriodicSite T L)) =>
+
+      U.value (ReflectSite.reflectSite n) 0) := by
+
+      -- The map U ↦ U.value is measurable from the comap definition
+
+      have h_value_map : Measurable (fun (U : LinkVariable (SU N) (PeriodicSite T L)) => U.value) :=
+
+        comap_measurable (fun (U : LinkVariable (SU N) (PeriodicSite T L)) => U.value)
+
+      -- Compose with coordinate projections
+
+      have h_at_n : Measurable (λ (f : PeriodicSite T L → Fin 4 → SU N) => f (ReflectSite.reflectSite n)) :=
+
+        measurable_pi_apply (ReflectSite.reflectSite n)
+
+      have h_at_n_0 : Measurable (λ (f : Fin 4 → SU N) => f 0) := measurable_pi_apply (0 : Fin 4)
+
+      exact h_at_n_0.comp (h_at_n.comp h_value_map)
+
+    -- Inversion is continuous, hence measurable
+
+    have h_inv : Measurable (λ (g : SU N) => g⁻�) := (Continuous.inv continuous_id).measurable
+
+    exact h_inv.comp h_val
+
+  � -- μ ≠ 0, so U.value (θ n) μ (no inverse)
+
+    have h_val : Measurable (λ (U : LinkVariable (SU N) (PeriodicSite T L)) =>
+
+      U.value (ReflectSite.reflectSite n) μ) := by
+
+      have h_value_map : Measurable (fun (U : LinkVariable (SU N) (PeriodicSite T L)) => U.value) :=
+
+        comap_measurable (fun (U : LinkVariable (SU N) (PeriodicSite T L)) => U.value)
+
+      have h_at_n : Measurable (λ (f : PeriodicSite T L → Fin 4 → SU N) => f (ReflectSite.reflectSite n)) :=
+
+        measurable_pi_apply (ReflectSite.reflectSite n)
+
+      have h_at_n_μ : Measurable (λ (f : Fin 4 → SU N) => f μ) := measurable_pi_apply μ
+
+      exact h_at_n_μ.comp (h_at_n.comp h_value_map)
+
+    simpa [hμ] using h_val
+
+
+
+
+
+/-- The set of links at positive-time sites. -/
+
+noncomputable def positiveLinks : Finset (PeriodicSite T L � Fin 4) :=
+
+  (positiveSites T L).product (Finset.univ : Finset (Fin 4))
+
+
+
+/-- The set of links at negative-time sites. -/
+
+noncomputable def negativeLinks : Finset (PeriodicSite T L � Fin 4) :=
+
+  (negativeSites T L).product (Finset.univ : Finset (Fin 4))
+
+
+
+/-- The set of links at interface sites. -/
+
+noncomputable def interfaceLinks : Finset (PeriodicSite T L � Fin 4) :=
+
+  (interfaceSites T L).product (Finset.univ : Finset (Fin 4))
+
+
+
+lemma linkPartition_disjoint_union :
+
+    positiveLinks T L ∪ negativeLinks T L ∪ interfaceLinks T L =
+
+    (Finset.univ : Finset (PeriodicSite T L � Fin 4)) := by
+
+  ext ⟨n, μ⟩; simp [positiveLinks, negativeLinks, interfaceLinks, positiveSites,
+
+    negativeSites, interfaceSites]
+
+  by_cases hpos : signedTime T n.time > 0
+
+  � simp [hpos]
+
+  � by_cases hneg : signedTime T n.time < 0
+
+    � simp [hpos, hneg]
+
+    � have hzero : signedTime T n.time = 0 := by
+
+        have hle : signedTime T n.time ≤ 0 := by linarith
+
+        have hge : signedTime T n.time ≥ 0 := by linarith
+
+        linarith
+
+      simp [hpos, hneg, hzero]
+
+
+
+lemma linkPartition_disjoint :
+
+    Disjoint (positiveLinks T L) (negativeLinks T L) ∧
+
+    Disjoint (positiveLinks T L) (interfaceLinks T L) ∧
+
+    Disjoint (negativeLinks T L) (interfaceLinks T L) := by
+
+  have h_pos_neg_sites : Disjoint (positiveSites T L) (negativeSites T L) := by
+
+    unfold positiveSites negativeSites
+
+    rw [Finset.disjoint_filter]
+
+    intro n hn hpos hneg
+
+    linarith
+
+  have h_pos_int_sites : Disjoint (positiveSites T L) (interfaceSites T L) := by
+
+    unfold positiveSites interfaceSites
+
+    rw [Finset.disjoint_filter]
+
+    intro n hn hpos hzero
+
+    linarith
+
+  have h_neg_int_sites : Disjoint (negativeSites T L) (interfaceSites T L) := by
+
+    unfold negativeSites interfaceSites
+
+    rw [Finset.disjoint_filter]
+
+    intro n hn hneg hzero
+
+    linarith
+
+  have h_pos_neg_links : Disjoint (positiveLinks T L) (negativeLinks T L) := by
+
+    unfold positiveLinks negativeLinks
+
+    simpa using (Finset.disjoint_product (s := positiveSites T L) (t := Finset.univ)
+
+      (s' := negativeSites T L) (t' := Finset.univ)).mpr (Or.inl h_pos_neg_sites)
+
+  have h_pos_int_links : Disjoint (positiveLinks T L) (interfaceLinks T L) := by
+
+    unfold positiveLinks interfaceLinks
+
+    simpa using (Finset.disjoint_product (s := positiveSites T L) (t := Finset.univ)
+
+      (s' := interfaceSites T L) (t' := Finset.univ)).mpr (Or.inl h_pos_int_sites)
+
+  have h_neg_int_links : Disjoint (negativeLinks T L) (interfaceLinks T L) := by
+
+    unfold negativeLinks interfaceLinks
+
+    simpa using (Finset.disjoint_product (s := negativeSites T L) (t := Finset.univ)
+
+      (s' := interfaceSites T L) (t' := Finset.univ)).mpr (Or.inl h_neg_int_sites)
+
+  exact ⟨h_pos_neg_links, h_pos_int_links, h_neg_int_links⟩
+
+
+
+/-- The union of positive, negative, and interface sites covers all sites. -/
+
+lemma sites_cover (T L : ℕ) [NeZero T] [NeZero L] :
+
+    (positiveSites T L) ∪ (negativeSites T L) ∪ (interfaceSites T L) = Finset.univ := by
+
+  ext n; simp [positiveSites, negativeSites, interfaceSites]
+
+  by_cases hpos : signedTime T n.time > 0
+
+  � simp [hpos]
+
+  � by_cases hneg : signedTime T n.time < 0
+
+    � simp [hpos, hneg]
+
+    � have hzero : signedTime T n.time = 0 := by
+
+        have hle : signedTime T n.time ≤ 0 := by linarith
+
+        have hge : signedTime T n.time ≥ 0 := by linarith
+
+        linarith
+
+      simp [hpos, hneg, hzero]
+
+
+
+/-- Haar measure on the positive links. -/
+
+noncomputable def haarMeasurePositive : Measure (FiniteLinkConfig N (PeriodicSite T L) (positiveSites T L)) :=
+
+  productHaarMeasure N (PeriodicSite T L) (positiveSites T L)
+
+
+
+/-- Haar measure on the negative links. -/
+
+noncomputable def haarMeasureNegative : Measure (FiniteLinkConfig N (PeriodicSite T L) (negativeSites T L)) :=
+
+  productHaarMeasure N (PeriodicSite T L) (negativeSites T L)
+
+
+
+/-- Haar measure on the interface links. -/
+
+noncomputable def haarMeasureInterface : Measure (FiniteLinkConfig N (PeriodicSite T L) (interfaceSites T L)) :=
+
+  productHaarMeasure N (PeriodicSite T L) (interfaceSites T L)
+
+
+
+/-- A helper equivalence: `FiniteLinkIndex Λ (s₁ ∪ s₂) ≃ FiniteLinkIndex Λ s₁ ⊕ FiniteLinkIndex Λ s₂`
+
+for disjoint s₁, s₂. -/
+
+noncomputable def finiteLinkIndexUnionSum {Λ : Type} [DecidableEq Λ] {s₁ s₂ : Finset Λ}
+
+    (h : Disjoint s₁ s₂) : FiniteLinkIndex Λ (s₁ ∪ s₂) ≃ FiniteLinkIndex Λ s₁ ⊕ FiniteLinkIndex Λ s₂ where
+
+  toFun := λ x =>
+
+    if h₁ : x.1.1 ∈ s₁ then
+
+      Sum.inl ⟨(x.1.1, x.1.2), h₁⟩
+
+    else
+
+      have h₂ : x.1.1 ∈ s₂ := by
+
+        rcases Finset.mem_union.mp x.2 with (h₁' | h₂')
+
+        � exact (h₁ h₁').elim
+
+        � exact h₂'
+
+      Sum.inr ⟨(x.1.1, x.1.2), h₂⟩
+
+  invFun := λ y => match y with
+
+    | Sum.inl ⟨(n, μ), hn⟩ => ⟨(n, μ), Finset.mem_union_left s₂ hn⟩
+
+    | Sum.inr ⟨(n, μ), hn⟩ => ⟨(n, μ), Finset.mem_union_right s₁ hn⟩
+
+  left_inv := by
+
+    intro x
+
+    apply Subtype.ext
+
+    by_cases h₁ : x.1.1 ∈ s₁
+
+    � simp [h₁]
+
+    � have h₂ : x.1.1 ∈ s₂ := by
+
+        rcases Finset.mem_union.mp x.2 with (h₁' | h₂')
+
+        � exact (h₁ h₁').elim
+
+        � exact h₂'
+
+      simp [h₁, h₂]
+
+  right_inv := by
+
+    intro y
+
+    rcases y with (⟨⟨n, μ⟩, hn⟩ | ⟨⟨n, μ⟩, hn⟩)
+
+    � -- Sum.inl case: hn : (n, μ).1 ∈ s₁, i.e. n ∈ s₁
+
+      simp [hn]
+
+    � -- Sum.inr case: hn : (n, μ).1 ∈ s₂, i.e. n ∈ s₂, and s₁, s₂ are disjoint
+
+      have hn' : n ∉ s₁ := by
+
+        intro hn1
+
+        have h_disj : s₁ ∩ s₂ = ∅ := Finset.disjoint_iff_inter_eq_empty.mp h
+
+        have mem_inter : n ∈ s₁ ∩ s₂ := Finset.mem_inter.mpr ⟨hn1, hn⟩
+
+        rw [h_disj] at mem_inter
+
+        simpa using mem_inter
+
+      simp [hn']
+
+
+
+/-- The product Haar measure on FiniteLinkConfig is Measure.pi on the FiniteLinkIndex type,
+
+and we can move between FiniteLinkIndex and the product Finset via a bijection. -/
+
+noncomputable def finiteLinkIndexEquiv (Λ : Type) [DecidableEq Λ] (sites : Finset Λ) :
+
+    FiniteLinkIndex Λ sites ≃ (sites.product (Finset.univ : Finset (Fin 4))) where
+
+  toFun := λ x =>
+
+    let n := x.1.1; let μ := x.1.2; let hn : n ∈ sites := x.2
+
+    ⟨(n, μ), by simp [hn, Finset.mem_product, Finset.mem_univ]⟩
+
+  invFun := λ y =>
+
+    let n := y.1.1; let μ := y.1.2
+
+    have hn : n ∈ sites := by
+
+      rcases Finset.mem_product.mp y.2 with ⟨hn, hμ⟩
+
+      exact hn
+
+    ⟨(n, μ), hn⟩
+
+  left_inv := by
+
+    intro x
+
+    let n := x.1.1; let μ := x.1.2; let hn : n ∈ sites := x.2
+
+    rfl
+
+  right_inv := by
+
+    intro y
+
+    let n := y.1.1; let μ := y.1.2
+
+    rcases Finset.mem_product.mp y.2 with ⟨hn, hμ⟩
+
+    rfl
+
+
+
+/-- The configuration space for positive and interface links together. -/
+
+abbrev PosInterfaceConfig :=
+
+  FiniteLinkConfig N (PeriodicSite T L) (positiveSites T L ∪ interfaceSites T L)
+
+
+
+/-- Restriction of a full configuration to the positive and interface links. -/
+
+noncomputable def restrictPosInterface (cfg : FiniteLinkConfig N (PeriodicSite T L) (Finset.univ : Finset (PeriodicSite T L))) :
+
+    PosInterfaceConfig N T L :=
+
+  λ idx => cfg ⟨(idx.1.1, idx.1.2), Finset.mem_univ (idx.1.1)⟩
+
+
+
+/-- Merging a positive configuration and an interface configuration. -/
+
+noncomputable def mergePosInterface
+
+    (U_plus : FiniteLinkConfig N (PeriodicSite T L) (positiveSites T L))
+
+    (U_zero : FiniteLinkConfig N (PeriodicSite T L) (interfaceSites T L)) :
+
+    PosInterfaceConfig N T L :=
+
+  λ idx =>
+
+    match idx with
+
+    | ⟨(n, μ), hmem⟩ =>
+
+      if h : n ∈ positiveSites T L then
+
+        U_plus ⟨(n, μ), h⟩
+
+      else
+
+        have hint : n ∈ interfaceSites T L := by
+
+          rcases Finset.mem_union.mp hmem with (hpos | hint)
+
+          � exact (h hpos).elim
+
+          � exact hint
+
+        U_zero ⟨(n, μ), hint⟩
+
+lemma measure_factorization' :
+
+    ∃ (e : (FiniteLinkConfig N (PeriodicSite T L) (positiveSites T L) �
+
+            FiniteLinkConfig N (PeriodicSite T L) (negativeSites T L) �
+
+            FiniteLinkConfig N (PeriodicSite T L) (interfaceSites T L)) ≃ᵐ
+
+           FiniteLinkConfig N (PeriodicSite T L) (Finset.univ : Finset (PeriodicSite T L))),
+
+    ((MeasurePreserving e
+
+      ((haarMeasurePositive N T L).prod ((haarMeasureNegative N T L).prod (haarMeasureInterface N T L)))
+
+      (productHaarMeasure N (PeriodicSite T L) (Finset.univ : Finset (PeriodicSite T L))) ∧
+
+    (∀ (x : FiniteLinkConfig N (PeriodicSite T L) (positiveSites T L) �
+
+            FiniteLinkConfig N (PeriodicSite T L) (negativeSites T L) �
+
+            FiniteLinkConfig N (PeriodicSite T L) (interfaceSites T L)),
+
+      restrictPosInterface N T L (e x) = mergePosInterface N T L x.1 x.2.2)) ∧
+
+    (∀ (x : FiniteLinkConfig N (PeriodicSite T L) (positiveSites T L) �
+
+            FiniteLinkConfig N (PeriodicSite T L) (negativeSites T L) �
+
+            FiniteLinkConfig N (PeriodicSite T L) (interfaceSites T L))
+
+      (idx : FiniteLinkIndex (PeriodicSite T L) (negativeSites T L)),
+
+      (e x) ⟨(idx.1.1, idx.1.2), Finset.mem_univ idx.1.1⟩ = x.2.1 idx)) := by
+
+  sorry
+
+
+
+
+
+
+
+
+
+/-- The product Haar measure on the positive+interface configuration space. -/
+
+noncomputable def haarMeasurePosInterface : Measure (PosInterfaceConfig N T L) :=
+
+  Measure.map (Function.uncurry (mergePosInterface N T L))
+
+    ((haarMeasurePositive N T L).prod (haarMeasureInterface N T L))
+
+
+
+lemma haarMeasurePosInterface_eq :
+
+    haarMeasurePosInterface N T L =
+
+    Measure.map (Function.uncurry (mergePosInterface N T L))
+
+      ((haarMeasurePositive N T L).prod (haarMeasureInterface N T L)) := rfl
+
+
+
+/-- Merge a negative and a positive+interface configuration into a full config. -/
+
+noncomputable def mergeConfigurations
+
+    (U_minus : FiniteLinkConfig N (PeriodicSite T L) (negativeSites T L))
+
+    (U_plus_zero : PosInterfaceConfig N T L) :
+
+    FiniteLinkConfig N (PeriodicSite T L) (Finset.univ : Finset (PeriodicSite T L)) :=
+
+  λ idx =>
+
+    match idx with
+
+    | ⟨(n, μ), hn⟩ =>
+
+      if hpos : n ∈ positiveSites T L then
+
+        U_plus_zero ⟨(n, μ), Finset.mem_union_left (interfaceSites T L) hpos⟩
+
+      else if hneg : n ∈ negativeSites T L then
+
+        U_minus ⟨(n, μ), hneg⟩
+
+      else
+
+        have hint : n ∈ interfaceSites T L := by
+
+          have h_cover : (positiveSites T L) ∪ (negativeSites T L) ∪ (interfaceSites T L) = Finset.univ := by
+
+            ext n'; simp [positiveSites, negativeSites, interfaceSites]
+
+            by_cases hpos' : signedTime T n'.time > 0
+
+            � simp [hpos']
+
+            � by_cases hneg' : signedTime T n'.time < 0
+
+              � simp [hpos', hneg']
+
+              � have hzero' : signedTime T n'.time = 0 := by
+
+                  have hle' : signedTime T n'.time ≤ 0 := by linarith
+
+                  have hge' : signedTime T n'.time ≥ 0 := by linarith
+
+                  linarith
+
+                simp [hpos', hneg', hzero']
+
+          have hn_univ : n ∈ Finset.univ := hn
+
+          have h_mem : n ∈ (positiveSites T L) ∪ (negativeSites T L) ∪ (interfaceSites T L) := by
+
+            rw [h_cover]; exact hn_univ
+
+          rcases Finset.mem_union.mp h_mem with (h | h)
+
+          � rcases Finset.mem_union.mp h with (h' | h')
+
+            � exfalso; exact hpos h'
+
+            � exfalso; exact hneg h'
+
+          � exact h
+
+        U_plus_zero ⟨(n, μ), Finset.mem_union_right (positiveSites T L) hint⟩
+
+
+
+/-- Extend a configuration to a full link variable. -/
+
+noncomputable def extendToFullConfig
+
+    (U_minus : FiniteLinkConfig N (PeriodicSite T L) (negativeSites T L))
+
+    (U_plus_zero : PosInterfaceConfig N T L) :
+
+    LinkVariable (SU N) (PeriodicSite T L) :=
+
+  extendLinkVariable N (PeriodicSite T L) (Finset.univ : Finset (PeriodicSite T L))
+
+    (mergeConfigurations N T L U_minus U_plus_zero)
+
+
+
+/--
+
+  Restrict a full `LinkVariable` to a `FiniteLinkConfig` on a subset of sites.
+
+-/
+
+noncomputable def linkVariableRestrict (Λ : Type) [DecidableEq Λ] (sites : Finset Λ)
+
+    (U : LinkVariable (SU N) Λ) : FiniteLinkConfig N Λ sites :=
+
+  λ ⟨(n, μ), hn⟩ => U.value n μ
+
+
+
+/--
+
+  The identity configuration on the positive+interface region (all links = 1).
+
+-/
+
+noncomputable def onePosInterface : PosInterfaceConfig N T L := λ _ => 1
+
+
+
+/--
+
+  The reflection map θ⁻⁰ from negative+interface configurations to
+
+  positive+interface configurations.
+
+
+
+  Given (U⁻, U⁰), we construct a full configuration where positive links are
+
+  set to 1, U⁻ on negative links, and U⁰ on interface links.  Then we apply
+
+  the full geometric reflection θ and restrict the result to the
+
+  positive+interface region.  Since θ maps negative links to positive links
+
+  and interface links to themselves, the result depends only on U⁻ and U⁰.
+
+-/
+
+noncomputable def reflectToPosInterface
+
+    (U_minus : FiniteLinkConfig N (PeriodicSite T L) (negativeSites T L))
+
+    (U_zero : FiniteLinkConfig N (PeriodicSite T L) (interfaceSites T L)) :
+
+    PosInterfaceConfig N T L :=
+
+  -- Combine identity on positive links with U_zero on interface links
+
+  let U_plus_zero_zeroed : PosInterfaceConfig N T L :=
+
+    λ idx =>
+
+      match idx with
+
+      | ⟨(n, μ), hmem⟩ =>
+
+        if hpos : n ∈ positiveSites T L then 1
+
+        else
+
+          have hint : n ∈ interfaceSites T L := by
+
+            rcases Finset.mem_union.mp hmem with (hpos' | hint')
+
+            � exact (hpos hpos').elim
+
+            � exact hint'
+
+          U_zero ⟨(n, μ), hint⟩
+
+  -- Merge with U_minus to get a full config, then reflect and restrict
+
+  let full_cfg := mergeConfigurations N T L U_minus U_plus_zero_zeroed
+
+  let full_link := extendLinkVariable N (PeriodicSite T L) (Finset.univ : Finset (PeriodicSite T L)) full_cfg
+
+  let reflected_link := reflectLinkVariable N full_link
+
+  linkVariableRestrict N (PeriodicSite T L) (positiveSites T L ∪ interfaceSites T L) reflected_link
+
+
+
+/--
+
+  Restrict a PosInterfaceConfig to the interface links only.
+
+-/
+
+noncomputable def restrictToInterface (u : PosInterfaceConfig N T L) :
+
+    FiniteLinkConfig N (PeriodicSite T L) (interfaceSites T L) :=
+
+  λ ⟨(n, μ), hn⟩ => u ⟨(n, μ), Finset.mem_union_right (positiveSites T L) hn⟩
+
+
+
+/--
+
+  Compute S_OS⁺(U⁺,U⁰) from a positive+interface configuration.
+
+  Since S_OS⁺ only involves positive-time plaquettes (all four corners > 0),
+
+  it depends only on the positive+interface part of the configuration.
+
+  The value does not depend on how negative links are set.
+
+-/
+
+noncomputable def osPositiveOfPosInterface (u : PosInterfaceConfig N T L) : ℝ :=
+
+  let full_link := extendLinkVariable N (PeriodicSite T L) (positiveSites T L ∪ interfaceSites T L) u
+
+  wilsonActionOSPositive N T L β full_link
+
+
+
+/--
+
+  The correct transfer matrix T acting on functions ψ : PosInterfaceConfig → ℝ.
+
+
+
+  (T ψ)(u) = ∫ ψ(θ⁻⁰(U⁻, u⁰))
+
+              � exp(-β�(S_OS⁺(u)/2 + S_OS⁻(U⁻)/2 + S_OS_int(u, U⁻)))
+
+              dμ⁻(U⁻)
+
+
+
+  where u = (U⁺, U⁰) and the integral kernel is chosen so that the key identity holds:
+
+
+
+    g(u)�(T g)(u) = ∫ G(U)�G(θU) dμ⁻(U⁻)
+
+
+
+  with g(u) = f(u)�exp(-β�S_OS⁺(u)/2).
+
+-/
+
+noncomputable def transferMatrixCorrect (ψ : PosInterfaceConfig N T L → ℝ)
+
+    (u : PosInterfaceConfig N T L) : ℝ :=
+
+  let S_plus := osPositiveOfPosInterface N T L β u
+
+  ∫ (U_minus : FiniteLinkConfig N (PeriodicSite T L) (negativeSites T L)),
+
+    ψ (reflectToPosInterface N T L U_minus (restrictToInterface N T L u)) *
+
+    Real.exp (-β * (S_plus / 2 +
+
+                    wilsonActionOSNegative N T L β (extendToFullConfig N T L U_minus u) / 2 +
+
+                    wilsonActionOSInterface N T L β (extendToFullConfig N T L U_minus u)))
+
+    ∂ haarMeasureNegative N T L
+
+/-- The function G(U) = f(U)�exp(-β�S_OS⁺(U))�exp(-β�S_OS_int(U)/2)
+
+
+
+  This is the key building block for the Osterwalder-Seiler reflection positivity proof.
+
+  For a function f depending only on positive+interface links, G(U)�G(θU) factors through
+
+  the transfer matrix. -/
+
+noncomputable def G (N T L : ℕ) [NeZero T] [NeZero L] (hT : Odd T) (β : ℝ) (f : LinkVariable (SU N) (PeriodicSite T L) → ℝ)
+
+    (U : LinkVariable (SU N) (PeriodicSite T L)) : ℝ :=
+
+  f U * Real.exp (-β * wilsonActionOSPositive N T L β U) *
+
+    Real.exp (-β * wilsonActionOSInterface N T L β U / 2)
+
+
+
+/-- The function g(u) = f(u)�exp(-β�S_OS⁺(u)/2) for u ∈ PosInterfaceConfig.
+
+
+
+  This is the positive+interface reduction of G.  The extra factor of 1/2 in the
+
+  exponential (compared to G) ensures that G(U)�G(θU) factorizes as
+
+  g(U⁺,U⁰)�g(θ⁻⁰(U⁻,U⁰))�exp(-β�(S_OS⁻(U⁻)+S_OS_int(U))/2). -/
+
+noncomputable def g_posInterface (N T L : ℕ) [NeZero T] [NeZero L] (hT : Odd T) (β : ℝ)
+
+    (f : LinkVariable (SU N) (PeriodicSite T L) → ℝ)
+
+    (u : PosInterfaceConfig N T L) : ℝ :=
+
+  f (extendLinkVariable N (PeriodicSite T L) (positiveSites T L ∪ interfaceSites T L) u) *
+
+    Real.exp (-β * osPositiveOfPosInterface N T L β u / 2)
+
+
+
+/-- For a full config cfg, merging its restrictions to negative and pos+interface recovers cfg. -/
+
+lemma mergeConfigurations_restore (cfg : FiniteLinkConfig N (PeriodicSite T L) (Finset.univ : Finset (PeriodicSite T L))) :
+
+    mergeConfigurations N T L
+
+      (λ ⟨(n, μ), hn⟩ => cfg ⟨(n, μ), Finset.mem_univ n⟩)
+
+      (restrictPosInterface N T L cfg) = cfg := by
+
+  ext x
+
+  rcases x with ⟨⟨n, μ⟩, hn⟩
+
+  dsimp [mergeConfigurations, restrictPosInterface]
+
+  by_cases hpos : n ∈ positiveSites T L
+
+  � simp [hpos]
+
+  � by_cases hneg : n ∈ negativeSites T L
+
+    � simp [hpos, hneg]
+
+    � have hint : n ∈ interfaceSites T L := by
+
+        have h_cover : (positiveSites T L) ∪ (negativeSites T L) ∪ (interfaceSites T L) = Finset.univ := by
+
+          ext n'; simp [positiveSites, negativeSites, interfaceSites]
+
+          by_cases hpos' : signedTime T n'.time > 0
+
+          � simp [hpos']
+
+          � by_cases hneg' : signedTime T n'.time < 0
+
+            � simp [hpos', hneg']
+
+            � have hzero' : signedTime T n'.time = 0 := by
+
+                have hle' : signedTime T n'.time ≤ 0 := by linarith
+
+                have hge' : signedTime T n'.time ≥ 0 := by linarith
+
+                linarith
+
+              simp [hpos', hneg', hzero']
+
+        have hn_univ : n ∈ Finset.univ := hn
+
+        have h_mem : n ∈ (positiveSites T L) ∪ (negativeSites T L) ∪ (interfaceSites T L) := by
+
+          rw [h_cover]; exact hn_univ
+
+        rcases Finset.mem_union.mp h_mem with (h | h)
+
+        � rcases Finset.mem_union.mp h with (h' | h')
+
+          � exfalso; exact hpos h'
+
+          � exfalso; exact hneg h'
+
+        � exact h
+
+      simp [hpos, hneg, hint]
+
+
+
+/-- For a full config cfg, the extended link variable equals extendToFullConfig of its pieces. -/
+
+lemma extend_eq_extendToFullConfig (cfg : FiniteLinkConfig N (PeriodicSite T L) (Finset.univ : Finset (PeriodicSite T L))) :
+
+    extendLinkVariable N (PeriodicSite T L) (Finset.univ : Finset (PeriodicSite T L)) cfg =
+
+    extendToFullConfig N T L
+
+      (λ ⟨(n, μ), hn⟩ => cfg ⟨(n, μ), Finset.mem_univ n⟩)
+
+      (restrictPosInterface N T L cfg) := by
+
+  dsimp [extendToFullConfig]
+
+  rw [mergeConfigurations_restore N T L cfg]
+
+
+
+/-- If V and W agree on all pos+interface link variables, then S_OS⁺(V) = S_OS⁺(W). -/
+
+lemma wilsonActionOSPositive_dependsOnlyOnPosInterface (N T L : ℕ) (β : ℝ) [NeZero T] [NeZero L]
+
+    (V W : LinkVariable (SU N) (PeriodicSite T L))
+
+    (h : ∀ (n : PeriodicSite T L) (μ : Fin 4), n ∈ (positiveSites T L ∪ interfaceSites T L) → V.value n μ = W.value n μ) :
+
+    wilsonActionOSPositive N T L β V = wilsonActionOSPositive N T L β W := by
+
+  unfold wilsonActionOSPositive
+
+  refine Finset.sum_congr rfl (λ n hn => ?_)
+
+  refine Finset.sum_congr rfl (λ μ hμ => ?_)
+
+  refine Finset.sum_congr rfl (λ ν hν => ?_)
+
+  by_cases hpos : signedTime T n.time > 0 ∧ signedTime T (addVectorPeriodic T L n μ).time > 0 ∧
+
+    signedTime T (addVectorPeriodic T L (addVectorPeriodic T L n μ) ν).time > 0 ∧
+
+    signedTime T (addVectorPeriodic T L n ν).time > 0
+
+  � -- All four corners have positive time, so they are in positiveSites ∪ interfaceSites
+
+    have hpos_n : signedTime T n.time > 0 := hpos.1
+
+    have hpos_nμ : signedTime T (addVectorPeriodic T L n μ).time > 0 := hpos.2.1
+
+    have hpos_nμν : signedTime T (addVectorPeriodic T L (addVectorPeriodic T L n μ) ν).time > 0 := hpos.2.2.1
+
+    have hpos_nν : signedTime T (addVectorPeriodic T L n ν).time > 0 := hpos.2.2.2
+
+    have mem_union (x : PeriodicSite T L) (hx : signedTime T x.time > 0) : x ∈ positiveSites T L ∪ interfaceSites T L := by
+
+      have hx_pos : x ∈ positiveSites T L := by
+
+        dsimp [positiveSites]
+
+        simp [hx]
+
+      exact Finset.mem_union_left _ hx_pos
+
+    have hVW1 : V.value n μ = W.value n μ := h n μ (mem_union n hpos_n)
+
+    have hVW2 : V.value (addVectorPeriodic T L n μ) ν = W.value (addVectorPeriodic T L n μ) ν :=
+
+      h (addVectorPeriodic T L n μ) ν (mem_union (addVectorPeriodic T L n μ) hpos_nμ)
+
+    have hVW3 : V.value (addVectorPeriodic T L (addVectorPeriodic T L n μ) ν) μ = W.value (addVectorPeriodic T L (addVectorPeriodic T L n μ) ν) μ :=
+
+      h (addVectorPeriodic T L (addVectorPeriodic T L n μ) ν) μ (mem_union (addVectorPeriodic T L (addVectorPeriodic T L n μ) ν) hpos_nμν)
+
+    have hVW4 : V.value (addVectorPeriodic T L n ν) ν = W.value (addVectorPeriodic T L n ν) ν :=
+
+      h (addVectorPeriodic T L n ν) ν (mem_union (addVectorPeriodic T L n ν) hpos_nν)
+
+    have h_pp_eq : plaquetteProduct N V n μ ν = plaquetteProduct N W n μ ν := by
+
+      dsimp [plaquetteProduct, AddVector.addVector]
+
+      simp [hVW1, hVW2, hVW3, hVW4]
+
+    simp [hpos_n, hpos_nμ, hpos_nμν, hpos_nν, h_pp_eq, plaquetteContribution]
+
+  � simp [hpos]
+
+
+
+/-- Restriction to pos+interface, then extension back, gives a link variable that agrees with
+
+  the original on pos+interface links. -/
+
+lemma extend_of_restrictPosInterface_agrees (U : LinkVariable (SU N) (PeriodicSite T L)) :
+
+    ∀ (n : PeriodicSite T L) (μ : Fin 4),
+
+      n ∈ (positiveSites T L ∪ interfaceSites T L) →
+
+      (extendLinkVariable N (PeriodicSite T L) (positiveSites T L ∪ interfaceSites T L)
+
+        (restrictPosInterface N T L (restrictLinkVariable N (PeriodicSite T L) (Finset.univ : Finset (PeriodicSite T L)) U))
+
+      ).value n μ = U.value n μ := by
+
+  intro n μ hn
+
+  dsimp [extendLinkVariable, restrictPosInterface, restrictLinkVariable]
+
+  simp [hn]
+
+lemma G_thetaG_factorization_clean (f : LinkVariable (SU N) (PeriodicSite T L) → ℝ)
+
+    (U : LinkVariable (SU N) (PeriodicSite T L)) :
+
+    G N T L hT β f U * G N T L hT β f (reflectLinkVariable N U) =
+
+    (f U * Real.exp (-β * wilsonActionOSPositive N T L β U / 2)) *
+
+    (f (reflectLinkVariable N U) * Real.exp (-β * wilsonActionOSNegative N T L β U / 2)) *
+
+    Real.exp (-β * (wilsonActionOSPositive N T L β U / 2 + wilsonActionOSNegative N T L β U / 2 +
+
+                    wilsonActionOSInterface N T L β U)) := by
+
+  unfold G
+
+  have h_pos_reflect : wilsonActionOSPositive N T L β (reflectLinkVariable N U) = wilsonActionOSNegative N T L β U :=
+
+    (neg_action_reflection_os_periodic N T L β hT U).symm
+
+  have h_int_reflect : wilsonActionOSInterface N T L β (reflectLinkVariable N U) = wilsonActionOSInterface N T L β U :=
+
+    interface_action_reflection_symmetric_os_periodic N T L β hT U
+
+  calc
+
+    (f U * Real.exp (-β * wilsonActionOSPositive N T L β U) * Real.exp (-β * wilsonActionOSInterface N T L β U / 2)) *
+
+    (f (reflectLinkVariable N U) * Real.exp (-β * wilsonActionOSPositive N T L β (reflectLinkVariable N U)) *
+
+      Real.exp (-β * wilsonActionOSInterface N T L β (reflectLinkVariable N U) / 2))
+
+        = (f U * f (reflectLinkVariable N U)) *
+
+          (Real.exp (-β * wilsonActionOSPositive N T L β U) * Real.exp (-β * wilsonActionOSPositive N T L β (reflectLinkVariable N U))) *
+
+          (Real.exp (-β * wilsonActionOSInterface N T L β U / 2) * Real.exp (-β * wilsonActionOSInterface N T L β (reflectLinkVariable N U) / 2)) := by
+
+      simp [mul_assoc, mul_comm, mul_left_comm]
+
+    _ = (f U * f (reflectLinkVariable N U)) *
+
+        (Real.exp (-β * wilsonActionOSPositive N T L β U) * Real.exp (-β * wilsonActionOSNegative N T L β U)) *
+
+        (Real.exp (-β * wilsonActionOSInterface N T L β U / 2) * Real.exp (-β * wilsonActionOSInterface N T L β U / 2)) := by
+
+      rw [h_pos_reflect, h_int_reflect]
+
+    _ = (f U * f (reflectLinkVariable N U)) *
+
+        Real.exp (-β * (wilsonActionOSPositive N T L β U + wilsonActionOSNegative N T L β U + wilsonActionOSInterface N T L β U)) := by
+
+      have h_exp_add : Real.exp (-β * wilsonActionOSPositive N T L β U) * Real.exp (-β * wilsonActionOSNegative N T L β U) =
+
+          Real.exp (-β * (wilsonActionOSPositive N T L β U + wilsonActionOSNegative N T L β U)) := by
+
+        rw [← Real.exp_add]
+
+        ring
+
+      have h_exp_double : Real.exp (-β * wilsonActionOSInterface N T L β U / 2) * Real.exp (-β * wilsonActionOSInterface N T L β U / 2) =
+
+          Real.exp (-β * wilsonActionOSInterface N T L β U) := by
+
+        calc
+
+          Real.exp (-β * wilsonActionOSInterface N T L β U / 2) * Real.exp (-β * wilsonActionOSInterface N T L β U / 2)
+
+              = Real.exp ((-β * wilsonActionOSInterface N T L β U / 2) + (-β * wilsonActionOSInterface N T L β U / 2)) := by
+
+            rw [← Real.exp_add]
+
+          _ = Real.exp (-β * wilsonActionOSInterface N T L β U) := by ring
+
+      rw [h_exp_add, h_exp_double]
+
+      calc
+
+        (f U * f (reflectLinkVariable N U)) * Real.exp (-β * (wilsonActionOSPositive N T L β U + wilsonActionOSNegative N T L β U)) *
+
+            Real.exp (-β * wilsonActionOSInterface N T L β U)
+
+            = (f U * f (reflectLinkVariable N U)) * (Real.exp (-β * (wilsonActionOSPositive N T L β U + wilsonActionOSNegative N T L β U)) *
+
+                Real.exp (-β * wilsonActionOSInterface N T L β U)) := by ring
+
+        _ = (f U * f (reflectLinkVariable N U)) * Real.exp (-β * (wilsonActionOSPositive N T L β U + wilsonActionOSNegative N T L β U +
+
+            wilsonActionOSInterface N T L β U)) := by
+
+          rw [← Real.exp_add]
+
+          ring
+
+    _ = (f U * f (reflectLinkVariable N U)) *
+
+        Real.exp (-β * (wilsonActionOSPositive N T L β U / 2 + wilsonActionOSNegative N T L β U / 2 +
+
+                        wilsonActionOSPositive N T L β U / 2 + wilsonActionOSNegative N T L β U / 2 +
+
+                        wilsonActionOSInterface N T L β U)) := by ring
+
+    _ = (f U * f (reflectLinkVariable N U)) *
+
+        (Real.exp (-β * wilsonActionOSPositive N T L β U / 2) * Real.exp (-β * wilsonActionOSNegative N T L β U / 2) *
+
+         Real.exp (-β * (wilsonActionOSPositive N T L β U / 2 + wilsonActionOSNegative N T L β U / 2 +
+
+                         wilsonActionOSInterface N T L β U))) := by
+
+      rw [← Real.exp_add, ← Real.exp_add]
+
+      ring
+
+    _ = (f U * Real.exp (-β * wilsonActionOSPositive N T L β U / 2)) *
+
+        (f (reflectLinkVariable N U) * Real.exp (-β * wilsonActionOSNegative N T L β U / 2)) *
+
+        Real.exp (-β * (wilsonActionOSPositive N T L β U / 2 + wilsonActionOSNegative N T L β U / 2 +
+
+                        wilsonActionOSInterface N T L β U)) := by
+
+      ring
+
+
+
+/-- Key lemma: osPositiveOfPosInterface of the restriction equals S_OS⁺(U). -/
+
+lemma osPositiveOfPosInterface_restrict_eq (U : LinkVariable (SU N) (PeriodicSite T L)) :
+
+    osPositiveOfPosInterface N T L β (restrictPosInterface N T L
+
+      (restrictLinkVariable N (PeriodicSite T L) (Finset.univ : Finset (PeriodicSite T L)) U)) =
+
+    wilsonActionOSPositive N T L β U := by
+
+  let u := restrictPosInterface N T L (restrictLinkVariable N (PeriodicSite T L) (Finset.univ : Finset (PeriodicSite T L)) U)
+
+  dsimp [osPositiveOfPosInterface, u]
+
+  apply wilsonActionOSPositive_dependsOnlyOnPosInterface N T L β _ _
+
+  intro n μ hn
+
+  rcases Finset.mem_union.mp hn with (hn_pos | hn_int)
+
+  � simp [hn_pos, extendLinkVariable, restrictPosInterface, restrictLinkVariable]
+
+  � simp [hn_int, extendLinkVariable, restrictPosInterface, restrictLinkVariable]
+
+
+
+/-- reflectToPosInterface(U⁻, U⁰) = restrictPosInterface(restrictLinkVariable(univ, θU)).
+
+  This is proved by extensionality. -/
+
+lemma reflectToPosInterface_eq_restrict (hT : Odd T) (U : LinkVariable (SU N) (PeriodicSite T L)) :
+
+    reflectToPosInterface N T L
+
+      (restrictLinkVariable N (PeriodicSite T L) (negativeSites T L) U)
+
+      (restrictToInterface N T L (restrictPosInterface N T L
+
+        (restrictLinkVariable N (PeriodicSite T L) (Finset.univ : Finset (PeriodicSite T L)) U))) =
+
+    restrictPosInterface N T L (restrictLinkVariable N (PeriodicSite T L) (Finset.univ : Finset (PeriodicSite T L))
+
+      (reflectLinkVariable N U)) := by
+
+  ext x
+
+  rcases x with ⟨⟨n, μ⟩, hx⟩
+
+  dsimp [reflectToPosInterface, linkVariableRestrict, reflectLinkVariable, restrictLinkVariable,
+
+    restrictPosInterface, restrictToInterface, extendLinkVariable, mergeConfigurations]
+
+  by_cases hn_pos : n ∈ positiveSites T L
+
+  � have h_reflect_neg : ReflectSite.reflectSite n ∈ negativeSites T L := by
+
+      have h_signed : signedTime T n.time > 0 := by
+
+        simpa [positiveSites, Finset.mem_filter] using hn_pos
+
+      have h_neg_signed : signedTime T (ReflectSite.reflectSite n).time < 0 := by
+
+        calc
+
+          signedTime T (ReflectSite.reflectSite n).time = -signedTime T n.time := by
+
+            simp [ReflectSite.reflectSite, reflectSitePeriodic, signedTime_neg T n.time hT]
+
+          _ < 0 := by linarith
+
+      simpa [negativeSites, Finset.mem_filter] using h_neg_signed
+
+    have h_pos_neg_disjoint : Disjoint (positiveSites T L) (negativeSites T L) := by
+
+      unfold positiveSites negativeSites
+
+      rw [Finset.disjoint_filter]
+
+      intro m hm hpos hneg; linarith
+
+    have h_reflect_not_pos : ReflectSite.reflectSite n ∉ positiveSites T L :=
+
+      Finset.disjoint_right.mp h_pos_neg_disjoint h_reflect_neg
+
+    by_cases hμ : μ = 0
+
+    � subst hμ; simp [hn_pos, h_reflect_neg, h_reflect_not_pos]
+
+    � simp [hn_pos, h_reflect_neg, h_reflect_not_pos, hμ]
+
+  � have hint : n ∈ interfaceSites T L := by
+
+      rcases Finset.mem_union.mp hx with (h | h)
+
+      � exact absurd h hn_pos
+
+      � exact h
+
+    have h_pos_int_disjoint : Disjoint (positiveSites T L) (interfaceSites T L) := by
+
+      unfold positiveSites interfaceSites
+
+      rw [Finset.disjoint_filter]
+
+      intro m hm hpos hint; linarith
+
+    have h_neg_int_disjoint : Disjoint (negativeSites T L) (interfaceSites T L) := by
+
+      unfold negativeSites interfaceSites
+
+      rw [Finset.disjoint_filter]
+
+      intro m hm hneg hint; linarith
+
+    have h_reflect_int : ReflectSite.reflectSite n ∈ interfaceSites T L := by
+
+      have h_signed : signedTime T n.time = 0 := by
+
+        simpa [interfaceSites, Finset.mem_filter] using hint
+
+      have h_int_signed : signedTime T (ReflectSite.reflectSite n).time = 0 := by
+
+        calc
+
+          signedTime T (ReflectSite.reflectSite n).time = -signedTime T n.time := by
+
+            simp [ReflectSite.reflectSite, reflectSitePeriodic, signedTime_neg T n.time hT]
+
+          _ = -0 := by rw [h_signed]
+
+          _ = 0 := by simp
+
+      simpa [interfaceSites, Finset.mem_filter] using h_int_signed
+
+    have h_reflect_not_pos : ReflectSite.reflectSite n ∉ positiveSites T L :=
+
+      Finset.disjoint_right.mp h_pos_int_disjoint h_reflect_int
+
+    have h_reflect_not_neg : ReflectSite.reflectSite n ∉ negativeSites T L :=
+
+      Finset.disjoint_right.mp h_neg_int_disjoint h_reflect_int
+
+    by_cases hμ : μ = 0
+
+    � subst hμ; simp [hint, h_reflect_int, h_reflect_not_pos, h_reflect_not_neg]
+
+    � simp [hint, h_reflect_int, h_reflect_not_pos, h_reflect_not_neg, hμ]
+
+
+
+lemma G_thetaG_factorization (f : LinkVariable (SU N) (PeriodicSite T L) → ℝ)
+
+    (hf_supported : dependsOnlyOnPosInterface N T L f) (U : LinkVariable (SU N) (PeriodicSite T L)) :
+
+    G N T L hT β f U * G N T L hT β f (reflectLinkVariable N U) =
+
+    g_posInterface N T L hT β f (restrictPosInterface N T L
+
+      (restrictLinkVariable N (PeriodicSite T L) (Finset.univ : Finset (PeriodicSite T L)) U)) *
+
+    g_posInterface N T L hT β f (reflectToPosInterface N T L
+
+      (restrictLinkVariable N (PeriodicSite T L) (negativeSites T L) U)
+
+      (restrictToInterface N T L (restrictPosInterface N T L
+
+        (restrictLinkVariable N (PeriodicSite T L) (Finset.univ : Finset (PeriodicSite T L)) U)))) *
+
+    Real.exp (-β * (osPositiveOfPosInterface N T L β
+
+                      (restrictPosInterface N T L
+
+                        (restrictLinkVariable N (PeriodicSite T L) (Finset.univ : Finset (PeriodicSite T L)) U)) / 2 +
+
+                    wilsonActionOSNegative N T L β (extendToFullConfig N T L
+
+                      (restrictLinkVariable N (PeriodicSite T L) (negativeSites T L) U)
+
+                      (restrictPosInterface N T L
+
+                        (restrictLinkVariable N (PeriodicSite T L) (Finset.univ : Finset (PeriodicSite T L)) U))) / 2 +
+
+                    wilsonActionOSInterface N T L β (extendToFullConfig N T L
+
+                      (restrictLinkVariable N (PeriodicSite T L) (negativeSites T L) U)
+
+                      (restrictPosInterface N T L
+
+                        (restrictLinkVariable N (PeriodicSite T L) (Finset.univ : Finset (PeriodicSite T L)) U))))) := by
+
+  let u := restrictPosInterface N T L (restrictLinkVariable N (PeriodicSite T L) (Finset.univ : Finset (PeriodicSite T L)) U)
+
+  let U_minus := restrictLinkVariable N (PeriodicSite T L) (negativeSites T L) U
+
+  let u_int := restrictToInterface N T L u
+
+  let θU := reflectLinkVariable N U
+
+  let θu_restrict := restrictPosInterface N T L (restrictLinkVariable N (PeriodicSite T L) (Finset.univ : Finset (PeriodicSite T L)) θU)
+
+
+
+  have h_ext_full : extendToFullConfig N T L U_minus u = U := by
+
+    dsimp [extendToFullConfig]
+
+    have h_merge_eq : mergeConfigurations N T L U_minus u =
+
+        restrictLinkVariable N (PeriodicSite T L) (Finset.univ : Finset (PeriodicSite T L)) U := by
+
+      calc
+
+        mergeConfigurations N T L U_minus u
+
+            = mergeConfigurations N T L
+
+                (λ ⟨(n, μ), hn⟩ => (restrictLinkVariable N (PeriodicSite T L) (Finset.univ : Finset (PeriodicSite T L)) U) ⟨(n, μ), Finset.mem_univ n⟩)
+
+                (restrictPosInterface N T L (restrictLinkVariable N (PeriodicSite T L) (Finset.univ : Finset (PeriodicSite T L)) U)) := rfl
+
+        _ = restrictLinkVariable N (PeriodicSite T L) (Finset.univ : Finset (PeriodicSite T L)) U :=
+
+          mergeConfigurations_restore N T L (restrictLinkVariable N (PeriodicSite T L) (Finset.univ : Finset (PeriodicSite T L)) U)
+
+    calc
+
+      extendToFullConfig N T L U_minus u
+
+          = extendLinkVariable N (PeriodicSite T L) (Finset.univ : Finset (PeriodicSite T L))
+
+              (mergeConfigurations N T L U_minus u) := rfl
+
+      _ = extendLinkVariable N (PeriodicSite T L) (Finset.univ : Finset (PeriodicSite T L))
+
+              (restrictLinkVariable N (PeriodicSite T L) (Finset.univ : Finset (PeriodicSite T L)) U) := by
+
+        rw [h_merge_eq]
+
+      _ = U := by
+
+        simp [extendLinkVariable, restrictLinkVariable]
+
+  
+
+  have h_os_pos : osPositiveOfPosInterface N T L β u = wilsonActionOSPositive N T L β U :=
+
+    osPositiveOfPosInterface_restrict_eq N T L β U
+
+
+
+  have h_S_neg : wilsonActionOSNegative N T L β (extendToFullConfig N T L U_minus u) = wilsonActionOSNegative N T L β U := by
+
+    rw [h_ext_full]
+
+
+
+  have h_S_int : wilsonActionOSInterface N T L β (extendToFullConfig N T L U_minus u) = wilsonActionOSInterface N T L β U := by
+
+    rw [h_ext_full]
+
+
+
+  have h_f_u : g_posInterface N T L hT β f u = f U * Real.exp (-β * wilsonActionOSPositive N T L β U / 2) := by
+
+    dsimp [g_posInterface, u]
+
+    have h_agrees : ∀ (n : PeriodicSite T L) (μ : Fin 4),
+
+        n ∈ (positiveSites T L ∪ interfaceSites T L) →
+
+        U.value n μ = (extendLinkVariable N (PeriodicSite T L) (positiveSites T L ∪ interfaceSites T L) u).value n μ := by
+
+      intro n μ hn
+
+      have h := extend_of_restrictPosInterface_agrees N T L U n μ hn
+
+      exact h.symm
+
+    have h_f_eq : f (extendLinkVariable N (PeriodicSite T L) (positiveSites T L ∪ interfaceSites T L) u) = f U := by
+
+      have h := hf_supported U (extendLinkVariable N (PeriodicSite T L) (positiveSites T L ∪ interfaceSites T L) u) h_agrees
+
+      exact h.symm
+
+    rw [h_f_eq, h_os_pos]
+
+
+
+  have h_reflect_eq : reflectToPosInterface N T L U_minus u_int = θu_restrict :=
+
+    reflectToPosInterface_eq_restrict N T L hT U
+
+
+
+  have h_f_θu : g_posInterface N T L hT β f (reflectToPosInterface N T L U_minus u_int) =
+
+      f (reflectLinkVariable N U) * Real.exp (-β * wilsonActionOSNegative N T L β U / 2) := by
+
+    dsimp [g_posInterface]
+
+    rw [h_reflect_eq]
+
+    dsimp [θu_restrict]
+
+    have h_agrees_θU : ∀ (n : PeriodicSite T L) (μ : Fin 4),
+
+        n ∈ (positiveSites T L ∪ interfaceSites T L) →
+
+        (reflectLinkVariable N U).value n μ =
+
+        (extendLinkVariable N (PeriodicSite T L) (positiveSites T L ∪ interfaceSites T L) θu_restrict).value n μ := by
+
+      intro n μ hn
+
+      rcases Finset.mem_union.mp hn with (hn_pos | hn_int)
+
+      � simp [hn_pos, θu_restrict, θU, extendLinkVariable, restrictPosInterface, restrictLinkVariable]
+
+      � simp [hn_int, θu_restrict, θU, extendLinkVariable, restrictPosInterface, restrictLinkVariable]
+
+    have h_f_θU : f (extendLinkVariable N (PeriodicSite T L) (positiveSites T L ∪ interfaceSites T L) θu_restrict) = f (reflectLinkVariable N U) := by
+
+      have h := hf_supported (reflectLinkVariable N U)
+
+        (extendLinkVariable N (PeriodicSite T L) (positiveSites T L ∪ interfaceSites T L) θu_restrict) h_agrees_θU
+
+      exact h.symm
+
+    rw [h_f_θU]
+
+    have h_os_pos_θu : osPositiveOfPosInterface N T L β θu_restrict = wilsonActionOSPositive N T L β (reflectLinkVariable N U) :=
+
+      osPositiveOfPosInterface_restrict_eq N T L β (reflectLinkVariable N U)
+
+    rw [h_os_pos_θu, neg_action_reflection_os_periodic N T L β hT U]
+
+
+
+  calc
+
+    G N T L hT β f U * G N T L hT β f (reflectLinkVariable N U)
+
+        = (f U * Real.exp (-β * wilsonActionOSPositive N T L β U / 2)) *
+
+          (f (reflectLinkVariable N U) * Real.exp (-β * wilsonActionOSNegative N T L β U / 2)) *
+
+          Real.exp (-β * (wilsonActionOSPositive N T L β U / 2 + wilsonActionOSNegative N T L β U / 2 +
+
+                          wilsonActionOSInterface N T L β U)) :=
+
+      G_thetaG_factorization_clean N T L hT β f U
+
+    _ = g_posInterface N T L hT β f u *
+
+        g_posInterface N T L hT β f (reflectToPosInterface N T L U_minus u_int) *
+
+        Real.exp (-β * (osPositiveOfPosInterface N T L β u / 2 +
+
+          wilsonActionOSNegative N T L β (extendToFullConfig N T L U_minus u) / 2 +
+
+          wilsonActionOSInterface N T L β (extendToFullConfig N T L U_minus u))) := by
+
+      rw [h_f_u, h_f_θu, h_os_pos, h_S_neg, h_S_int]
+
+    _ = g_posInterface N T L hT β f (restrictPosInterface N T L
+
+          (restrictLinkVariable N (PeriodicSite T L) (Finset.univ : Finset (PeriodicSite T L)) U)) *
+
+        g_posInterface N T L hT β f (reflectToPosInterface N T L
+
+          (restrictLinkVariable N (PeriodicSite T L) (negativeSites T L) U)
+
+          (restrictToInterface N T L (restrictPosInterface N T L
+
+            (restrictLinkVariable N (PeriodicSite T L) (Finset.univ : Finset (PeriodicSite T L)) U)))) *
+
+        Real.exp (-β * (osPositiveOfPosInterface N T L β
+
+                          (restrictPosInterface N T L
+
+                            (restrictLinkVariable N (PeriodicSite T L) (Finset.univ : Finset (PeriodicSite T L)) U)) / 2 +
+
+                        wilsonActionOSNegative N T L β (extendToFullConfig N T L
+
+                          (restrictLinkVariable N (PeriodicSite T L) (negativeSites T L) U)
+
+                          (restrictPosInterface N T L
+
+                            (restrictLinkVariable N (PeriodicSite T L) (Finset.univ : Finset (PeriodicSite T L)) U))) / 2 +
+
+                        wilsonActionOSInterface N T L β (extendToFullConfig N T L
+
+                          (restrictLinkVariable N (PeriodicSite T L) (negativeSites T L) U)
+
+                          (restrictPosInterface N T L
+
+                            (restrictLinkVariable N (PeriodicSite T L) (Finset.univ : Finset (PeriodicSite T L)) U))))) := by
+
+      simp [u, U_minus, u_int]
+
+
+
+/-- The plaquette contribution is measurable as a function of the link variable,
+
+  because it involves only finitely many matrix entries (multiplication, inversion,
+
+  trace, and real part are all continuous, hence measurable). -/
+
+lemma measurable_plaquetteContribution (N : ℕ) (β : ℝ) (Λ : Type) [DecidableEq Λ] [AddVector Λ]
+
+    (n : Λ) (μ ν : Fin 4) : Measurable (λ (U : LinkVariable (SU N) Λ) => plaquetteContribution N β U n μ ν) := by
+
+  unfold plaquetteContribution
+
+  -- The map U ↦ U.value is measurable (comap definition)
+
+  have h_value_map : Measurable (fun (U : LinkVariable (SU N) Λ) => U.value) :=
+
+    comap_measurable (fun (U : LinkVariable (SU N) Λ) => U.value)
+
+  -- For each n', μ', the map U ↦ U.value n' μ' is measurable
+
+  have h_val_meas (n' : Λ) (μ' : Fin 4) : Measurable (λ (U : LinkVariable (SU N) Λ) => U.value n' μ') := by
+
+    have h_at_n : Measurable (λ (f : Λ → Fin 4 → SU N) => f n') := measurable_pi_apply n'
+
+    have h_at_n_μ' : Measurable (λ (f : Fin 4 → SU N) => f μ') := measurable_pi_apply μ'
+
+    exact h_at_n_μ'.comp (h_at_n.comp h_value_map)
+
+  -- The plaquetteProduct is a product of four SU(N) entries, each measurable
+
+  have h_pp_meas : Measurable (λ (U : LinkVariable (SU N) Λ) => plaquetteProduct N U n μ ν) := by
+
+    unfold plaquetteProduct
+
+    have h_inv_meas : Measurable (λ (g : SU N) => g⁻�) := (Continuous.inv continuous_id).measurable
+
+    -- Build the product: A * B * C⁻� * D⁻�
+
+    -- Using Measurable.mul repeatedly with right-associativity
+
+    have h_A : Measurable (λ (U : LinkVariable (SU N) Λ) => U.value n μ) := h_val_meas n μ
+
+    have h_B : Measurable (λ (U : LinkVariable (SU N) Λ) => U.value (AddVector.addVector n μ) ν) :=
+
+      h_val_meas (AddVector.addVector n μ) ν
+
+    have h_C_inv : Measurable (λ (U : LinkVariable (SU N) Λ) => (U.value (AddVector.addVector (AddVector.addVector n μ) ν) μ)⁻�) :=
+
+      h_inv_meas.comp (h_val_meas (AddVector.addVector (AddVector.addVector n μ) ν) μ)
+
+    have h_D_inv : Measurable (λ (U : LinkVariable (SU N) Λ) => (U.value (AddVector.addVector n ν) ν)⁻�) :=
+
+      h_inv_meas.comp (h_val_meas (AddVector.addVector n ν) ν)
+
+    -- A * B * C⁻� * D⁻� = ((A * B) * C⁻�) * D⁻�
+
+    have h_AB : Measurable (λ (U : LinkVariable (SU N) Λ) => U.value n μ * U.value (AddVector.addVector n μ) ν) :=
+
+      Measurable.mul h_A h_B
+
+    have h_AB_Cinv : Measurable (λ (U : LinkVariable (SU N) Λ) => (U.value n μ * U.value (AddVector.addVector n μ) ν) *
+
+      (U.value (AddVector.addVector (AddVector.addVector n μ) ν) μ)⁻�) :=
+
+      Measurable.mul h_AB h_C_inv
+
+    have h_ABCD : Measurable (λ (U : LinkVariable (SU N) Λ) => (U.value n μ * U.value (AddVector.addVector n μ) ν) *
+
+      (U.value (AddVector.addVector (AddVector.addVector n μ) ν) μ)⁻� * (U.value (AddVector.addVector n ν) ν)⁻�) :=
+
+      Measurable.mul h_AB_Cinv h_D_inv
+
+    -- The expression is now grouped as (A*B)*C⁻�*D⁻� but the goal has A*B*C⁻�*D⁻� (left-assoc)
+
+    -- The grouping doesn't matter for measurability
+
+    simpa [mul_assoc] using h_ABCD
+
+  -- Now handle the trace and real part
+
+  have h_cont_trace_re : Continuous (λ (g : SU N) => ((trace ((g : Matrix (Fin N) (Fin N) ℂ))).re : ℝ)) := by
+
+    have h_cont_trace : Continuous (trace : Matrix (Fin N) (Fin N) ℂ → ℂ) := by
+
+      have h_eq : trace = λ (A : Matrix (Fin N) (Fin N) ℂ) => ∑ i : Fin N, A i i := by
+
+        ext A; simp [Matrix.trace]
+
+      rw [h_eq]
+
+      apply continuous_finsetSum
+
+      intro i hi
+
+      have h_entry : Continuous (λ (A : Matrix (Fin N) (Fin N) ℂ) => A i i) :=
+
+        (continuous_apply i).comp (continuous_apply i)
+
+      exact h_entry
+
+    have h_cont_val : Continuous (Subtype.val : SU N → Matrix (Fin N) (Fin N) ℂ) :=
+
+      continuous_subtype_val
+
+    have h_cont_re : Continuous (Complex.re : ℂ → ℝ) := Complex.continuous_re
+
+    exact h_cont_re.comp (h_cont_trace.comp h_cont_val)
+
+  have h_trace_re_meas : Measurable (λ (U : LinkVariable (SU N) Λ) =>
+
+    ((trace ((plaquetteProduct N U n μ ν : Matrix (Fin N) (Fin N) ℂ))).re : ℝ)) :=
+
+    h_cont_trace_re.measurable.comp h_pp_meas
+
+  -- Now combine with constants: β * (1 - (1/N) * (...))
+
+  have h_inner : Measurable (λ (U : LinkVariable (SU N) Λ) =>
+
+    (1 : ℝ) - (1 / (N : ℝ)) * ((trace ((plaquetteProduct N U n μ ν : Matrix (Fin N) (Fin N) ℂ))).re : ℝ)) := by
+
+    refine Measurable.sub measurable_const (Measurable.mul measurable_const h_trace_re_meas)
+
+  exact (measurable_const_mul β).comp h_inner
+
+
+
+/-- The positive-time part of the OS Wilson action is measurable. -/
+
+lemma measurable_wilsonActionOSPositive (N T L : ℕ) (β : ℝ) [NeZero T] [NeZero L] :
+
+    Measurable (wilsonActionOSPositive N T L β) := by
+
+  unfold wilsonActionOSPositive
+
+  refine Finset.measurable_sum _ (λ n hn => ?_)
+
+  refine Finset.measurable_sum _ (λ μ hμ => ?_)
+
+  refine Finset.measurable_sum _ (λ ν hν => ?_)
+
+  split_ifs
+
+  � exact measurable_plaquetteContribution N β (PeriodicSite T L) n μ ν
+
+  � exact measurable_const
+
+
+
+/-- The interface part of the OS Wilson action is measurable. -/
+
+lemma measurable_wilsonActionOSInterface (N T L : ℕ) (β : ℝ) [NeZero T] [NeZero L] :
+
+    Measurable (wilsonActionOSInterface N T L β) := by
+
+  unfold wilsonActionOSInterface
+
+  refine Finset.measurable_sum _ (λ n hn => ?_)
+
+  refine Finset.measurable_sum _ (λ μ hμ => ?_)
+
+  refine Finset.measurable_sum _ (λ ν hν => ?_)
+
+  split_ifs
+
+  � exact measurable_plaquetteContribution N β (PeriodicSite T L) n μ ν
+
+  � exact measurable_const
+
+
+
+/-- The negative-time part of the OS Wilson action is measurable. -/
+
+lemma measurable_wilsonActionOSNegative (N T L : ℕ) (β : ℝ) [NeZero T] [NeZero L] :
+
+    Measurable (wilsonActionOSNegative N T L β) := by
+
+  unfold wilsonActionOSNegative
+
+  refine Finset.measurable_sum _ (λ n hn => ?_)
+
+  refine Finset.measurable_sum _ (λ μ hμ => ?_)
+
+  refine Finset.measurable_sum _ (λ ν hν => ?_)
+
+  split_ifs
+
+  � exact measurable_plaquetteContribution N β (PeriodicSite T L) n μ ν
+
+  � exact measurable_const
+
+
+
+/-- G(U) is measurable when f is measurable. -/
+
+lemma measurable_G (f : LinkVariable (SU N) (PeriodicSite T L) → ℝ) (hf : Measurable f) :
+
+    Measurable (G N T L hT β f) := by
+
+  unfold G
+
+  have h_pos_meas : Measurable (wilsonActionOSPositive N T L β) :=
+
+    measurable_wilsonActionOSPositive N T L β
+
+  have h_int_meas : Measurable (wilsonActionOSInterface N T L β) :=
+
+    measurable_wilsonActionOSInterface N T L β
+
+  have h_exp_pos : Measurable (λ (U : LinkVariable (SU N) (PeriodicSite T L)) =>
+
+    Real.exp (-β * wilsonActionOSPositive N T L β U)) := by
+
+    have h_mul : Measurable (λ (U : LinkVariable (SU N) (PeriodicSite T L)) => -β * wilsonActionOSPositive N T L β U) :=
+
+      (measurable_const_mul (-β)).comp h_pos_meas
+
+    exact Real.measurable_exp.comp h_mul
+
+  have h_exp_int : Measurable (λ (U : LinkVariable (SU N) (PeriodicSite T L)) =>
+
+    Real.exp (-β * wilsonActionOSInterface N T L β U / 2)) := by
+
+    have h_mul : Measurable (λ (U : LinkVariable (SU N) (PeriodicSite T L)) => -β * wilsonActionOSInterface N T L β U / 2) :=
+
+      ((measurable_const_mul (-β)).comp h_int_meas).div_const (2 : ℝ)
+
+    exact Real.measurable_exp.comp h_mul
+
+  -- G = f * exp1 * exp2. The goal after unfold G is Measurable (λ U => (f U * exp1 U) * exp2 U),
+
+  -- while hf.mul (h_exp_pos.mul h_exp_int) gives Measurable (f * (exp1 * exp2)).
+
+  -- We show the two function expressions are equal.
+
+  have h_eq : f * ((λ (U : LinkVariable (SU N) (PeriodicSite T L)) => Real.exp (-β * wilsonActionOSPositive N T L β U)) *
+
+      (λ (U : LinkVariable (SU N) (PeriodicSite T L)) => Real.exp (-β * wilsonActionOSInterface N T L β U / 2))) =
+
+    (λ (U : LinkVariable (SU N) (PeriodicSite T L)) => f U * Real.exp (-β * wilsonActionOSPositive N T L β U) *
+
+      Real.exp (-β * wilsonActionOSInterface N T L β U / 2)) := by
+
+    ext U; simp [Pi.mul_apply, mul_assoc]
+
+  rw [← h_eq]
+
+  exact hf.mul (h_exp_pos.mul h_exp_int)
+
+
+
+/-- The integrand in the LHS of the key identity is measurable (hence AEStronglyMeasurable).
+
+  This follows because G, extendLinkVariable and reflectLinkVariable are all continuous
+
+  (or at least measurable) functions on a compact group. -/
+
+lemma integrand_measurable (f : LinkVariable (SU N) (PeriodicSite T L) → ℝ) (hf : Measurable f) :
+
+    Measurable (λ (cfg : FiniteLinkConfig N (PeriodicSite T L) (Finset.univ : Finset (PeriodicSite T L))) =>
+
+      G N T L hT β f (extendLinkVariable N (PeriodicSite T L) (Finset.univ : Finset (PeriodicSite T L)) cfg) *
+
+      G N T L hT β f (reflectLinkVariable N (extendLinkVariable N (PeriodicSite T L) (Finset.univ : Finset (PeriodicSite T L)) cfg))) := by
+
+  have hG_meas : Measurable (G N T L hT β f) := measurable_G N T L hT β f hf
+
+  have h_ext_meas : Measurable (extendLinkVariable N (PeriodicSite T L) (Finset.univ : Finset (PeriodicSite T L))) :=
+
+    measurable_extendLinkVariable N (PeriodicSite T L) (Finset.univ : Finset (PeriodicSite T L))
+
+  have h_reflect_meas : Measurable (reflectLinkVariable N : LinkVariable (SU N) (PeriodicSite T L) → LinkVariable (SU N) (PeriodicSite T L)) :=
+
+    measurable_reflectLinkVariable N T L
+
+  have h_first : Measurable (λ (cfg : _) => G N T L hT β f (extendLinkVariable N (PeriodicSite T L) (Finset.univ : Finset (PeriodicSite T L)) cfg)) :=
+
+    hG_meas.comp h_ext_meas
+
+  have h_second : Measurable (λ (cfg : _) => G N T L hT β f (reflectLinkVariable N (extendLinkVariable N (PeriodicSite T L) (Finset.univ : Finset (PeriodicSite T L)) cfg))) :=
+
+    hG_meas.comp (h_reflect_meas.comp h_ext_meas)
+
+  exact Measurable.mul h_first h_second
+
+
+
+/-- `linkVariableRestrict` is measurable (each coordinate is a projection from `U.value`). -/
+
+lemma measurable_linkVariableRestrict (Λ : Type) [DecidableEq Λ] (sites : Finset Λ) :
+
+    Measurable (linkVariableRestrict N Λ sites) := by
+
+  rw [measurable_pi_iff]
+
+  intro idx
+
+  rcases idx with ⟨⟨n, μ⟩, hn⟩
+
+  dsimp [linkVariableRestrict]
+
+  have h_value_map : Measurable (fun (U : LinkVariable (SU N) Λ) => U.value) :=
+
+    comap_measurable (fun (U : LinkVariable (SU N) Λ) => U.value)
+
+  have h_at_n : Measurable (λ (f : Λ → Fin 4 → SU N) => f n) := measurable_pi_apply n
+
+  have h_at_n_μ : Measurable (λ (f : Fin 4 → SU N) => f μ) := measurable_pi_apply μ
+
+  exact h_at_n_μ.comp (h_at_n.comp h_value_map)
+
+
+
+/-- `mergeConfigurations` is measurable in its first argument when the second is fixed. -/
+
+lemma measurable_mergeConfigurations_first (U_plus_zero : PosInterfaceConfig N T L) :
+
+    Measurable (λ (U_minus : FiniteLinkConfig N (PeriodicSite T L) (negativeSites T L)) =>
+
+      mergeConfigurations N T L U_minus U_plus_zero) := by
+
+  rw [measurable_pi_iff]
+
+  intro idx
+
+  rcases idx with ⟨⟨n, μ⟩, hn⟩
+
+  by_cases hpos : n ∈ positiveSites T L
+
+  � -- At a positive site, the value is constant (from U_plus_zero)
+
+    have h_const : (λ (U_minus : FiniteLinkConfig N (PeriodicSite T L) (negativeSites T L)) =>
+
+      (mergeConfigurations N T L U_minus U_plus_zero) ⟨(n, μ), hn⟩) =
+
+      λ _ => U_plus_zero ⟨(n, μ), Finset.mem_union_left (interfaceSites T L) hpos⟩ := by
+
+      ext U_minus; simp [mergeConfigurations, hpos]
+
+    rw [h_const]
+
+    exact measurable_const
+
+  � by_cases hneg : n ∈ negativeSites T L
+
+    � -- At a negative site, the value is a projection from U_minus
+
+      have h_proj : (λ (U_minus : FiniteLinkConfig N (PeriodicSite T L) (negativeSites T L)) =>
+
+        (mergeConfigurations N T L U_minus U_plus_zero) ⟨(n, μ), hn⟩) =
+
+        λ U_minus => U_minus ⟨(n, μ), hneg⟩ := by
+
+        ext U_minus; simp [mergeConfigurations, hpos, hneg]
+
+      rw [h_proj]
+
+      refine measurable_pi_apply (⟨(n, μ), hneg⟩ : FiniteLinkIndex (PeriodicSite T L) (negativeSites T L))
+
+    � -- At an interface site, the value is constant (from U_plus_zero)
+
+      have hint : n ∈ interfaceSites T L := by
+
+        have h_cover := sites_cover T L
+
+        have hn_univ : n ∈ Finset.univ := hn
+
+        have h_mem : n ∈ (positiveSites T L) ∪ (negativeSites T L) ∪ (interfaceSites T L) := by
+
+          rw [h_cover]; exact hn_univ
+
+        rcases Finset.mem_union.mp h_mem with (h | h)
+
+        � rcases Finset.mem_union.mp h with (h' | h')
+
+          � exfalso; exact hpos h'
+
+          � exfalso; exact hneg h'
+
+        � exact h
+
+      have h_const : (λ (U_minus : FiniteLinkConfig N (PeriodicSite T L) (negativeSites T L)) =>
+
+        (mergeConfigurations N T L U_minus U_plus_zero) ⟨(n, μ), hn⟩) =
+
+        λ _ => U_plus_zero ⟨(n, μ), Finset.mem_union_right (positiveSites T L) hint⟩ := by
+
+        ext U_minus; simp [mergeConfigurations, hpos, hneg, hint]
+
+      rw [h_const]
+
+      exact measurable_const
+
+
+
+/-- `reflectToPosInterface` is measurable in its first argument when the second is fixed. -/
+
+lemma measurable_reflectToPosInterface_first (U_zero : FiniteLinkConfig N (PeriodicSite T L) (interfaceSites T L)) :
+
+    Measurable (λ (U_minus : FiniteLinkConfig N (PeriodicSite T L) (negativeSites T L)) =>
+
+      reflectToPosInterface N T L U_minus U_zero) := by
+
+  -- Define the constant second argument to mergeConfigurations
+
+  let c : PosInterfaceConfig N T L := λ idx =>
+
+    match idx with
+
+    | ⟨(n, μ), hmem⟩ =>
+
+      if hpos : n ∈ positiveSites T L then (1 : SU N)
+
+      else
+
+        have hint : n ∈ interfaceSites T L := by
+
+          rcases Finset.mem_union.mp hmem with (hpos' | hint')
+
+          � exact (hpos hpos').elim
+
+          � exact hint'
+
+        U_zero ⟨(n, μ), hint⟩
+
+  have h_merge : Measurable (λ (U_minus : FiniteLinkConfig N (PeriodicSite T L) (negativeSites T L)) =>
+
+      mergeConfigurations N T L U_minus c) :=
+
+    measurable_mergeConfigurations_first N T L c
+
+  have h_ext : Measurable (extendLinkVariable N (PeriodicSite T L) (Finset.univ : Finset (PeriodicSite T L))) :=
+
+    measurable_extendLinkVariable N (PeriodicSite T L) (Finset.univ : Finset (PeriodicSite T L))
+
+  have h_reflect : Measurable (reflectLinkVariable N : LinkVariable (SU N) (PeriodicSite T L) → LinkVariable (SU N) (PeriodicSite T L)) :=
+
+    measurable_reflectLinkVariable N T L
+
+  have h_restrict : Measurable (linkVariableRestrict N (PeriodicSite T L) (positiveSites T L ∪ interfaceSites T L)) :=
+
+    measurable_linkVariableRestrict N (PeriodicSite T L) (positiveSites T L ∪ interfaceSites T L)
+
+  have h_comp : Measurable (linkVariableRestrict N (PeriodicSite T L) (positiveSites T L ∪ interfaceSites T L) ∘
+
+      reflectLinkVariable N ∘
+
+      extendLinkVariable N (PeriodicSite T L) (Finset.univ : Finset (PeriodicSite T L)) ∘
+
+      (λ U_minus => mergeConfigurations N T L U_minus c)) := by
+
+    refine h_restrict.comp ?_
+
+    refine h_reflect.comp ?_
+
+    refine h_ext.comp ?_
+
+    exact h_merge
+
+  have h_eq : (λ (U_minus : FiniteLinkConfig N (PeriodicSite T L) (negativeSites T L)) =>
+
+      reflectToPosInterface N T L U_minus U_zero) =
+
+    (linkVariableRestrict N (PeriodicSite T L) (positiveSites T L ∪ interfaceSites T L) ∘
+
+      reflectLinkVariable N ∘
+
+      extendLinkVariable N (PeriodicSite T L) (Finset.univ : Finset (PeriodicSite T L)) ∘
+
+      (λ U_minus => mergeConfigurations N T L U_minus c)) := by
+
+    rfl
+
+  rw [h_eq]
+
+  exact h_comp
+
+
+
+/-- `extendToFullConfig` is measurable in its first argument when the second is fixed. -/
+
+lemma measurable_extendToFullConfig_first (u : PosInterfaceConfig N T L) :
+
+    Measurable (λ (U_minus : FiniteLinkConfig N (PeriodicSite T L) (negativeSites T L)) =>
+
+      extendToFullConfig N T L U_minus u) := by
+
+  dsimp [extendToFullConfig]
+
+  refine (measurable_extendLinkVariable N (PeriodicSite T L) (Finset.univ : Finset (PeriodicSite T L))).comp ?_
+
+  exact measurable_mergeConfigurations_first N T L u
+
+
+
+/-- The key identity for the Osterwalder-Seiler reflection positivity proof:
+
+
+
+  ∫ G(U)�G(θU) dμ₀(U) = ∫_{PosInt} g(u)�(T g)(u) dμ⁺⁰(u)
+
+
+
+  where G(U) = f(U)�exp(-β�S_OS⁺(U))�exp(-β�S_OS_int(U)/2) and
+
+  g(u) = f(u)�exp(-β�S_OS⁺(u)/2).
+
+
+
+  Hypothesis: `hf_supported` ensures f (hence g) depends only on positive+interface links.
+
+  Hypothesis: `hf` ensures f is measurable (so the integrals are well-defined).
+
+-/
+
+lemma integral_G_thetaG_eq_inner_g_Tg (f : LinkVariable (SU N) (PeriodicSite T L) → ℝ)
+
+    (hf : Measurable f) (hf_supported : dependsOnlyOnPosInterface N T L f) :
+
+    (∫ (cfg : FiniteLinkConfig N (PeriodicSite T L) (Finset.univ : Finset (PeriodicSite T L))),
+
+      G N T L hT β f (extendLinkVariable N (PeriodicSite T L) (Finset.univ : Finset (PeriodicSite T L)) cfg) *
+
+      G N T L hT β f (reflectLinkVariable N (extendLinkVariable N (PeriodicSite T L) (Finset.univ : Finset (PeriodicSite T L)) cfg))
+
+      ∂ productHaarMeasure N (PeriodicSite T L) (Finset.univ : Finset (PeriodicSite T L))) =
+
+    (∫ (u : PosInterfaceConfig N T L),
+
+      g_posInterface N T L hT β f u * (transferMatrixCorrect N T L β (g_posInterface N T L hT β f) u)
+
+      ∂ haarMeasurePosInterface N T L) := by
+
+  sorry
+
+  sorry
+

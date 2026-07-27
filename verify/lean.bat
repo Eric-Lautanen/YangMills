@@ -18,7 +18,9 @@ if exist "%TMPFILE%" (
 
 set PATH=%USERPROFILE%\.elan\bin;%PATH%
 
-lean "%TMPFILE%" 2>&1
+REM Run lean with lake environment to find project modules
+cd /d "%~dp0.."
+lake env lean "%TMPFILE%" 2>&1
 set EXITCODE=%ERRORLEVEL%
 
 del "%TMPFILE%" 2>nul
