@@ -114,20 +114,38 @@ The corrected transfer matrix has been implemented in `TransferMatrix.lean`:
    - `PositiveDefinite.integralOperator_nonneg` — a PD kernel on a compact
      group defines a positive integral operator
      (`∫∫ f(x)·conj(f(y))·K(x⁻¹y) dμ dμ ≥ 0`).
+   - `PositiveDefiniteKernel.integralOperator_nonneg` — the *Mercer-type*
+     generalization: a continuous Mercer-PD kernel on a compact space (no group
+     structure needed) defines a positive integral operator.  This is approach
+     (a) below, now built.  `PositiveDefinite.toPositiveDefiniteKernel` embeds
+     the group-theoretic notion into the Mercer one.
+   Building blocks for promoting `plaquetteBoltzmannPD` to the full Boltzmann
+   factor are also proved in `PositiveDefinite.lean` (0 sorries):
+   `PositiveDefinite.comp_mulEquiv` (PD preserved by group isomorphisms),
+   `PositiveDefinite.comp_hom` (PD preserved by group homomorphisms —
+   generalizes `comp_mulEquiv` to coordinate projections),
+   `PositiveDefinite.fst`/`.snd` (extension by constants), and
+   `PositiveDefinite.finprod` (n-ary Schur product theorem).
+   Additionally, `repCharacter_inv` (χ(g⁻¹) = conj(χ(g)) for unitary reps) and
+   `plaquetteBoltzmannPD_inv` (the plaquette Boltzmann factor with **inverse
+   links** exp(c·Re Tr(g₁g₂g₃⁻¹g₄⁻¹)) is PD on SU(N)⁴) are proved in
+   `PositiveDefinite.lean` / `PeterWeyl.lean`.  This handles the actual lattice
+   plaquette product U(n,μ)·U(n+e_μ,ν)·U(n+e_μ+e_ν,μ)⁻¹·U(n+e_ν,ν)⁻¹ which has
+   inverses on the 3rd and 4th links (orientation reversal).
    The **remaining** work is the concrete wiring: showing the transfer-matrix
    kernel is a PD function of the interface link variables (via
    `PositiveDefinite.integral` applied to the plaquette factors, themselves PD
-   by `plaquetteBoltzmannPD` modulo the Peter–Weyl axiom), then applying
+   by `plaquetteBoltzmannPD_inv` modulo the Peter–Weyl axiom), then applying
    `integralOperator_nonneg`.  **Key obstruction**: the TM kernel
    `(Tψ)(u) = ∫ ψ(θ⁻⁰(U⁻,u⁰))·exp(-β·(...)) dμ⁻(U⁻)` is NOT of the form
    `φ(u⁻¹·v)` for a PD function `φ` on a group — the reflection map `θ⁻⁰` is a
    geometric operation, not group multiplication.  While `PosInterfaceConfig`
    is a product of SU(N)'s (hence a group), the kernel does not factor through
-   the group structure.  Closing the axiom requires either (a) a more general
-   PD kernel theory (Mercer-type), (b) showing the TM kernel reduces to the
-   group-theoretic form, or (c) applying the Peter–Weyl character expansion
-   directly to the TM kernel.  This is a fundamental mathematical gap, not
-   just formalization work.
+   the group structure.  The Mercer framework removes the *group-structure*
+   obstruction, but showing the TM kernel *is* Mercer-PD still requires the
+   Peter–Weyl character expansion to decompose the Boltzmann factor into
+   separable positive terms (approach (c)).  This is a fundamental mathematical
+   gap, not just formalization work.
 
 3. **`gibbsExpectationPeriodic_reflection_positive`**: The final `sorry` in
    `ReflectionPositivity.lean` (line 1437) that depends on (2).

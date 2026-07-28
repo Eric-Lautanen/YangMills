@@ -21,6 +21,7 @@ import YangMills.SpecialUnitary
 import YangMills.Proofs.LatticeMeasure
 import YangMills.Proofs.BasicLemmas
 import YangMills.Proofs.PeterWeyl
+import YangMills.Proofs.BoltzmannFactor
 import Mathlib.LinearAlgebra.Matrix.Trace
 
 set_option linter.unusedVariables false
@@ -1463,6 +1464,66 @@ lemma gibbsExpectationPeriodic_reflection_positive (N T L : ℕ) (β : ℝ) [NeZ
       -- justified by `plaquetteBoltzmannPD` (Peter-Weyl / Clebsch-Gordan) ⟹
       -- transfer matrix T positive ⟹ ∫ G·G(θU) ≥ 0.  See the axiom's docstring.
       exact transferMatrixPositivity_axiom N T L β hT f hf_supported
+
+/-! ## Clean factorization and the PD-structure obstruction
+
+The reflection-positivity integrand `osG(U) · osG(θU)` factorizes cleanly as
+`f(U) · f(θU) · exp(-β S_W(U))` (lemma `osG_thetaG_factorization` below).
+This shows that the axiom `transferMatrixPositivity_axiom` is equivalent to:
+
+    ∫ f(U) · f(θU) · exp(-β S_W(U)) dμ₀ ≥ 0
+
+where `exp(-β S_W)` is the full Boltzmann factor, proved positive-definite on the
+full link-variable group by `boltzmannFactorPD` (in `BoltzmannFactor.lean`).
+
+**Key obstruction**: this integral is NOT the standard positive-definite quadratic
+form `∫∫ f(g) conj(f(h)) K(g⁻¹ h) dμ dμ ≥ 0` (which follows from PD-ness of `K`).
+Instead, it is a *single* integral `∫ f(g) f(θg) K(g) dμ` with the geometric
+reflection `θ` and `K` evaluated at `g` (not `g⁻¹ h`).  PD-ness of `K` on the
+group does NOT imply this integral is non-negative; the Peter–Weyl character
+expansion of `K` and character orthogonality are needed to decompose the
+integrand into `|Fourier coefficients|²`.  See `docs/gap_analysis.md` for the
+full analysis.
+-/
+
+/-- **Clean factorization of the reflection-positivity integrand.**
+
+`osG(U) · osG(θU) = f(U) · f(θU) · exp(-β S_W(U))`.
+
+This is a purely algebraic identity: it follows from the reflection symmetries
+`S⁺(θU) = S⁻(U)` and `S_int(θU) = S_int(U)`, together with the action
+decomposition `S_W = S⁺ + S⁻ + S_int`.  No support hypothesis on `f` is needed. -/
+lemma osG_thetaG_factorization
+    (N T L : ℕ) (β : ℝ) [NeZero T] [NeZero L] (hT : Odd T)
+    (f : LinkVariable (SU N) (PeriodicSite T L) → ℝ)
+    (U : LinkVariable (SU N) (PeriodicSite T L)) :
+    osG N T L β f U * osG N T L β f (reflectLinkVariable N U) =
+    f U * f (reflectLinkVariable N U) *
+    Real.exp (-β * wilsonActionFinite N β (Finset.univ : Finset (PeriodicSite T L)) U) := by
+  unfold osG
+  have h_pos_reflect : wilsonActionOSPositive N T L β (reflectLinkVariable N U) =
+      wilsonActionOSNegative N T L β U :=
+    (neg_action_reflection_os_periodic N T L β hT U).symm
+  have h_int_reflect : wilsonActionOSInterface N T L β (reflectLinkVariable N U) =
+      wilsonActionOSInterface N T L β U :=
+    interface_action_reflection_symmetric_os_periodic N T L β hT U
+  have h_total : wilsonActionFinite N β (Finset.univ : Finset (PeriodicSite T L)) U =
+      wilsonActionOSPositive N T L β U + wilsonActionOSNegative N T L β U +
+      wilsonActionOSInterface N T L β U :=
+    total_decomposition_os_periodic N T L β U
+  rw [h_pos_reflect, h_int_reflect, h_total]
+  -- Split the RHS exp(-β*(S⁺+S⁻+S_int)) into a product of four exp's matching the LHS
+  rw [show (-β * (wilsonActionOSPositive N T L β U + wilsonActionOSNegative N T L β U +
+      wilsonActionOSInterface N T L β U) : ℝ) =
+      (-β * wilsonActionOSPositive N T L β U) + (-β * wilsonActionOSNegative N T L β U) +
+      (-β * wilsonActionOSInterface N T L β U) by ring]
+  rw [Real.exp_add, Real.exp_add]
+  rw [show (-β * wilsonActionOSInterface N T L β U : ℝ) =
+      (-β * wilsonActionOSInterface N T L β U / 2) + (-β * wilsonActionOSInterface N T L β U / 2)
+      by ring]
+  rw [Real.exp_add]
+  ring
+
 structure PeriodicExpectation (N T L : ℕ) (β : ℝ) [NeZero T] [NeZero L] (hT : Odd T) : Type 1 where
   /-- The partition function Z = ∫ exp(-S_W) dU. -/
   partitionFunction : ℝ

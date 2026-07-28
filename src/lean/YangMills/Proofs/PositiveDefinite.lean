@@ -409,6 +409,106 @@ lemma PositiveDefinite.prod {G H : Type*} [Group G] [Group H]
 
 end ProductGroup
 
+/-! ## Building blocks for the full Boltzmann factor
+
+These lemmas are the abstract ingredients needed to promote the single-plaquette
+positive-definiteness result `plaquetteBoltzmannPD` (in `PeterWeyl.lean`) to
+positive-definiteness of the *full* Wilson Boltzmann factor
+`exp(-β · S_W)` on the entire link-variable group `SU(N)^{#links}`.
+
+* `PositiveDefinite.comp_mulEquiv`: positive-definiteness is preserved by group
+  isomorphisms.  This lets one permute / rearrange the factors of a product group
+  (e.g. place four plaquette links at arbitrary positions among all links).
+* `PositiveDefinite.fst` / `.snd`: a positive-definite function on one factor,
+  viewed as a function on a product group that ignores the other factor, is
+  positive-definite.  This lets one regard a single-plaquette factor (which
+  depends on only four links) as a function on the full link group.
+* `PositiveDefinite.finprod`: a finite product of positive-definite functions on
+  the same group is positive-definite (the n-ary Schur product theorem).  This
+  combines the individual (extended) plaquette factors into the full Boltzmann
+  factor `∏_p exp(β · Re Tr(U_{∂p}))`.
+-/
+
+section BuildingBlocks
+
+variable {G H : Type*} [Group G] [Group H]
+
+/-- Positive-definiteness is preserved by group isomorphisms: if `e : G ≃* H`
+is a group isomorphism and `φ : H → ℂ` is positive-definite, then
+`φ ∘ e : G → ℂ` is positive-definite.  The proof regroups the quadratic form by
+the image of `e` using `PositiveDefinite.sum_nonneg_of_map`. -/
+lemma PositiveDefinite.comp_mulEquiv (e : G ≃* H) {φ : H → ℂ}
+    (hφ : PositiveDefinite φ) : PositiveDefinite (fun g => φ (e g)) := by
+  intro s c
+  have hkey := hφ.sum_nonneg_of_map s e c
+  have hsum_eq : (∑ i ∈ s, ∑ j ∈ s, c i * conj (c j) * φ (e (i⁻¹ * j))) =
+      (∑ i ∈ s, ∑ j ∈ s, c i * conj (c j) * φ ((e i)⁻¹ * e j)) := by
+    apply Finset.sum_congr rfl
+    intro i hi
+    apply Finset.sum_congr rfl
+    intro j hj
+    congr 1
+    rw [MulEquiv.map_mul, MulEquiv.map_inv]
+  rw [hsum_eq]
+  exact hkey
+
+/-- Positive-definiteness is preserved by group homomorphisms: if `f : G →* H`
+is a group homomorphism and `φ : H → ℂ` is positive-definite, then
+`φ ∘ f : G → ℂ` is positive-definite.  This generalizes `comp_mulEquiv` from
+isomorphisms to arbitrary homomorphisms (e.g. coordinate projections from a
+product group to a sub-product).  The proof regroups the quadratic form by the
+image of `f` using `PositiveDefinite.sum_nonneg_of_map`. -/
+lemma PositiveDefinite.comp_hom (f : G →* H) {φ : H → ℂ}
+    (hφ : PositiveDefinite φ) : PositiveDefinite (fun g => φ (f g)) := by
+  intro s c
+  have hkey := hφ.sum_nonneg_of_map s f c
+  have hsum_eq : (∑ i ∈ s, ∑ j ∈ s, c i * conj (c j) * φ (f (i⁻¹ * j))) =
+      (∑ i ∈ s, ∑ j ∈ s, c i * conj (c j) * φ ((f i)⁻¹ * f j)) := by
+    apply Finset.sum_congr rfl
+    intro i hi
+    apply Finset.sum_congr rfl
+    intro j hj
+    congr 1
+    rw [MonoidHom.map_mul, MonoidHom.map_inv]
+  rw [hsum_eq]
+  exact hkey
+
+/-- A positive-definite function on `G`, regarded as a function on `G × H` that
+ignores the `H`-component, is positive-definite on `G × H`. -/
+lemma PositiveDefinite.fst {φ : G → ℂ} (hφ : PositiveDefinite φ) :
+    PositiveDefinite (fun (p : G × H) => φ p.1) := by
+  have h := PositiveDefinite.prod hφ (@PositiveDefinite.one H _)
+  convert h using 1
+  ext p; simp
+
+/-- A positive-definite function on `H`, regarded as a function on `G × H` that
+ignores the `G`-component, is positive-definite on `G × H`. -/
+lemma PositiveDefinite.snd {ψ : H → ℂ} (hψ : PositiveDefinite ψ) :
+    PositiveDefinite (fun (p : G × H) => ψ p.2) := by
+  have h := PositiveDefinite.prod (@PositiveDefinite.one G _) hψ
+  convert h using 1
+  ext p; simp
+
+/-- A finite product of positive-definite functions on the same group is
+positive-definite (the n-ary Schur product theorem). -/
+lemma PositiveDefinite.finprod {ι : Type*} (s : Finset ι) (f : ι → G → ℂ)
+    (hf : ∀ i ∈ s, PositiveDefinite (f i)) :
+    PositiveDefinite (fun g => ∏ i ∈ s, f i g) := by
+  classical
+  induction s using Finset.induction_on with
+  | empty => simp [PositiveDefinite.one]
+  | insert x s hx ih =>
+    have hPDx : PositiveDefinite (f x) := hf x (Finset.mem_insert_self x s)
+    have hPDs : PositiveDefinite (fun g => ∏ i ∈ s, f i g) :=
+      ih (fun i hi => hf i (Finset.mem_insert_of_mem hi))
+    have heq : (fun g => ∏ i ∈ insert x s, f i g) =
+        fun g => f x g * ∏ i ∈ s, f i g := by
+      funext g; rw [Finset.prod_insert hx]
+    rw [heq]
+    exact PositiveDefinite.mul hPDx hPDs
+
+end BuildingBlocks
+
 section SU_N
 
 open Matrix
@@ -641,3 +741,19 @@ lemma repCharacter_positiveDefinite
   have h_trace_nonneg : 0 ≤ Matrix.trace (Bᴴ * B) := h_nonneg_sq B
   rw [← h_tr_eq]
   exact h_trace_nonneg
+
+/-- For a unitary representation, the character satisfies `χ(g⁻¹) = conj(χ(g))`.
+This follows from `ρ(g⁻¹) = ρ(g)⁻¹ = ρ(g)ᴴ` (unitary) and
+`Tr(Mᴴ) = conj(Tr(M))`. -/
+lemma repCharacter_inv (ρ : G →* Matrix (Fin n) (Fin n) ℂ)
+    (h_unitary : IsUnitaryRepresentation ρ) (g : G) :
+    repCharacter ρ g⁻¹ = conj (repCharacter ρ g) := by
+  have h_star_eq : (ρ g)ᴴ = ρ g⁻¹ := by
+    rw [conjTranspose_eq_inv_of_unitary (h_unitary g)]
+    have hmul : ρ g * ρ g⁻¹ = 1 := by
+      rw [← ρ.map_mul, show g * g⁻¹ = 1 from by simp, ρ.map_one]
+    exact Matrix.inv_eq_right_inv hmul
+  rw [repCharacter, repCharacter, ← h_star_eq]
+  simp [Matrix.trace, Matrix.conjTranspose_apply, Complex.star_def]
+
+end UnitaryRepresentation

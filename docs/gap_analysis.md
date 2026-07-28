@@ -70,22 +70,149 @@ plaquette Boltzmann factors $\exp(c \cdot \operatorname{Re} \operatorname{Tr}(U_
    `PositiveDefinite.sum_nonneg_of_map`) and controls the error via uniform
    continuity on $G \times G$.
 
+**Approach (a) — Mercer-type PD kernel theory — is now also built** (same file,
+0 sorries, 0 custom axioms).  This removes the group-structure requirement:
+
+3. `PositiveDefiniteKernel` — a kernel $K : X \to X \to \mathbb{C}$ is
+   positive-definite in the Mercer sense: $\sum c_i \overline{c_j} K(x_i, x_j)
+   \ge 0$ for every finite set and coefficients.  No group structure on $X$.
+4. `PositiveDefiniteKernel.sum_nonneg_of_map` — the quadratic form is
+   non-negative even under a non-injective index map.
+5. `PositiveDefiniteKernel.integralOperator_nonneg` — a *continuous* Mercer-PD
+   kernel on a compact space defines a positive integral operator, with no
+   Haar-measure invariance or group structure needed.  This is the strictly more
+   general version of (2); `PositiveDefinite.toPositiveDefiniteKernel` shows the
+   group-theoretic notion embeds into the Mercer one.
+
+**Building blocks for the full Boltzmann factor** are now proved in
+`PositiveDefinite.lean` (0 sorries):
+
+6. `PositiveDefinite.comp_mulEquiv` — PD is preserved by group isomorphisms
+   (permute/rearrange factors of a product group).
+7. `PositiveDefinite.fst` / `.snd` — a PD function on one factor, viewed as a
+   function on a product that ignores the other factor, is PD (extension by
+   constants).
+8. `PositiveDefinite.finprod` — a finite product of PD functions on the same
+   group is PD (n-ary Schur product theorem).
+
+These are the abstract ingredients for promoting the single-plaquette result
+`plaquetteBoltzmannPD` to PD-ness of the full Boltzmann factor
+$\exp(-\beta S_W) = \prod_p \exp(\beta\,\operatorname{Re}\operatorname{Tr}(U_{\partial p}))$
+on the entire link-variable group.  The remaining combinatorial wiring (which
+links belong to which plaquette, permuting factors into position) is
+lattice-specific and not yet formalized.
+
+**Additional infrastructure** proved in `PositiveDefinite.lean` and
+`PeterWeyl.lean` (0 sorries, 0 custom axioms beyond the Peter–Weyl axiom):
+
+9. `PositiveDefinite.comp_hom` — PD is preserved by group *homomorphisms*
+   (generalizes `comp_mulEquiv` from isomorphisms to arbitrary homomorphisms,
+   e.g. coordinate projections from a product group to a sub-product).
+10. `repCharacter_inv` — for a unitary representation, the character satisfies
+    $\chi(g^{-1}) = \overline{\chi(g)}$ (from $\rho(g^{-1}) = \rho(g)^{-1} =
+    \rho(g)^H$ and $\operatorname{Tr}(M^H) = \overline{\operatorname{Tr}(M)}$).
+11. `plaquetteBoltzmannPD_inv` — the plaquette Boltzmann factor with **inverse
+    links** $\exp(c \cdot \operatorname{Re}\operatorname{Tr}(g_1 g_2 g_3^{-1}
+    g_4^{-1}))$ is PD on $\text{SU}(N)^4$.  This is the version needed for the
+    actual lattice plaquette product $U(n,\mu) \cdot U(n{+}e_\mu,\nu) \cdot
+    U(n{+}e_\mu{+}e_\nu,\mu)^{-1} \cdot U(n{+}e_\nu,\nu)^{-1}$, which has
+    inverses on the 3rd and 4th links (orientation reversal).  The proof
+    substitutes $(g_1, g_2, g_3^{-1}, g_4^{-1})$ into the Peter–Weyl axiom,
+    then replaces $\chi_u(g_3^{-1}) = \overline{\chi_u(g_3)}$ and
+    $\chi_v(g_4^{-1}) = \overline{\chi_v(g_4)}$ via `repCharacter_inv`; each
+    factor $\chi_s \cdot \chi_t \cdot \overline{\chi_u} \cdot \overline{\chi_v}$
+    is PD by `charProduct4_inv_positiveDefinite` (using `PositiveDefinite.conj`
+    on the 3rd and 4th factors), and the sum with non-negative coefficients is
+    PD by `PositiveDefinite.sum`.
+
+**Promotion to the full link-variable group** is now proved in
+`BoltzmannFactor.lean` (0 sorries, 0 custom axioms beyond the Peter–Weyl axiom;
+full `lake build` clean):
+
+12. `plaquetteProjection` — the group homomorphism
+    `LinkVariable (SU N) Λ →* ((SU N × SU N) × SU N) × SU N` extracting the four
+    link variables around a plaquette `(n, μ, ν)`.  It is a homomorphism because
+    the group operation on `LinkVariable` is pointwise (the product group
+    `SU(N)^{Λ × Fin 4}`) and the operation on `SU(N)^4` is componentwise; both
+    `map_one'` and `map_mul'` hold by `rfl` (definitional pointwise structure).
+13. `plaquetteFactorPD` — the plaquette Boltzmann factor
+    $\exp((\beta/N)\,\operatorname{Re}\operatorname{Tr}(U_{\partial p}))$ is PD on
+    the **full** link-variable group `LinkVariable (SU N) Λ`.  This is
+    `plaquetteBoltzmannPD_inv` (item 11) composed with `plaquetteProjection` via
+    `PositiveDefinite.comp_hom` (item 9); the composition equals the plaquette
+    factor because `plaquetteProduct` is exactly the `g₁ g₂ g₃⁻¹ g₄⁻¹` pattern
+    that `plaquetteBoltzmannPD_inv` expects.
+14. `plaquetteContributionPD` — the full plaquette contribution
+    $\exp(-S_p) = \exp(-\beta)\cdot\exp((\beta/N)\,\operatorname{Re}\operatorname{Tr}(U_{\partial p}))$
+    is PD on the full link-variable group, by `PositiveDefinite.smul_nonneg`
+    applied to the non-negative constant $\exp(-\beta)$ and `plaquetteFactorPD`.
+15. `boltzmannFactorPD` — the **full Boltzmann factor**
+    $\exp(-S_W) = \prod_{n,\mu,\nu} \exp(-S_p(n,\mu,\nu))$ is PD on the full
+    link-variable group `LinkVariable (SU N) Λ`.  The Wilson action is a sum of
+    plaquette contributions, so the Boltzmann factor factorises as a product;
+    each factor is PD by `plaquetteContributionPD` (item 14), and a finite
+    product of PD functions on the same group is PD by
+    `PositiveDefinite.finprod` (item 8, the n-ary Schur product theorem).  The
+    proof flattens the product over `(sites ×ˢ Fin 4) ×ˢ Fin 4` via
+    `Finset.prod_product`, pushes the negation through the nested sums via
+    `Finset.sum_neg_distrib`, and applies `Real.exp_sum` three times.  0
+    sorries, 0 custom axioms beyond the Peter–Weyl axiom, full `lake build`
+    clean (2967 jobs).
+
+**Mercer-PD kernel building blocks** are now proved in
+`PositiveDefiniteIntegral.lean` (0 sorries, 0 custom axioms; full `lake build`
+clean).  These are the algebraic ingredients needed to construct the TM kernel
+as a Mercer-PD kernel from the group-PD `boltzmannFactorPD`:
+
+16. `PositiveDefiniteKernel.conj_symm` — a Mercer-PD kernel is Hermitian:
+    $K(x, y) = \overline{K(y, x)}$ (the kernel analogue of
+    `PositiveDefinite.conj_inv`).
+17. `PositiveDefiniteKernel.one` — the constant-one kernel is Mercer-PD.
+18. `PositiveDefiniteKernel.matrix_posSemidef` (private) — a Mercer-PD kernel
+    gives a positive-semidefinite matrix on any finite subset (the bridge to
+    `Matrix.PosSemidef.hadamard`).
+19. `PositiveDefiniteKernel.mul` — the **Schur (Hadamard) product theorem** for
+    Mercer-PD kernels: the pointwise product of two Mercer-PD kernels is
+    Mercer-PD (kernel analogue of `PositiveDefinite.mul`).
+20. `PositiveDefiniteKernel.smul_nonneg` — non-negative scaling preserves
+    Mercer-PD.
+21. `PositiveDefiniteKernel.finprod` — a finite product of Mercer-PD kernels is
+    Mercer-PD (n-ary Schur product theorem, kernel analogue of
+    `PositiveDefinite.finprod`).
+22. `PositiveDefiniteKernel.comp` — Mercer-PD is preserved by composition with a
+    function $f : X \to Y$ on both arguments: if $K$ is Mercer-PD on $Y$, then
+    $(x, y) \mapsto K(f(x), f(y))$ is Mercer-PD on $X$.  This is the key
+    operation for composing the Boltzmann-factor kernel with the
+    reflection/projection maps.
+23. `PositiveDefiniteKernel.continuous_comp` — continuity of a Mercer-PD kernel
+    is preserved by composition with a continuous function on both arguments
+    (needed to apply `integralOperator_nonneg` to the composed TM kernel).
+
+Together with `PositiveDefinite.toPositiveDefiniteKernel` (group-PD → Mercer-PD,
+item 5), these allow the construction chain: group-PD Boltzmann factor →
+Mercer-PD kernel → compose with reflection/projection maps → Mercer-PD TM kernel
+→ `integralOperator_nonneg`.  The **remaining** gap is showing that the
+concrete TM kernel (with the geometric reflection map $\theta^{-0}$) *is*
+Mercer-PD — which still requires the Peter–Weyl character expansion to
+decompose the Boltzmann factor into separable positive terms (approach (c)).
+
 **The remaining work is the concrete wiring**: showing that the transfer-matrix
 kernel (a product of plaquette Boltzmann factors, integrated over negative-time
 links) is a PD function of the interface link variables — applying
-`PositiveDefinite.integral` to the plaquette factors (themselves PD by
-`plaquetteBoltzmannPD`, modulo the Peter–Weyl axiom) — and then applying
-`integralOperator_nonneg` to the resulting PD kernel.
+`PositiveDefinite.integral` to integrate out the negative-time links from the
+full Boltzmann factor (now proved PD by `boltzmannFactorPD`, item 15), and
+finally applying `integralOperator_nonneg` to the resulting PD kernel.
 
 **Key obstruction**: the TM kernel
 `(Tψ)(u) = ∫ ψ(θ⁻⁰(U⁻,u⁰))·exp(-β·(...)) dμ⁻(U⁻)` is NOT of the form
 `φ(u⁻¹·v)` for a PD function `φ` on a group — the reflection map `θ⁻⁰` is a
 geometric operation, not group multiplication.  While `PosInterfaceConfig` is a
 product of SU(N)'s (hence a group), the kernel does not factor through the group
-structure.  Closing the axiom requires either (a) a more general PD kernel
-theory (Mercer-type), (b) showing the TM kernel reduces to the group-theoretic
-form, or (c) applying the Peter–Weyl character expansion directly to the TM
-kernel.  This is a fundamental mathematical gap, not just formalization work.
+structure.  The Mercer framework (3–5 above) removes the *group-structure*
+obstruction, but showing the TM kernel *is* Mercer-PD still requires the
+Peter–Weyl character expansion to decompose the Boltzmann factor into separable
+positive terms (approach (c)).  This is a fundamental mathematical gap, not just
+formalization work.
 
 **Fundamental obstruction (resolved by Peter–Weyl, not by the abstract lemmas)**:
 The function $(g_1, g_2, g_3, g_4) \mapsto \exp(c \cdot \operatorname{Re} \operatorname{Tr}(g_1 g_2 g_3 g_4))$ is **NOT** positive-definite on $\text{SU}(N)^4$ for $N \ge 2$ as a naive composition, because even the simpler function $(g, h) \mapsto \operatorname{Tr}(gh)$ is NOT
@@ -102,6 +229,46 @@ $\chi_\mu(g_1) \chi_\nu(g_2) \chi_\rho(g_3) \chi_\sigma(g_4)$ is PD on $\text{SU
 different factors). This decomposition is captured by the `peterWeyl_clebschGordan_plaquette` axiom and proved as `plaquetteBoltzmannPD` in `PeterWeyl.lean`.
 
 See `docs/found_issues.md` §3 for the full analysis.
+
+### ✅ Clean factorization PROVEN (2025-06-29)
+
+The lemma `osG_thetaG_factorization` (in `ReflectionPositivity.lean`, 0 sorries,
+0 axioms) proves the purely algebraic identity:
+
+$$\texttt{osG}(U) \cdot \texttt{osG}(\theta U) = f(U) \cdot f(\theta U) \cdot \exp(-\beta S_W(U))$$
+
+This follows from the reflection symmetries $S^+_{OS}(\theta U) = S^-_{OS}(U)$ and
+$S^0_{OS}(\theta U) = S^0_{OS}(U)$, together with the action decomposition
+$S_W = S^+_{OS} + S^-_{OS} + S^0_{OS}$.  No support hypothesis on $f$ is needed.
+
+This shows that `transferMatrixPositivity_axiom` is equivalent to:
+
+$$\int f(U) \cdot f(\theta U) \cdot \exp(-\beta S_W(U)) \, d\mu_0(U) \ge 0$$
+
+where $\exp(-\beta S_W)$ is the full Boltzmann factor, proved positive-definite on
+the full link-variable group by `boltzmannFactorPD` (item 15).
+
+### ❌ Why PD-ness of the Boltzmann factor is NOT sufficient
+
+The integral $\int f(U) \cdot f(\theta U) \cdot \exp(-\beta S_W(U)) \, d\mu_0(U)$
+is **NOT** the standard positive-definite quadratic form
+
+$$\iint f(g)\,\overline{f(h)}\,K(g^{-1} h)\,d\mu(g)\,d\mu(h) \ge 0$$
+
+which follows from PD-ness of $K$ on a group (proven as
+`PositiveDefinite.integralOperator_nonneg`).  Instead, it is a **single** integral
+$\int f(g)\,f(\theta g)\,K(g)\,d\mu(g)$ with:
+
+1. The **geometric reflection** $\theta$ (not group multiplication or inversion).
+2. $K$ evaluated at $g$ (not $g^{-1} h$ — there is no "second variable" $h$).
+3. $f(\theta g)$ (not $\overline{f(h)}$ — no complex conjugation, and the argument
+   is $\theta g$, not $h$).
+
+PD-ness of $K = \exp(-\beta S_W)$ on the group does **not** imply this integral is
+non-negative.  The Peter–Weyl character expansion of $K$ and character
+orthogonality are needed to decompose the integrand into $|\text{Fourier
+coefficients}|^2$, which are manifestly non-negative.  This is the fundamental
+mathematical gap that remains.
 
 ## Why This Is Non-Trivial
 

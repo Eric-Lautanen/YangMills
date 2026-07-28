@@ -94,19 +94,88 @@ formalization effort.
      `PositiveDefinite.sum_nonneg_of_map`) and controls the error via uniform
      continuity on `G × G`.
    Together these close both abstract sub-steps of the transfer-matrix
-   positivity chain.  The **remaining** work to turn
-   `transferMatrixPositivity_axiom` into a theorem is the *wiring*: showing
-   that the concrete transfer-matrix kernel is a PD kernel on the interface
-   link variables.  **Key obstruction**: the TM kernel
-   `(Tψ)(u) = ∫ ψ(θ⁻⁰(U⁻,u⁰))·exp(-β·(...)) dμ⁻(U⁻)` is NOT of the form
+   positivity chain.  The **Mercer-type** generalization (approach (a)) is also
+   built in the same file: `PositiveDefiniteKernel` (Mercer sense, no group
+   structure), `PositiveDefiniteKernel.sum_nonneg_of_map`, and
+   `PositiveDefiniteKernel.integralOperator_nonneg` (a continuous Mercer-PD
+   kernel on a compact space defines a positive integral operator).  Building
+   blocks for promoting `plaquetteBoltzmannPD` to the full Boltzmann factor are
+   proved in `PositiveDefinite.lean`: `PositiveDefinite.comp_mulEquiv` (PD
+   preserved by group isomorphisms), `PositiveDefinite.comp_hom` (PD preserved
+   by group homomorphisms), `PositiveDefinite.fst`/`.snd` (extension by
+   constants), and `PositiveDefinite.finprod` (n-ary Schur product theorem).
+   Additionally, `repCharacter_inv` (χ(g⁻¹) = conj(χ(g))) and
+   `plaquetteBoltzmannPD_inv` (the plaquette factor with **inverse links**
+   exp(c·Re Tr(g₁g₂g₃⁻¹g₄⁻¹)) is PD on SU(N)⁴) are proved in
+   `PositiveDefinite.lean` / `PeterWeyl.lean`, handling the actual lattice
+   plaquette product with orientation-reversing inverses.  This single-plaquette
+   result is then **promoted to the full link-variable group** in
+   `BoltzmannFactor.lean`: `plaquetteProjection` (the homomorphism
+   `LinkVariable (SU N) Λ →* SU(N)⁴` extracting the four links around a plaquette,
+   with `map_one'`/`map_mul'` by `rfl`), `plaquetteFactorPD` (the plaquette
+   Boltzmann factor is PD on the full link group, via `comp_hom`), and
+   `plaquetteContributionPD` (the full plaquette contribution `exp(-S_p)` is PD,
+    via `smul_nonneg`), and `boltzmannFactorPD` (the **full Boltzmann factor**
+    `exp(-S_W) = ∏_{n,μ,ν} exp(-S_p)` is PD on the full link group, via
+    `finprod` — the n-ary Schur product theorem).  All 0 sorries, 0 custom
+     axioms beyond the Peter–Weyl axiom, full `lake build` clean.
+     **Mercer-PD kernel building blocks** are also proved in
+     `PositiveDefiniteIntegral.lean`: `PositiveDefiniteKernel.conj_symm`
+     (Hermitian symmetry), `PositiveDefiniteKernel.mul` (Schur/Hadamard product
+     theorem for Mercer-PD kernels), `PositiveDefiniteKernel.smul_nonneg`
+     (non-negative scaling), `PositiveDefiniteKernel.finprod` (n-ary Schur
+     product), `PositiveDefiniteKernel.comp` (PD preserved by composition with
+     `f : X → Y` on both arguments — the key operation for composing the
+     Boltzmann-factor kernel with reflection/projection maps), and
+     `PositiveDefiniteKernel.continuous_comp` (continuity preserved by
+     composition).  These are the algebraic ingredients for constructing the TM
+     kernel as a Mercer-PD kernel from the group-PD `boltzmannFactorPD` via
+     `toPositiveDefiniteKernel` → `comp` → `integralOperator_nonneg`.  All 0
+     sorries, 0 custom axioms, full `lake build` clean.
+    The **remaining** work to turn `transferMatrixPositivity_axiom` into a
+    theorem is the *wiring*: showing that the concrete transfer-matrix kernel is
+    a PD kernel on the interface link variables — integrating out negative-time
+    links via `PositiveDefinite.integral` (from the full Boltzmann factor, now
+    proved PD by `boltzmannFactorPD`), and applying `integralOperator_nonneg`.
+   kernel `(Tψ)(u) = ∫ ψ(θ⁻⁰(U⁻,u⁰))·exp(-β·(...)) dμ⁻(U⁻)` is NOT of the form
    `φ(u⁻¹·v)` for a PD function `φ` on a group — the reflection map `θ⁻⁰` is a
    geometric operation, not group multiplication.  While `PosInterfaceConfig`
    is a product of SU(N)'s (hence a group), the kernel does not factor through
-   the group structure.  Closing the axiom requires either (a) a more general
-   PD kernel theory (Mercer-type), (b) showing the TM kernel reduces to the
-   group-theoretic form, or (c) applying the Peter–Weyl character expansion
-   directly to the TM kernel.  This is a fundamental mathematical gap, not
-   just formalization work.
+   the group structure.  The Mercer framework removes the *group-structure*
+   obstruction, but showing the TM kernel *is* Mercer-PD still requires the
+     Peter–Weyl character expansion to decompose the Boltzmann factor into
+     separable positive terms (approach (c)).  This is a fundamental mathematical
+     gap, not just formalization work.
+
+     **Clean factorization PROVEN** (`osG_thetaG_factorization`): the
+     reflection-positivity integrand factorizes as
+     `osG(U)·osG(θU) = f(U)·f(θU)·exp(-β S_W(U))`, showing the axiom is
+     equivalent to `∫ f(U)·f(θU)·exp(-β S_W) dμ ≥ 0`.  But this integral is NOT
+     the standard PD quadratic form `∫∫ f(g)·conj(f(h))·K(g⁻¹h) dμ dμ ≥ 0` — it
+     is a single integral with the geometric reflection θ and K evaluated at g
+     (not g⁻¹h).  PD-ness of K does not imply this; the Peter–Weyl character
+     expansion + orthogonality are needed to decompose the integrand into
+     |Fourier coefficients|².  See `docs/gap_analysis.md`.
+
+       Both lemmas carry two independent verification checks: (1) `#print axioms`
+       confirms no hidden axiom or `sorry` (only `propext`, `Classical.choice`,
+       `Quot.sound`), and (2) independent line-by-line code review of the full
+       proof scripts confirmed the logic is sound (Fubini swap, a.e.-non-negativity
+       of the PD quadratic-form integrand, Riemann-sum construction,
+       uniform-continuity error bound, `Complex.nonneg_iff` split).  These are
+       complementary — a clean `#print axioms` alone would not catch a
+       wrong-but-compiling argument, and code review alone would not catch a
+       silently-introduced axiom.  Both were done.
+
+       Additionally, both lemmas were confirmed **absent from Mathlib** (as of the
+       pinned commit `3bc2a1801c2416549ba5ba0b3f5728a28b87e7d9`, Lean v4.33) via
+       multiple independent search angles: `PositiveDefinite` does not exist as a
+       bare identifier in Mathlib; Loogle `IsCompact _ -> _ -> 0 ≤ _` returns no
+       matches across all 126 relevant declarations; Loogle `0 ≤ ∫ _, _ ∂_`
+       returns only generic integral-nonnegativity hits, nothing group-theoretic
+       or kernel-based.  The key Mathlib API names the proofs depend on
+       (`measureReal_prod_prod`, `finite_cover_balls_of_compact`) were verified
+       present at the pinned commit to catch toolchain-drift breakage proactively.
 
 3. **`exp_reTrace_positiveDefinite`** (`PositiveDefinite.lean`): proved
    unconditionally (no axiom) — it builds `exp(c·Re Tr g)` as a PD function via
@@ -140,14 +209,18 @@ by `#print axioms` (only `propext`, `Classical.choice`, `Quot.sound`).
 - Wire `PositiveDefinite.integral` and `PositiveDefinite.integralOperator_nonneg`
   (both proved in `PositiveDefiniteIntegral.lean`) into the concrete
   lattice-gauge-theory setup to close `transferMatrixPositivity_axiom`.
-  **Key obstruction**: the TM kernel `(Tψ)(u) = ∫ ψ(θ⁻⁰(U⁻,u⁰))·exp(-β·(...)) dμ⁻(U⁻)`
-  is NOT of the form `φ(u⁻¹·v)` for a PD function `φ` on a group — the reflection
-  map `θ⁻⁰` is a geometric operation, not group multiplication.  While
-  `PosInterfaceConfig` is a product of SU(N)'s (hence a group), the kernel does
-  not factor through the group structure.  Closing the axiom requires either
-  (a) a more general PD kernel theory (Mercer-type), (b) showing the TM kernel
-  reduces to the group-theoretic form, or (c) applying the Peter–Weyl character
-  expansion directly to the TM kernel.
+  The Mercer-type generalization (`PositiveDefiniteKernel.integralOperator_nonneg`,
+  no group structure needed) and the full-Boltzmann-factor building blocks
+  (`comp_mulEquiv`, `fst`/`snd`, `finprod` in `PositiveDefinite.lean`) are now
+  available.  **Key obstruction**: the TM kernel
+  `(Tψ)(u) = ∫ ψ(θ⁻⁰(U⁻,u⁰))·exp(-β·(...)) dμ⁻(U⁻)` is NOT of the form
+  `φ(u⁻¹·v)` for a PD function `φ` on a group — the reflection map `θ⁻⁰` is a
+  geometric operation, not group multiplication.  While `PosInterfaceConfig` is
+  a product of SU(N)'s (hence a group), the kernel does not factor through the
+  group structure.  The Mercer framework removes the *group-structure*
+  obstruction, but showing the TM kernel *is* Mercer-PD still requires the
+  Peter–Weyl character expansion to decompose the Boltzmann factor into
+  separable positive terms (approach (c)).
 - Peter–Weyl theorem for SU(N) (or a bypass via spectral theory) — would remove
   the `peterWeyl_clebschGordan_plaquette` axiom.
 - Construct `PeriodicExpectation` structure (requires the corrected reflection
@@ -174,5 +247,3 @@ namespace YangMills
 
 def description : String :=
   "Formalization of Yang-Mills existence and mass gap problem (Clay Millennium Prize)"
-
-

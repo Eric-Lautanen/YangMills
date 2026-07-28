@@ -54,6 +54,7 @@ set_option maxHeartbeats 4000000
 
 open Finset
 open Matrix
+open scoped ComplexConjugate
 
 namespace YangMills
 
@@ -243,6 +244,121 @@ theorem plaquetteBoltzmannPD (N : ℕ) (c : ℝ) (hc : 0 ≤ c) :
     funext p
     simp only [F]
     exact hexp4 p.1.1.1 p.1.1.2 p.1.2 p.2
+  rw [hfun]
+  exact hSr
+
+/-- A product of four characters with the 3rd and 4th conjugated,
+`χ_s(g₁) · χ_t(g₂) · conj(χ_u(g₃)) · conj(χ_v(g₄))`, is positive-definite on
+`SU(N)⁴` (left-associated).  This follows from `charProduct4_positiveDefinite`
+and `PositiveDefinite.conj` applied to the 3rd and 4th factors. -/
+lemma charProduct4_inv_positiveDefinite {ι : Type*} {dims : ι → ℕ}
+    (ρ : ∀ i, SU N →* Matrix (Fin (dims i)) (Fin (dims i)) ℂ)
+    (hU : ∀ i, IsUnitaryRepresentation (ρ i))
+    (s t u v : ι) :
+    PositiveDefinite
+      (λ (p : ((SU N × SU N) × SU N) × SU N) =>
+        repCharacter (ρ s) p.1.1.1 * repCharacter (ρ t) p.1.1.2 *
+        conj (repCharacter (ρ u) p.1.2) * conj (repCharacter (ρ v) p.2)) := by
+  have hS : PositiveDefinite (repCharacter (ρ s)) := repCharacter_SU_positiveDefinite ρ hU s
+  have hT : PositiveDefinite (repCharacter (ρ t)) := repCharacter_SU_positiveDefinite ρ hU t
+  have hU' : PositiveDefinite (fun g => conj (repCharacter (ρ u) g)) := by
+    exact PositiveDefinite.conj (repCharacter_SU_positiveDefinite ρ hU u)
+  have hV : PositiveDefinite (fun g => conj (repCharacter (ρ v) g)) := by
+    exact PositiveDefinite.conj (repCharacter_SU_positiveDefinite ρ hU v)
+  have hST := PositiveDefinite.prod hS hT
+  have hSTU := PositiveDefinite.prod hST hU'
+  have hSTUV := PositiveDefinite.prod hSTU hV
+  convert hSTUV using 3
+
+/-- **The plaquette Boltzmann factor with inverse links is positive-definite on
+`SU(N)⁴`.**
+
+For `c ≥ 0`, the function
+    (g₁, g₂, g₃, g₄) ↦ exp(c · Re Tr(g₁ g₂ g₃⁻¹ g₄⁻¹))
+is positive-definite on `SU(N) × SU(N) × SU(N) × SU(N)` (left-associated).
+
+This is the version needed for the actual lattice plaquette product
+`U(n,μ) · U(n+e_μ,ν) · U(n+e_μ+e_ν,μ)⁻¹ · U(n+e_ν,ν)⁻¹`, which has inverses on
+the 3rd and 4th links (orientation reversal).  The proof uses the Peter-Weyl /
+Clebsch-Gordan axiom applied to `(g₁, g₂, g₃⁻¹, g₄⁻¹)`, then replaces
+`χ_u(g₃⁻¹) = conj(χ_u(g₃))` and `χ_v(g₄⁻¹) = conj(χ_v(g₄))` via `repCharacter_inv`.
+Each factor `χ_s(g₁) · χ_t(g₂) · conj(χ_u(g₃)) · conj(χ_v(g₄))` is
+positive-definite by `charProduct4_inv_positiveDefinite`, and the finite sum
+with non-negative coefficients is positive-definite by `PositiveDefinite.sum`. -/
+theorem plaquetteBoltzmannPD_inv (N : ℕ) (c : ℝ) (hc : 0 ≤ c) :
+    PositiveDefinite
+      (λ (p : ((SU N × SU N) × SU N) × SU N) =>
+        (Real.exp (c * (Matrix.trace ((p.1.1.1 * p.1.1.2 * p.1.2⁻¹ * p.2⁻¹ : SU N) :
+            Matrix (Fin N) (Fin N) ℂ)).re) : ℂ)) := by
+  obtain ⟨ι, hι, dims, ρ, hU, coeff, hcoeff, hexp4⟩ :=
+    peterWeyl_clebschGordan_plaquette N c hc
+  letI : Fintype ι := hι
+  -- The four-character product with conj on 3rd and 4th factors.
+  let F (r s t u v : ι) (p : ((SU N × SU N) × SU N) × SU N) : ℂ :=
+    repCharacter (ρ s) p.1.1.1 * repCharacter (ρ t) p.1.1.2 *
+    conj (repCharacter (ρ u) p.1.2) * conj (repCharacter (ρ v) p.2)
+  have hF_PD : ∀ r s t u v, PositiveDefinite (F r s t u v) :=
+    fun r s t u v => charProduct4_inv_positiveDefinite ρ hU s t u v
+  -- Innermost sum (over v): weighted by the expansion coefficient.
+  have hSv : ∀ r s t u, PositiveDefinite
+      (λ p => ∑ v : ι, (coeff r s t u v : ℂ) * F r s t u v p) :=
+    fun r s t u =>
+      PositiveDefinite.sum Finset.univ (F r s t u)
+        (fun v _ => hF_PD r s t u v) (coeff r s t u)
+        (fun v _ => hcoeff r s t u v)
+  -- Outer sums (over u, t, s, r): unweighted sums of PD functions.
+  have hSu : ∀ r s t, PositiveDefinite
+      (λ p => ∑ u : ι, ∑ v : ι, (coeff r s t u v : ℂ) * F r s t u v p) :=
+    fun r s t =>
+      PositiveDefinite.sum' Finset.univ
+        (fun u p => ∑ v : ι, (coeff r s t u v : ℂ) * F r s t u v p)
+        (fun u _ => hSv r s t u)
+  have hSt : ∀ r s, PositiveDefinite
+      (λ p => ∑ t : ι, ∑ u : ι, ∑ v : ι, (coeff r s t u v : ℂ) * F r s t u v p) :=
+    fun r s =>
+      PositiveDefinite.sum' Finset.univ
+        (fun t p => ∑ u : ι, ∑ v : ι, (coeff r s t u v : ℂ) * F r s t u v p)
+        (fun t _ => hSu r s t)
+  have hSs : ∀ r, PositiveDefinite
+      (λ p => ∑ s : ι, ∑ t : ι, ∑ u : ι, ∑ v : ι, (coeff r s t u v : ℂ) * F r s t u v p) :=
+    fun r =>
+      PositiveDefinite.sum' Finset.univ
+        (fun s p => ∑ t : ι, ∑ u : ι, ∑ v : ι, (coeff r s t u v : ℂ) * F r s t u v p)
+        (fun s _ => hSt r s)
+  have hSr : PositiveDefinite
+      (λ p => ∑ r : ι, ∑ s : ι, ∑ t : ι, ∑ u : ι, ∑ v : ι,
+        (coeff r s t u v : ℂ) * F r s t u v p) :=
+    PositiveDefinite.sum' Finset.univ
+      (fun r p => ∑ s : ι, ∑ t : ι, ∑ u : ι, ∑ v : ι,
+        (coeff r s t u v : ℂ) * F r s t u v p)
+      (fun r _ => hSs r)
+  -- The Boltzmann factor with inverses equals the character expansion with
+  -- g₃ → g₃⁻¹, g₄ → g₄⁻¹ substituted, then χ(g⁻¹) = conj(χ(g)) applied.
+  have hfun :
+      (λ p : ((SU N × SU N) × SU N) × SU N =>
+        (Real.exp (c * (Matrix.trace ((p.1.1.1 * p.1.1.2 * p.1.2⁻¹ * p.2⁻¹ : SU N) :
+            Matrix (Fin N) (Fin N) ℂ)).re) : ℂ)) =
+      (λ p => ∑ r : ι, ∑ s : ι, ∑ t : ι, ∑ u : ι, ∑ v : ι,
+        (coeff r s t u v : ℂ) * F r s t u v p) := by
+    funext p
+    simp only [F]
+    -- Apply the axiom to (g₁, g₂, g₃⁻¹, g₄⁻¹)
+    have hexp := hexp4 p.1.1.1 p.1.1.2 p.1.2⁻¹ p.2⁻¹
+    rw [hexp]
+    -- Replace χ_u(g₃⁻¹) = conj(χ_u(g₃)) and χ_v(g₄⁻¹) = conj(χ_v(g₄))
+    apply Finset.sum_congr rfl
+    intro r hr
+    apply Finset.sum_congr rfl
+    intro s hs
+    apply Finset.sum_congr rfl
+    intro t ht
+    apply Finset.sum_congr rfl
+    intro u hu
+    apply Finset.sum_congr rfl
+    intro v hv
+    congr 1
+    rw [repCharacter_inv (ρ u) (hU u) p.1.2,
+        repCharacter_inv (ρ v) (hU v) p.2]
   rw [hfun]
   exact hSr
 

@@ -173,6 +173,17 @@ structure LinkVariable (G : Type) (Λ : Type) : Type 1 where
   /-- Assigns a group element to each lattice site and direction. -/
   value : Λ → Fin 4 → G
 
+/-- `LinkVariable G Λ` is a group under pointwise multiplication when `G` is a
+group.  This is the product group `G^{Λ × Fin 4}`. -/
+instance {G : Type} {Λ : Type} [Group G] : Group (LinkVariable G Λ) where
+  mul U V := ⟨fun n μ => U.value n μ * V.value n μ⟩
+  mul_assoc U V W := by ext n μ; exact mul_assoc _ _ _
+  one := ⟨fun _ _ => 1⟩
+  one_mul U := by ext n μ; exact one_mul _
+  mul_one U := by ext n μ; exact mul_one _
+  inv U := ⟨fun n μ => (U.value n μ)⁻¹⟩
+  inv_mul_cancel U := by ext n μ; exact inv_mul_cancel _
+
 /--
 The reflection map θ on link variables for any lattice type with `ReflectSite`.
 For a link variable U(n, μ) from site n in direction μ, the reflected

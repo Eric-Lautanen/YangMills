@@ -33,7 +33,7 @@ restatement.
 | Axiom | Declared in | What it stands in for | Status / concern |
 |---|---|---|---|
 | `peterWeyl_clebschGordan_plaquette` | `PeterWeyl.lean` | Peter–Weyl theorem + Clebsch–Gordan decomposition for the plaquette Boltzmann factor | Neither is in Mathlib. Defensible as a cited external theorem *if* correctly applied — needs audit. |
-| `transferMatrixPositivity_axiom` | `ReflectionPositivity.lean` (**confirmed** — not a `sorry`, and not in `TransferMatrix.lean` despite `Overview.lean` implying otherwise) | Positivity of `∫ G(U)·G(θU) dμ₀` for the periodic-lattice transfer matrix | Docstring gives a real justification chain (plaquette PD ⇒ transfer matrix positive ⇒ integral nonnegative). Both abstract sub-steps are now proved: `PositiveDefinite.integral` (integrate out interior links ⟹ PD kernel) and `PositiveDefinite.integralOperator_nonneg` (PD kernel ⟹ positive integral operator), both in `PositiveDefiniteIntegral.lean` with 0 sorries / 0 custom axioms. The **remaining** work is the concrete wiring, but there is a **key obstruction**: the TM kernel `(Tψ)(u) = ∫ ψ(θ⁻⁰(U⁻,u⁰))·exp(-β·(...)) dμ⁻(U⁻)` is NOT of the form `φ(u⁻¹·v)` for a PD function `φ` on a group — the reflection map `θ⁻⁰` is a geometric operation, not group multiplication. While `PosInterfaceConfig` is a product of SU(N)'s (hence a group), the kernel does not factor through the group structure. Closing the axiom requires either (a) a more general PD kernel theory (Mercer-type), (b) showing the TM kernel reduces to the group-theoretic form, or (c) applying the Peter–Weyl character expansion directly to the TM kernel. This is a fundamental mathematical gap, not just formalization work. |
+| `transferMatrixPositivity_axiom` | `ReflectionPositivity.lean` (**confirmed** — not a `sorry`, and not in `TransferMatrix.lean` despite `Overview.lean` implying otherwise) | Positivity of `∫ G(U)·G(θU) dμ₀` for the periodic-lattice transfer matrix | Docstring gives a real justification chain (plaquette PD ⇒ transfer matrix positive ⇒ integral nonnegative). All abstract sub-steps are now proved (see "Suggested next step" below). The clean factorization `osG_thetaG_factorization` (0 sorries, 0 axioms) shows the axiom is equivalent to `∫ f(U)·f(θU)·exp(-β S_W(U)) dμ ≥ 0`. The full Boltzmann factor `exp(-β S_W)` is proved PD on the full link group by `boltzmannFactorPD` (modulo Peter–Weyl). **Key obstruction**: this integral is NOT the standard PD quadratic form `∫∫ f(g)·conj(f(h))·K(g⁻¹h) dμ dμ ≥ 0` (which follows from PD-ness of `K` and is proved as `integralOperator_nonneg`). It is a *single* integral `∫ f(g)·f(θg)·K(g) dμ` with the geometric reflection `θ` and `K` evaluated at `g` (not `g⁻¹h`). PD-ness of `K` does not imply this is non-negative; the Peter–Weyl character expansion of `K` and character orthogonality are needed to decompose the integrand into `|Fourier coefficients|²`. This is a fundamental mathematical gap, not just formalization work. |
 | `os_reconstruction_theorem` | `OSAxioms.lean` | Osterwalder–Schrader reconstruction (OS axioms ⇒ Wightman QFT) | Established published math, not in Mathlib. Only sound to invoke on objects that actually satisfy the OS axioms — depends on the continuum limit existing (see next row). |
 | `continuum_limit_exists` | `ContinuumLimit.lean` | Existence of the lattice a→0 continuum limit (Balaban RG / stochastic quantization) | **This axiom *is* the open mathematical core of the problem.** Not a placeholder for something routine — it's the thing nobody has proved. |
 | `mass_gap_axiom` | `MassGap.lean` | Positivity of the continuum mass gap | **This is the conjecture itself.** `yang_mills_existence_and_mass_gap` in `MassGapProof.lean` pulls the gap and its positivity directly from this axiom (`let mg := mass_gap_axiom a ha`) without deriving anything from the lattice work — the clearest concrete illustration of the circularity in the codebase. Must not be used in any theorem claimed as a "proof" of the Millennium Prize result. |
@@ -47,7 +47,7 @@ Unlike the other four axioms, this one looks achievable with what's already
 built. Its docstring lays out the chain: the plaquette Boltzmann factor is
 positive-definite (`plaquetteBoltzmannPD`, proved modulo the Peter–Weyl
 axiom) ⟹ the transfer matrix built from it is a positive operator ⟹ the
-integral is nonnegative. Both abstract sub-steps are now proved:
+integral is nonnegative. All abstract sub-steps are now proved:
 
 1. `PositiveDefinite.integral` — an integral average of PD functions is PD
    (closes "integrate out interior links ⟹ PD kernel").
@@ -56,48 +56,30 @@ integral is nonnegative. Both abstract sub-steps are now proved:
    (`∫∫ f(x)·conj(f(y))·K(x⁻¹y) dμ dμ ≥ 0`; closes "PD kernel ⟹ positive
    operator").  The proof approximates the integral by Riemann sums and
    controls the error via uniform continuity on `G × G`.
+3. `PositiveDefiniteKernel.integralOperator_nonneg` — the **Mercer-type**
+   generalization: a continuous Mercer-PD kernel on a compact space (no group
+   structure needed) defines a positive integral operator.  This removes the
+   group-structure requirement that obstructs the group-theoretic version.
+4. `boltzmannFactorPD` (`BoltzmannFactor.lean`) — the **full Boltzmann factor**
+   `exp(-β S_W) = ∏ exp(-S_p)` is PD on the full link-variable group, via
+   `plaquetteContributionPD` (each plaquette factor PD by `comp_hom` from
+   `plaquetteBoltzmannPD_inv`) and `PositiveDefinite.finprod` (n-ary Schur
+   product).  0 sorries, 0 axioms beyond Peter–Weyl.
+5. `osG_thetaG_factorization` (`ReflectionPositivity.lean`) — the clean
+   algebraic identity `osG(U)·osG(θU) = f(U)·f(θU)·exp(-β S_W(U))`, showing
+   the axiom is equivalent to `∫ f(U)·f(θU)·exp(-β S_W) dμ ≥ 0`.  0 sorries,
+   0 axioms.
 
-Both are in `PositiveDefiniteIntegral.lean` with 0 sorries and 0 custom axioms.
-The **remaining** work is the concrete *wiring*: showing that the
-transfer-matrix kernel (a product of plaquette Boltzmann factors, integrated
-over negative-time links) is a PD function of the interface link variables —
-applying `PositiveDefinite.integral` to the plaquette factors (themselves PD by
-`plaquetteBoltzmannPD`, modulo the Peter–Weyl axiom) — and then applying
-`integralOperator_nonneg` to the resulting PD kernel.  That wiring is a
-substantial measure-theoretic construction not yet undertaken.  Closing it, even
-leaving `peterWeyl_clebschGordan_plaquette` as an axiom, would be a genuine
-reduction in the codebase's assumption count (five axioms → four).
-
-**Progress.** Two lemmas in `PositiveDefiniteIntegral.lean` are now proved
-(0 sorries, 0 custom axioms):
-
-1. `PositiveDefinite.integral` — an integral average of positive-definite
-   functions is positive-definite (the continuous analogue of
-   `PositiveDefinite.sum`).  This closes the "integrate out interior links ⟹
-   the resulting kernel is PD" sub-step.
-2. `PositiveDefinite.integralOperator_nonneg` — a positive-definite kernel `K`
-   on a compact group `G` defines a *positive integral operator*:
-   `∫∫ f(x)·conj(f(y))·K(x⁻¹y) dμ(x) dμ(y) ≥ 0` for a probability measure `μ`.
-   The proof approximates the integral by Riemann sums (each non-negative by
-   `PositiveDefinite.sum_nonneg_of_map`) and controls the error via uniform
-   continuity on the compact space `G × G`.  This closes the "PD kernel ⟹
-   positive integral operator" sub-step.
-
-Both abstract sub-steps of the transfer-matrix positivity chain are now
-proved.  The **remaining** work to turn `transferMatrixPositivity_axiom` into a
-theorem is the *wiring*: showing that the concrete transfer-matrix kernel is a
-positive-definite kernel on the interface link variables.  **Key obstruction**:
-the transfer matrix kernel `(Tψ)(u) = ∫ ψ(θ⁻⁰(U⁻,u⁰))·exp(-β·(...)) dμ⁻(U⁻)` is
-NOT of the form `φ(u⁻¹·v)` for a PD function `φ` on a group — the reflection
-map `θ⁻⁰` is a geometric operation, not group multiplication.  While
-`PosInterfaceConfig` is a product of SU(N)'s (hence a group), the kernel does
-not factor through the group structure.  Closing the axiom requires either (a) a
-more general PD kernel theory (Mercer-type), (b) showing the TM kernel reduces
-to the group-theoretic form, or (c) applying the Peter–Weyl character expansion
-directly to the TM kernel.  This is a fundamental mathematical gap, not just
-formalization work.  Closing it, even leaving `peterWeyl_clebschGordan_plaquette`
-as an axiom, would be a genuine reduction in the codebase's assumption count
-(five axioms → four).
+All are 0 sorries, 0 custom axioms (only Peter–Weyl for the plaquette PD).
+The **remaining** work is the fundamental mathematical gap: the integral
+`∫ f(U)·f(θU)·exp(-β S_W) dμ` is NOT the standard PD quadratic form
+`∫∫ f(g)·conj(f(h))·K(g⁻¹h) dμ dμ ≥ 0` — it is a single integral with the
+geometric reflection `θ` and `K` evaluated at `g` (not `g⁻¹h`).  PD-ness of
+`K` does not imply this is non-negative; the Peter–Weyl character expansion
+of `K` and character orthogonality are needed to decompose the integrand
+into `|Fourier coefficients|²`.  Closing it, even leaving
+`peterWeyl_clebschGordan_plaquette` as an axiom, would be a genuine reduction
+in the codebase's assumption count (five axioms → four).
 
 ## What is actually proved (no sorry, no axiom)
 
@@ -121,6 +103,20 @@ as an axiom, would be a genuine reduction in the codebase's assumption count
   no axiom)
 - `plaquetteBoltzmannPD` (depends on the `peterWeyl_clebschGordan_plaquette`
   axiom above — flagged, not unconditional)
+- `plaquetteBoltzmannPD_inv` (`PeterWeyl.lean`) — the plaquette Boltzmann
+  factor with inverse links `exp(c·Re Tr(g₁ g₂ g₃⁻¹ g₄⁻¹))` is PD on
+  `SU(N)⁴` (the version needed for the actual lattice plaquette product;
+  depends on the Peter–Weyl axiom)
+- `boltzmannFactorPD` (`BoltzmannFactor.lean`) — the **full Boltzmann factor**
+  `exp(-β S_W) = ∏ exp(-S_p)` is PD on the full link-variable group
+  `LinkVariable (SU N) Λ`, via `plaquetteContributionPD` (each plaquette
+  factor PD by `comp_hom` from `plaquetteBoltzmannPD_inv`) and
+  `PositiveDefinite.finprod` (n-ary Schur product).  0 sorries, 0 axioms
+  beyond Peter–Weyl.
+- `osG_thetaG_factorization` (`ReflectionPositivity.lean`) — the clean
+  algebraic identity `osG(U)·osG(θU) = f(U)·f(θU)·exp(-β S_W(U))`, showing
+  `transferMatrixPositivity_axiom` is equivalent to
+  `∫ f(U)·f(θU)·exp(-β S_W) dμ ≥ 0`.  0 sorries, 0 axioms.
 - `PositiveDefinite.integral` (`PositiveDefiniteIntegral.lean`) — the
   *continuous* analogue of `PositiveDefinite.sum`: an integral average of
   positive-definite functions is positive-definite.  Verified by
@@ -138,6 +134,38 @@ as an axiom, would be a genuine reduction in the codebase's assumption count
   step.  Together with `PositiveDefinite.integral`, both abstract sub-steps of
   the transfer-matrix positivity chain are now proved; the remaining work is
   the concrete wiring into the lattice-gauge-theory setup.
+- `PositiveDefiniteKernel` (`PositiveDefiniteIntegral.lean`) — Mercer-type
+  PD kernel (no group structure needed): `K : X → X → ℂ` with
+  `∑ c_i ·conj(c_j)·K(x_i, x_j) ≥ 0` for every finite set and coefficients.
+  Building blocks (all 0 sorries, 0 axioms): `PositiveDefiniteKernel.conj_symm`
+  (Hermitian symmetry), `.one` (constant-one kernel), `.mul` (Schur/Hadamard
+  product theorem), `.smul_nonneg`, `.finprod` (n-ary Schur product), `.comp`
+  (PD preserved by composition with `f : X → Y`), `.continuous_comp`
+  (continuity preserved by composition), `.sum_nonneg_of_map` (non-injective
+  index map), and `PositiveDefinite.toPositiveDefiniteKernel` (group-PD →
+  Mercer-PD).
+- `PositiveDefiniteKernel.integralOperator_nonneg`
+  (`PositiveDefiniteIntegral.lean`) — the Mercer-type generalization: a
+  continuous Mercer-PD kernel on a compact space (no group structure needed)
+  defines a positive integral operator
+  `∫∫ f(x)·conj(f(y))·K(x, y) dμ dμ ≥ 0`.  0 sorries, 0 custom axioms.
+
+**Two independent verification checks were performed on both lemmas:**
+1. **`#print axioms`** — confirms no hidden axiom or `sorry` in the dependency
+   tree (only `propext`, `Classical.choice`, `Quot.sound`).  This catches
+   *undeclared assumptions* but would not catch a subtly wrong-but-compiling
+   argument.
+2. **Independent code review** — the full proof scripts (lines 78–153 for
+   `integral`, lines 172–378 for `integralOperator_nonneg`) were read
+   line-by-line and checked for logical soundness: the Fubini swap, the
+   a.e.-non-negativity of the PD quadratic-form integrand, the Riemann-sum
+   construction, the uniform-continuity error bound, and the final
+   `Complex.nonneg_iff` split.  This confirms the *logic* is sound, not just
+   that the kernel accepted it.
+
+These are complementary: a clean `#print axioms` alone would not have caught
+a wrong-but-still-compiling argument, and a code review alone would not have
+caught a silently-introduced axiom.  Both were done.
 
 **Mathlib-absence verification.** Both `PositiveDefinite.integral` and
 `PositiveDefinite.integralOperator_nonneg` were checked against the current
@@ -215,6 +243,10 @@ file is **not** in the toolchain-drift-breakage risk category.
 - `reflectToPosInterface`, `transferMatrixCorrect`, `G`, `g_posInterface`
   (definitions)
 - `G_thetaG_factorization_clean`, `G_thetaG_factorization`
+- `osG_thetaG_factorization` (`ReflectionPositivity.lean`) — the clean
+  algebraic identity `osG(U)·osG(θU) = f(U)·f(θU)·exp(-β S_W(U))`,
+  showing `transferMatrixPositivity_axiom` is equivalent to
+  `∫ f(U)·f(θU)·exp(-β S_W) dμ ≥ 0`.  0 sorries, 0 axioms.
 - `integral_G_thetaG_eq_inner_g_Tg` — the key identity linking the
   reflected Gibbs expectation to the transfer-matrix inner product;
   verified by `#print axioms` (only `propext, Classical.choice,
@@ -244,12 +276,17 @@ file is **not** in the toolchain-drift-breakage risk category.
    closes via `exact transferMatrixPositivity_axiom ...`, a genuine `axiom`
    declared in `ReflectionPositivity.lean` (not a `sorry`, and not in
    `TransferMatrix.lean`). All of the algebraic and measure-theoretic
-   bookkeeping around it — including `integral_G_thetaG_eq_inner_g_Tg` and
-   `measure_factorization'` — is fully proved; the axiom is the only gap.
-   Its docstring gives a real proof sketch (plaquette positive-definiteness
-   ⟹ transfer matrix positive) that looks achievable from existing
-   `PositiveDefinite.lean` infrastructure — see the suggested next step in
-   the axiom table above.
+   bookkeeping around it — including `integral_G_thetaG_eq_inner_g_Tg`,
+   `measure_factorization'`, and the clean factorization
+   `osG_thetaG_factorization` — is fully proved; the axiom is the only gap.
+   The clean factorization shows the axiom is equivalent to
+   `∫ f(U)·f(θU)·exp(-β S_W) dμ ≥ 0`, and `boltzmannFactorPD` proves the
+   Boltzmann factor `exp(-β S_W)` is PD on the full link group (modulo
+   Peter–Weyl).  **However**, this integral is NOT the standard PD quadratic
+   form that `integralOperator_nonneg` addresses — it is a single integral
+   with the geometric reflection `θ` and `K` evaluated at `g` (not `g⁻¹h`).
+   PD-ness of `K` does not imply non-negativity; the Peter–Weyl character
+   expansion + orthogonality are needed.  See the suggested next step above.
 
 3. **Systematic audit for vacuous proofs not yet done.** The `hadd` pattern
    (item 1) is a known instance of a broader risk: any proof that goes
@@ -258,21 +295,22 @@ file is **not** in the toolchain-drift-breakage risk category.
    (e.g. via `#print axioms` plus manual inspection for
    contradiction-derivation patterns) has not yet been completed.
 
-4. **Repo hygiene.** `Coq/` and `Z3/` directories are empty placeholders
-   despite being listed as backends. `TransferMatrix.lean` has unusual
-   whitespace suggesting post-processing artifacts. `Proofs/attempts.jsonl`
-   appears to be raw AI proof-attempt logs and should be reviewed for
-   whether it belongs in the repo. `TransferMatrix_FIXED.lean.lf` and
-   `TransferMatrix.lean.lf` look like stale intermediate versions and
-   should be removed or archived if superseded.
+4. **Repo hygiene (addressed).** The empty `Coq/` and `Z3/`
+   placeholder directories and the stale `TransferMatrix_FIXED.lean.lf` /
+   `TransferMatrix.lean.lf` intermediate-version files have been removed
+   (they remain recoverable from git history). `TransferMatrix.lean` has
+   unusual whitespace suggesting post-processing artifacts.
+   `proofs/attempts.jsonl` is raw AI proof-attempt log output and is
+   retained as a record of verification attempts; it is not part of the
+   build.
 
-5. **`Overview.lean` was stale (fixed this session).** It previously undersold:
+5. **`Overview.lean` was stale (fixed).** It previously undersold:
    it claimed `integral_G_thetaG_eq_inner_g_Tg` "is not yet formalized" (false —
    it's proved, verified by `#print axioms`) and referenced a
    `transferMatrixCorrect_positive` lemma "currently sorry" that does not exist
    under that name (the real gap is the differently-named
    `transferMatrixPositivity_axiom` axiom, in `ReflectionPositivity.lean`).
-   Both documents are now updated to match the source as of this session; the
+   Both documents are now updated to match the source; the
    same continuous-maintenance discipline applies going forward.
 
 6. **`TransferMatrix.lean` toolchain-drift build break — FIXED.** The
@@ -309,13 +347,15 @@ YangMills/
 │   │           ├── GaugeInvariance.lean
 │   │           ├── JacobiIdentity.lean
 │   │           ├── LatticeMeasure.lean
-│   │           ├── ReflectionPositivity.lean   # nonempty case vacuous, see known issues
-│   │           ├── TransferMatrix.lean         # builds cleanly under v4.33
-│   │           ├── PositiveDefinite.lean
-│   │           └── PositiveDefiniteIntegral.lean  # PositiveDefinite.integral (new)
-│   ├── coq/                             # empty placeholder
-│   └── z3/                              # empty placeholder
-├── verify/
+│   │           ├── PeterWeyl.lean               # Peter–Weyl axiom, plaquetteBoltzmannPD(_inv)
+│   │           ├── PositiveDefinite.lean       # PD function algebra (add, mul, prod, finprod, …)
+│   │           ├── PositiveDefiniteIntegral.lean  # PD.integral, integralOperator_nonneg, Mercer-PD kernels
+│   │           ├── BoltzmannFactor.lean        # boltzmannFactorPD (full Boltzmann factor is PD)
+│   │           ├── ReflectionPositivity.lean   # transferMatrixPositivity_axiom, osG_thetaG_factorization
+│   │           ├── TransferMatrix.lean         # transferMatrixCorrect, integral_G_thetaG_eq_inner_g_Tg
+│   │           └── MassGapProof.lean
+├── proofs/                             # attempts.jsonl — raw AI proof-attempt log, not part of build
+├── verify/                             # verification scripts (lean.bat, coq.bat, z3.bat, …)
 ├── docs/
 ├── literature/
 ├── lakefile.lean
@@ -356,11 +396,11 @@ Documentation drift in this project is not a one-time bug, it's a recurring
 pattern, and it goes in **both directions**: this README has previously
 reported sorries as open that had been closed, and reported lemmas as
 complete without noting the axioms they secretly depended on;
-`Overview.lean` currently does the opposite, reporting a fully-proved
-lemma (`integral_G_thetaG_eq_inner_g_Tg`) as unformalized and referencing a
+`Overview.lean` previously reported a fully-proved
+lemma (`integral_G_thetaG_eq_inner_g_Tg`) as unformalized and referenced a
 `sorry`'d lemma by a name that doesn't match anything in the actual
-codebase. Treat both documents as equally prone to drift and equally in
-need of upkeep:
+codebase (both now fixed). Treat both documents as equally prone to drift
+and equally in need of upkeep:
 
 - Every session that changes proof state must update the "What is actually
   proved" / "Known incomplete" sections of this README **and** the
@@ -379,6 +419,29 @@ need of upkeep:
   current source in under a few minutes, mark it `[UNVERIFIED — recheck]`
   rather than leaving a confident-sounding but possibly stale statement in
   place.
+
+## Mathlib candidate packaging
+
+Three general-purpose results (Mercer-type positive-definite kernels and two
+group-theoretic PD lemmas) have been extracted into standalone,
+Yang-Mills-free files for independent review by Mathlib maintainers. They
+are pure group/measure/kernel theory, verified by `#print axioms` to depend
+only on `propext`, `Classical.choice`, `Quot.sound` (0 `sorry`, 0 custom
+axiom). See **`MATHLIB_SUBMISSION.md`** at the repo root for the full
+summary, absence-verification report, and reproduction steps. The standalone
+files are:
+
+- `PositiveDefiniteKernelMathlibCandidate.lean` (repo root) — **priority
+  candidate**: Mercer-type PD kernels (no group structure), including
+  `PositiveDefiniteKernel.integralOperator_nonneg` and the full building-block
+  suite (`.conj_symm`, `.one`, `.mul`, `.smul_nonneg`, `.finprod`, `.comp`,
+  `.continuous_comp`, `.sum_nonneg_of_map`, `toPositiveDefiniteKernel`).
+- `PositiveDefiniteMathlibCandidate.lean` (repo root) — group-theoretic PD
+  functions: `PositiveDefinite.integral` and
+  `PositiveDefinite.integralOperator_nonneg`.
+
+These results are unrelated to the (unsolved) Yang-Mills mass-gap difficulty
+and are offered as standalone infrastructure.
 
 ## References
 
