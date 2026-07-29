@@ -15,9 +15,13 @@ finite set {g₁, ..., gₙ} ⊂ G and coefficients {c₁, ..., cₙ} ⊂ ℂ:
 import Mathlib.Analysis.Complex.Basic
 import Mathlib.LinearAlgebra.Matrix.Trace
 import Mathlib.LinearAlgebra.UnitaryGroup
+import Mathlib.LinearAlgebra.Span.Basic
 import Mathlib.Analysis.SpecialFunctions.Exp
 import Mathlib.Analysis.Matrix.Order
 import Mathlib.Analysis.Normed.Algebra.Exponential
+import Mathlib.MeasureTheory.Integral.Bochner.Basic
+import Mathlib.MeasureTheory.Measure.Haar.Basic
+import Mathlib.Topology.Compactness.Compact
 import Mathlib.Analysis.SpecialFunctions.Exponential
 import Mathlib.Topology.Algebra.Monoid
 import Mathlib.Topology.Order.OrderClosed
@@ -27,6 +31,7 @@ open Finset
 open Complex
 open Filter
 open Matrix
+open MeasureTheory
 open scoped ComplexConjugate
 open scoped ComplexOrder
 
@@ -755,5 +760,71 @@ lemma repCharacter_inv (ρ : G →* Matrix (Fin n) (Fin n) ℂ)
     exact Matrix.inv_eq_right_inv hmul
   rw [repCharacter, repCharacter, ← h_star_eq]
   simp [Matrix.trace, Matrix.conjTranspose_apply, Complex.star_def]
+
+/-! ## Irreducible representations and character orthogonality
+
+The Osterwalder–Seiler reflection-positivity argument requires not just that
+the Boltzmann factor is positive-definite (proved modulo Peter–Weyl as
+`boltzmannFactorPD`), but that the reflection-positivity integral
+`∫ f(U)·f(θU)·exp(-β S_W) dμ` is non-negative.  As documented in
+`docs/gap_analysis.md`, this integral is NOT the standard PD quadratic form
+`∫∫ f(g)·conj(f(h))·K(g⁻¹h) dμ dμ ≥ 0`; it is a single integral with the
+geometric reflection `θ` and `K` evaluated at `g` (not `g⁻¹h`).
+
+The Peter–Weyl character expansion of `K = exp(-β S_W)` writes
+`K = ∑_λ a_λ χ_λ`, and the reflection-positivity integral becomes a sum of
+terms `∑_λ a_λ · |∫ f · χ_λ|²` (using character orthogonality and the
+reflection symmetry of the Haar measure).  Each term is non-negative because
+`a_λ ≥ 0` and `|·|² ≥ 0`.  This is the missing step.
+
+The infrastructure below axiomatizes the two deep theorems of compact-Lie-group
+representation theory that are not in Mathlib:
+1. **Irreducibility** of a unitary representation (no non-trivial invariant
+   subspaces).
+2. **Character orthogonality** for irreducible unitary representations of a
+   compact group with normalized Haar measure: the integral of `χ_λ · conj(χ_μ)`
+   is `1` if `λ = μ` (same irrep) and `0` otherwise (Schur orthogonality).
+
+These are the ingredients needed to turn the character expansion of the
+Boltzmann factor into the `|Fourier coefficient|²` decomposition of the
+reflection-positivity integral.  See `docs/gap_analysis.md` for the full
+analysis.
+-/
+
+/-- A unitary representation `ρ` is *irreducible* if the only invariant
+subspaces (subspaces `W` with `ρ(g) W ⊆ W` for all `g`) are `{0}` and the
+whole space.  This is the standard representation-theoretic notion. -/
+def IsIrreducible {G : Type*} [Group G] {n : ℕ}
+    (ρ : G →* Matrix (Fin n) (Fin n) ℂ) : Prop :=
+  ∀ (W : Submodule ℂ (Fin n → ℂ)),
+    (∀ g : G, ∀ v ∈ W, ρ g *ᵥ v ∈ W) → (W = ⊥ ∨ W = ⊤)
+
+/-- **Axiom (Schur orthogonality for characters of irreducible unitary
+representations of a compact group).**
+
+For a compact group `G` with normalized Haar measure `μ`, and irreducible
+unitary representations `ρ_λ, ρ_μ` with characters `χ_λ, χ_μ`, the integral
+`∫ χ_λ(g) · conj(χ_μ(g)) dμ(g)` equals `1` if `λ = μ` (the same irrep) and
+`0` otherwise (distinct irreps).
+
+This is the **Great Orthogonality Theorem** for compact groups (Schur
+orthogonality), a cornerstone of the Peter–Weyl theorem.  It is not currently
+in Mathlib.  The axiom is stated for a *finite* index set of irreps (the
+Peter–Weyl theorem gives a countable family; for the lattice Boltzmann factor
+only finitely many irreps appear in the character expansion, so a finite
+family suffices).
+
+See `docs/gap_analysis.md` for how this axiom is used to close the
+reflection-positivity gap. -/
+axiom characterOrthogonality {G : Type*} [Group G] [TopologicalSpace G]
+    [CompactSpace G] [MeasurableSpace G] [BorelSpace G]
+    (μ : Measure G) [IsProbabilityMeasure μ]
+    (ι : Type) [Fintype ι] [DecidableEq ι] (dims : ι → ℕ)
+    (ρ : ∀ i, G →* Matrix (Fin (dims i)) (Fin (dims i)) ℂ)
+    (hU : ∀ i, IsUnitaryRepresentation (ρ i))
+    (hIrr : ∀ i, IsIrreducible (ρ i))
+    (i j : ι) :
+    ∫ g, repCharacter (ρ i) g * conj (repCharacter (ρ j) g) ∂μ =
+      if i = j then (1 : ℂ) else 0
 
 end UnitaryRepresentation

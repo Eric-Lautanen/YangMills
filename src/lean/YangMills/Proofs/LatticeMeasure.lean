@@ -4,8 +4,12 @@
 import YangMills.Lattice
 import YangMills.SpecialUnitary
 import Mathlib.MeasureTheory.Measure.Haar.Basic
+import Mathlib.MeasureTheory.Measure.Haar.Unique
+import Mathlib.MeasureTheory.Measure.Regular
+import Mathlib.MeasureTheory.Group.Measure
 import Mathlib.MeasureTheory.Integral.Pi
 import Mathlib.MeasureTheory.Constructions.Pi
+import Mathlib.Topology.Algebra.Group.Compact
 
 open Set Matrix MeasureTheory
 open scoped MeasureTheory
@@ -184,6 +188,196 @@ lemma productHaarMeasure_isFiniteMeasure (N : ℕ) (Λ : Type) [DecidableEq Λ] 
   refine { measure_univ_lt_top := ?_ }
   rw [h_total]
   exact ENNReal.one_lt_top
+
+/-- The Haar measure on `SU(N)` is invariant under inversion `g ↦ g⁻¹`.
+This follows from `IsHaarMeasure.isInvInvariant_of_regular` (Mathlib), since
+`SU(N)` is compact (hence locally compact) and the Haar measure is regular.
+
+**Status**: the proof is a standard instance-resolution chain
+(`LocallyCompactSpace` from `PositiveCompacts` → `Regular` from
+`regular_haarMeasure` → `IsInvInvariant` from
+`isInvInvariant_of_regular` → `map_inv_eq_self`), but the instance resolution
+is delicate due to the `let`-bound `PositiveCompacts` value.  The lemma is
+stated as a `sorry` pending instance-resolution plumbing. -/
+lemma haarMeasure_inv_invariant (N : ℕ) :
+    let K : TopologicalSpace.PositiveCompacts (SU N) :=
+      ⟨⟨Set.univ, isCompact_univ⟩, by simpa using Set.univ_nonempty (α := SU N)⟩
+    MeasureTheory.Measure.map Inv.inv (MeasureTheory.Measure.haarMeasure K) =
+      MeasureTheory.Measure.haarMeasure K := by
+  intro K
+  set μ := MeasureTheory.Measure.haarMeasure K with hμ_def
+  have hμ_univ : μ Set.univ = 1 := by
+    simpa [K, hμ_def] using MeasureTheory.Measure.haarMeasure_self (K₀ := K)
+  -- Compact groups are unimodular: μ is right-invariant.
+  haveI : Measure.IsMulRightInvariant μ := by
+    refine ⟨fun g => ?_⟩
+    haveI : Measure.IsMulLeftInvariant (Measure.map (fun x => x * g) μ) :=
+      isMulLeftInvariant_map_mul_right g
+    have hmap_univ : Measure.map (fun x => x * g) μ Set.univ = 1 := by
+      rw [Measure.map_apply (measurable_mul_const g) MeasurableSet.univ, preimage_univ]
+      exact hμ_univ
+    haveI : IsFiniteMeasureOnCompacts (Measure.map (fun x => x * g) μ) := by
+      refine ⟨fun s _hs => ?_⟩
+      exact (measure_mono (Set.subset_univ _)).trans_lt
+        (hmap_univ.symm ▸ ENNReal.one_lt_top)
+    have h_eq : Measure.map (fun x => x * g) μ =
+        Measure.haarScalarFactor (Measure.map (fun x => x * g) μ) μ • μ :=
+      Measure.isMulInvariant_eq_smul_of_compactSpace _ _
+    have h_scalar : Measure.haarScalarFactor (Measure.map (fun x => x * g) μ) μ = 1 := by
+      have h' : Measure.map (fun x => x * g) μ Set.univ =
+          Measure.haarScalarFactor (Measure.map (fun x => x * g) μ) μ * μ Set.univ := by
+        have hstep : Measure.map (fun x => x * g) μ Set.univ =
+            (Measure.haarScalarFactor (Measure.map (fun x => x * g) μ) μ • μ) Set.univ :=
+          congr_arg (fun ν => ν Set.univ) h_eq
+        rw [hstep, Measure.coe_nnreal_smul_apply]
+      rw [hμ_univ, hmap_univ] at h'
+      simp at h'
+      exact_mod_cast h'.symm
+    rw [h_eq, h_scalar, one_smul]
+  -- μ.inv is left-invariant (from right-invariance of μ)
+  haveI : Measure.IsMulLeftInvariant μ.inv := inferInstance
+  haveI : IsFiniteMeasureOnCompacts μ.inv := inferInstance
+  -- By uniqueness: μ.inv = c • μ, c = 1
+  have h_eq : μ.inv = Measure.haarScalarFactor μ.inv μ • μ :=
+    Measure.isMulInvariant_eq_smul_of_compactSpace _ _
+  have hμinv_univ : μ.inv Set.univ = 1 := by
+    rw [Measure.inv_def, Measure.map_apply measurable_inv MeasurableSet.univ, preimage_univ]
+    exact hμ_univ
+  have h_scalar : Measure.haarScalarFactor μ.inv μ = 1 := by
+    have h' : μ.inv Set.univ = Measure.haarScalarFactor μ.inv μ * μ Set.univ := by
+      have hstep : μ.inv Set.univ =
+          (Measure.haarScalarFactor μ.inv μ • μ) Set.univ :=
+        congr_arg (fun ν => ν Set.univ) h_eq
+      rw [hstep, Measure.coe_nnreal_smul_apply]
+    rw [hμ_univ, hμinv_univ] at h'
+    simp at h'
+    exact_mod_cast h'.symm
+  rw [← Measure.inv_def, h_eq, h_scalar, one_smul]
+
+/-- The reflection map on the full link-variable group is measure-preserving
+with respect to the product Haar measure.
+
+The reflection `θ` acts by `(θU)(n, μ) = U(θn, μ)⁻¹` for time-like links (μ = 0)
+and `(θU)(n, μ) = U(θn, μ)` for spatial links (μ ≠ 0).  This is a composition of:
+1. An index permutation `(n, μ) ↦ (θn, μ)` — preserves the product measure since
+   all factors are identical.
+2. Componentwise inversion on time-like links — preserves the product measure
+   since the Haar measure on `SU(N)` is inversion-invariant
+   (`haarMeasure_inv_invariant`).
+
+Both steps preserve the product Haar measure, so the composition does too.
+
+This is the key measure-theoretic ingredient for the character-orthogonality
+approach to closing `transferMatrixPositivity_axiom`: it justifies the change
+of variables `U ↦ θU` in the reflection-positivity integral.
+
+The reflection `θ` acts by `(θU)(n, μ) = U(θn, μ)⁻¹` for time-like links (μ = 0)
+and `(θU)(n, μ) = U(θn, μ)` for spatial links (μ ≠ 0).  This is a composition of:
+1. An index permutation `(n, μ) ↦ (θn, μ)` — preserves the product measure since
+   all factors are identical (`measurePreserving_piCongrLeft`).
+2. Componentwise inversion on time-like links — preserves the product measure
+   since the Haar measure on `SU(N)` is inversion-invariant
+   (`haarMeasure_inv_invariant`).
+
+Both steps preserve the product Haar measure, so the composition does too
+(`MeasurePreserving.comp`).
+
+This is the key measure-theoretic ingredient for the character-orthogonality
+approach to closing `transferMatrixPositivity_axiom`: it justifies the change
+of variables `U ↦ θU` in the reflection-positivity integral.
+
+The hypothesis `hsites : ∀ n, n ∈ sites → reflectSite n ∈ sites` is necessary:
+since `ReflectSite.involution` makes `reflectSite` involutive, it makes the
+reflection a bijection on `sites`, so the index permutation is a genuine
+permutation of `FiniteLinkIndex Λ sites`.  Without it, an out-of-`sites`
+reflection would collapse a Haar-distributed degree of freedom to the constant
+`1` (via `extendLinkVariable`'s default), which does *not* preserve the product
+Haar measure. -/
+lemma reflectLinkVariable_measurePreserving
+    (N : ℕ) {Λ : Type} [DecidableEq Λ] [ReflectSite Λ]
+    (sites : Finset Λ)
+    (hsites : ∀ n, n ∈ sites → ReflectSite.reflectSite n ∈ sites) :
+    MeasurePreserving
+      (fun (cfg : FiniteLinkConfig N Λ sites) =>
+        restrictLinkVariable N Λ sites
+          (reflectLinkVariable N (extendLinkVariable N Λ sites cfg)))
+      (productHaarMeasure N Λ sites) (productHaarMeasure N Λ sites) := by
+  -- The positive compact set used to build the Haar measure on SU(N),
+  -- matching the one in `productHaarMeasure`.
+  let K : TopologicalSpace.PositiveCompacts (SU N) :=
+    ⟨⟨Set.univ, isCompact_univ⟩, by simpa using Set.univ_nonempty (α := SU N)⟩
+  set ν : Measure (SU N) := MeasureTheory.Measure.haarMeasure K with hν_def
+  -- `productHaarMeasure` is the product of identical Haar factors.
+  have hμ : productHaarMeasure N Λ sites =
+      Measure.pi (fun _ : FiniteLinkIndex Λ sites => ν) := by
+    simp only [productHaarMeasure, ν, K, hν_def]
+  -- The index permutation `(n, μ) ↦ (reflectSite n, μ)` on `FiniteLinkIndex`.
+  -- It is involutive (hence a bijection) thanks to `ReflectSite.involution`.
+  let perm : FiniteLinkIndex Λ sites ≃ FiniteLinkIndex Λ sites :=
+    { toFun := fun ⟨⟨n, μ⟩, hn⟩ => ⟨⟨ReflectSite.reflectSite n, μ⟩, hsites n hn⟩
+      invFun := fun ⟨⟨n, μ⟩, hn⟩ => ⟨⟨ReflectSite.reflectSite n, μ⟩, hsites n hn⟩
+      left_inv := fun ⟨⟨n, μ⟩, hn⟩ => by
+        simp only [ReflectSite.involution]
+        rfl
+      right_inv := fun ⟨⟨n, μ⟩, hn⟩ => by
+        simp only [ReflectSite.involution]
+        rfl }
+  -- Step 1: the index permutation preserves the product measure.
+  -- `MeasurableEquiv.piCongrLeft (fun _ => SU N) perm.symm` acts, with the
+  -- constant fibre `SU N`, as `cfg ↦ fun i => cfg (perm i)`.
+  have h_perm : MeasurePreserving
+      (MeasurableEquiv.piCongrLeft (fun _ => SU N) perm.symm)
+      (Measure.pi (fun _ : FiniteLinkIndex Λ sites => ν))
+      (Measure.pi (fun _ : FiniteLinkIndex Λ sites => ν)) :=
+    measurePreserving_piCongrLeft (fun _ => ν) perm.symm
+  -- With the constant fibre `SU N`, the `piCongrLeft` application simplifies
+  -- to `cfg (perm i)` (the dependent transport is over a constant motive).
+  have h_perm_eq : ∀ (cfg : FiniteLinkConfig N Λ sites) (i : FiniteLinkIndex Λ sites),
+      MeasurableEquiv.piCongrLeft (fun _ => SU N) perm.symm cfg i = cfg (perm i) := by
+    intro cfg i
+    have h := @MeasurableEquiv.piCongrLeft_apply_apply _ _ perm.symm
+      (fun _ => SU N) _ cfg (perm i)
+    rwa [Equiv.symm_apply_apply] at h
+  -- product measure, since each factor is either `id` (spatial) or `Inv.inv`
+  -- (time-like), and the Haar measure is inversion-invariant.
+  have h_inv : MeasurePreserving
+      (fun (cfg : FiniteLinkConfig N Λ sites) (i : FiniteLinkIndex Λ sites) =>
+        if i.1.2 = 0 then (cfg i)⁻¹ else cfg i)
+      (Measure.pi (fun _ : FiniteLinkIndex Λ sites => ν))
+      (Measure.pi (fun _ : FiniteLinkIndex Λ sites => ν)) := by
+    have h := measurePreserving_pi (fun _ : FiniteLinkIndex Λ sites => ν) (fun _ => ν)
+      (f := fun i => if i.1.2 = 0 then (Inv.inv : SU N → SU N) else id)
+      (by
+        intro i
+        by_cases h : i.1.2 = 0
+        · simp only [h, ↓reduceIte]
+          exact ⟨continuous_inv.measurable, haarMeasure_inv_invariant N⟩
+        · simp only [h, ↓reduceIte]
+          exact MeasurePreserving.id ν)
+    convert h using 1
+    funext cfg i
+    by_cases h : i.1.2 = 0 <;> simp only [h, ↓reduceIte, Function.id_def]
+  -- Compose the two measure-preserving maps.
+  have h_comp := h_inv.comp h_perm
+  -- The stated map equals the composition: at `(n, μ)` with `n ∈ sites`,
+  -- `hsites` forces `reflectSite n ∈ sites`, so the out-of-`sites` default
+  -- never triggers, and the map reduces to the permutation followed by the
+  -- componentwise (id/inv) operation.
+  have h_eq :
+      (fun (cfg : FiniteLinkConfig N Λ sites) =>
+        restrictLinkVariable N Λ sites
+          (reflectLinkVariable N (extendLinkVariable N Λ sites cfg))) =
+      (fun cfg i =>
+        if i.1.2 = 0 then (MeasurableEquiv.piCongrLeft (fun _ => SU N) perm.symm cfg i)⁻¹
+        else MeasurableEquiv.piCongrLeft (fun _ => SU N) perm.symm cfg i) := by
+    funext cfg i
+    rcases i with ⟨⟨n, μ⟩, hn⟩
+    simp only [restrictLinkVariable, reflectLinkVariable, extendLinkVariable,
+      dif_pos (hsites n hn)]
+    rw [h_perm_eq cfg ⟨(n, μ), hn⟩]
+    rfl
+  rw [hμ, h_eq]
+  exact h_comp
 
 /-- The partition function for a finite lattice with Wilson action. -/
 noncomputable def partitionFunctionFinite (N : ℕ) (β : ℝ) (Λ : Type) [DecidableEq Λ] [AddVector Λ]

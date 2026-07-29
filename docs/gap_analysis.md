@@ -203,6 +203,73 @@ links) is a PD function of the interface link variables — applying
 full Boltzmann factor (now proved PD by `boltzmannFactorPD`, item 15), and
 finally applying `integralOperator_nonneg` to the resulting PD kernel.
 
+**The character-orthogonality path (new)**: the `characterOrthogonality` axiom
+(Schur orthogonality, now in `PositiveDefinite.lean`) provides the key
+ingredient to turn the character expansion of the Boltzmann factor into a
+`|Fourier coefficient|²` decomposition of the reflection-positivity integral.
+The path: (1) expand `exp(-β S_W) = ∑_λ a_λ χ_λ` (Peter–Weyl), (2) substitute
+into `∫ f(U)·f(θU)·exp(-β S_W) dμ` (shown equivalent to the axiom by
+`osG_thetaG_factorization`), (3) use reflection-invariance of Haar measure +
+`characterOrthogonality` to rewrite each term as `|∫ f·χ_λ|² ≥ 0`, (4) sum
+with `a_λ ≥ 0`.  Steps 1–2 are formalized; steps 3–4 are the remaining wiring.
+
+### Precise analysis of the character-orthogonality path (2025-06-29 session)
+
+A detailed analysis of the character-orthogonality path was performed in the
+2025-06-29 session.  The key findings are:
+
+**The correct abstract lemma** is NOT at the level of the full Boltzmann
+factor (where `χ_λ(θU) ≠ conj(χ_λ(U))` in general, so the naive
+`|∫ f·χ_λ|²` decomposition fails).  It is at the level of the **transfer
+matrix kernel**:
+
+    K_TM(u, U⁻) = exp(-β·(S⁺(u)/2 + S⁻(U⁻)/2 + S_int(u, U⁻)))
+
+If this kernel decomposes as
+
+    K_TM(u, U⁻) = ∑_λ a_λ · Φ_λ(u) · conj(Φ_λ(θ⁻⁰(U⁻, u⁰)))
+
+with `a_λ ≥ 0`, then (using `reflectLinkVariable_measurePreserving` for the
+change of variables `U⁻ ↦ θ⁻⁰(U⁻, u⁰)`):
+
+    ∫∫ g(u)·g(θ⁻⁰(U⁻, u⁰))·K_TM(u, U⁻) dμ⁻(U⁻) dμ⁺⁰(u)
+    = ∑_λ a_λ · ∫_{u⁰} |∫_{u⁺} g(u⁺, u⁰)·Φ_λ(u⁺, u⁰) dμ⁺(u⁺)|² dμ⁰(u⁰) ≥ 0
+
+The key steps are:
+1. **Kernel decomposition** (the hard part): the interface Boltzmann factor
+   `exp(-β·S_int)` has a character expansion that separates into
+   `u`-dependent and `U⁻`-dependent parts, related by reflection.
+2. **Change of variables**: `θ⁻⁰` maps `μ⁻` to `μ⁺` (by
+   `reflectLinkVariable_measurePreserving`).
+3. **Algebra**: the integral becomes a sum of `|Fourier coefficients|² ≥ 0`.
+
+**The key obstruction** to formalizing step 1: the interface Boltzmann factor
+is a **product of multiple interface plaquette factors**.  Each single
+plaquette factor has a character expansion (by
+`peterWeyl_clebschGordan_plaquette`), but the **product** of multiple
+expansions involves **products of characters of the same link variable**
+(when a link appears in multiple plaquettes).  Reducing such a product to a
+sum of single characters requires the **Clebsch–Gordan decomposition**
+`χ_s(g)·χ_t(g) = ∑_w N^w_{st} χ_w(g)` with `N^w_{st} ≥ 0`, which is NOT
+currently axiomatized.  The existing `peterWeyl_clebschGordan_plaquette` axiom
+bakes Clebsch–Gordan into the single-plaquette expansion, but does not
+provide it as a separate tool for combining characters of the same group
+element across different plaquettes.
+
+**The abstract lemma to formalize** (no new axioms needed): if a kernel
+`K : X → Y → ℂ` has a finite separable decomposition
+`K(x, y) = ∑_i a_i · Φ_i(x) · conj(Φ_i(θ y))` with `a_i ≥ 0` and `θ`
+measure-preserving (`θ_*ν = μ`), then for real-valued `f`:
+
+    ∫∫ f(x) · f(θ y) · K(x, y) dν(y) dμ(x) = ∑_i a_i · |∫ f · Φ_i dμ|² ≥ 0
+
+This is a pure measure-theory lemma (uses only `MeasurePreserving` for the
+change of variables, no group structure, no character orthogonality).  It is
+the abstract scaffold that the concrete character expansion would plug into.
+Formalizing it is the natural next step; it was sketched but not completed in
+the 2025-06-29 session (the integrability bookkeeping for exchanging the
+finite sum with the integral needs care).
+
 **Key obstruction**: the TM kernel
 `(Tψ)(u) = ∫ ψ(θ⁻⁰(U⁻,u⁰))·exp(-β·(...)) dμ⁻(U⁻)` is NOT of the form
 `φ(u⁻¹·v)` for a PD function `φ` on a group — the reflection map `θ⁻⁰` is a

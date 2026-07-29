@@ -204,6 +204,23 @@ by `#print axioms` (only `propext`, `Classical.choice`, `Quot.sound`).
   (referenced in earlier versions of this file as a "currently sorry" lemma)
   does not exist under that name; the real gap is the differently-named
   `transferMatrixPositivity_axiom` axiom in `ReflectionPositivity.lean`.
+  Added `IsIrreducible` (definition) and `characterOrthogonality` (axiom:
+  Schur orthogonality for irreducible unitary representations of a compact
+  group) to `PositiveDefinite.lean` — the key ingredient for the
+  `|Fourier coefficient|²` decomposition of the reflection-positivity integral.
+  Also proved `osG_thetaG_factorization` (clean factorization of the
+  reflection-positivity integrand) in `ReflectionPositivity.lean`.  Added
+  Added `haarMeasure_inv_invariant` (now **proved**, 0 sorries, 0 custom axioms
+  — verified by `#print axioms`: only `propext, Classical.choice, Quot.sound`;
+  the standard compact-group unimodularity argument) and
+  `reflectLinkVariable_measurePreserving`
+  (now **proved**, 0 sorries, 0 custom axioms — verified by `#print axioms`:
+  only `propext, Classical.choice, Quot.sound`; composes the index-permutation
+  `measurePreserving_piCongrLeft` with the componentwise-inversion
+  `measurePreserving_pi` + `haarMeasure_inv_invariant` via
+  `MeasurePreserving.comp`, under the necessary `hsites` hypothesis that the
+  reflection permutes `sites`) to `LatticeMeasure.lean`.  The axiom
+  count is now six.
 
 ### Future work:
 - Wire `PositiveDefinite.integral` and `PositiveDefinite.integralOperator_nonneg`
@@ -221,8 +238,36 @@ by `#print axioms` (only `propext`, `Classical.choice`, `Quot.sound`).
   obstruction, but showing the TM kernel *is* Mercer-PD still requires the
   Peter–Weyl character expansion to decompose the Boltzmann factor into
   separable positive terms (approach (c)).
+- **Character-orthogonality path** (new): the `characterOrthogonality` axiom
+  (Schur orthogonality for irreducible unitary representations of a compact
+  group, now in `PositiveDefinite.lean`) provides the key ingredient to turn
+  the character expansion of the Boltzmann factor into a `|Fourier
+  coefficient|²` decomposition of the reflection-positivity integral
+  `∫ f(U)·f(θU)·exp(-β S_W) dμ`.  The path: (1) expand `exp(-β S_W) =
+  ∑_λ a_λ χ_λ` (Peter–Weyl), (2) substitute into the integral, (3) use
+  reflection-invariance of Haar measure + `characterOrthogonality` to rewrite
+  each term as `|∫ f·χ_λ|² ≥ 0`, (4) sum with `a_λ ≥ 0`.  Steps 1–2 are
+  formalized (`boltzmannFactorPD`, `osG_thetaG_factorization`); steps 3–4
+  are the remaining wiring.
+  **Precise analysis (2025-06-29 session):** the naive path at the level of
+  the full Boltzmann factor does NOT work directly, because
+  `χ_λ(θU) ≠ conj(χ_λ(U))` — the reflection `θ` is not group inversion.
+  The correct approach works at the level of the **transfer matrix kernel**
+  `K_TM(u, U⁻)`, which must decompose as
+  `∑_λ a_λ Φ_λ(u) · conj(Φ_λ(θ⁻⁰(U⁻, u⁰)))` with `a_λ ≥ 0`.  The change of
+  variables `U⁻ ↦ θ⁻⁰(U⁻, u⁰)` (measure-preserving by
+  `reflectLinkVariable_measurePreserving`) then turns the integral into a sum
+  of `|Fourier coefficients|² ≥ 0`.  The key obstruction: the interface
+  Boltzmann factor is a **product of multiple plaquette factors**, and
+  combining their character expansions requires the **Clebsch–Gordan
+  decomposition** for products of characters of the same link variable — not
+  currently axiomatized.  An abstract lemma (no new axioms) connecting
+  separable kernel decompositions to integral positivity was identified as
+  the natural next formalization step.  See `docs/gap_analysis.md`.
 - Peter–Weyl theorem for SU(N) (or a bypass via spectral theory) — would remove
   the `peterWeyl_clebschGordan_plaquette` axiom.
+- Schur orthogonality for compact groups — would remove the
+  `characterOrthogonality` axiom.
 - Construct `PeriodicExpectation` structure (requires the corrected reflection
   positivity proof).
 - Continuum limit (Balaban renormalization group) — `continuum_limit_exists`.

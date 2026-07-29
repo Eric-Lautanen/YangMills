@@ -110,6 +110,21 @@ all measure-preserving maps, including the reflection `θ`).  Step 4 is
 trivial algebra.  The remaining formalization work is the concrete wiring
 of steps 3–4 into the lattice-gauge-theory setup.
 
+**Precise analysis (2025-06-29 session):** the naive path above (steps 1–4
+at the level of the full Boltzmann factor) does NOT work directly, because
+`χ_λ(θU) ≠ conj(χ_λ(U))` in general — the reflection `θ` is not group
+inversion.  The correct approach works at the level of the **transfer matrix
+kernel** `K_TM(u, U⁻)`, which must decompose as
+`∑_λ a_λ Φ_λ(u) · conj(Φ_λ(θ⁻⁰(U⁻, u⁰)))` with `a_λ ≥ 0`.  The change of
+variables `U⁻ ↦ θ⁻⁰(U⁻, u⁰)` (measure-preserving by
+`reflectLinkVariable_measurePreserving`) then turns the integral into a sum
+of `|Fourier coefficients|² ≥ 0`.  The key obstruction to formalizing this
+kernel decomposition is that the interface Boltzmann factor is a **product
+of multiple plaquette factors**, and combining their character expansions
+requires the **Clebsch–Gordan decomposition** for products of characters of
+the same link variable — not currently axiomatized.  See
+`docs/gap_analysis.md` for the full analysis.
+
 ## What is actually proved (no sorry, no axiom)
 
 ### SU(N) and general algebra
@@ -294,12 +309,20 @@ file is **not** in the toolchain-drift-breakage risk category.
   `Set.univ` (via `congr_arg (fun ν => ν Set.univ) h_eq`).
 - `reflectLinkVariable_measurePreserving` (`LatticeMeasure.lean`) — the
   reflection map `θ` on the full link-variable group is measure-preserving
-  w.r.t. the product Haar measure.  **Stated with `sorry`** — the proof
-  requires composing the index-permutation measure-preservation
-  (`measurePreserving_piCongrLeft`) with the componentwise inversion
-  invariance (`haarMeasure_inv_invariant` + `Measure.pi_map_pi`).  This is
-  the key measure-theoretic ingredient for the character-orthogonality
-  approach to closing `transferMatrixPositivity_axiom`.
+  w.r.t. the product Haar measure.  **Proved** (0 sorries, 0 custom axioms —
+  verified by `#print axioms`: only `propext`, `Classical.choice`,
+  `Quot.sound`).  The statement carries the necessary hypothesis
+  `hsites : ∀ n, n ∈ sites → reflectSite n ∈ sites` (which, since
+  `ReflectSite.involution` makes `reflectSite` involutive, makes the
+  reflection a bijection on `sites`).  The proof composes two
+  measure-preserving maps via `MeasurePreserving.comp`: (1) the index
+  permutation `(n, μ) ↦ (reflectSite n, μ)` preserves the product measure
+  by `measurePreserving_piCongrLeft` (all factors are identical); (2)
+  componentwise inversion on time-like links (μ = 0) preserves the product
+  measure by `measurePreserving_pi` + `haarMeasure_inv_invariant` (spatial
+  links use `MeasurePreserving.id`).  This is the key measure-theoretic
+  ingredient for the character-orthogonality approach to closing
+  `transferMatrixPositivity_axiom`.
 
 ### Transfer matrix
 - `reflectToPosInterface`, `transferMatrixCorrect`, `G`, `g_posInterface`
