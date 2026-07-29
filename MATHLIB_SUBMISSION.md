@@ -10,7 +10,10 @@ Two standalone, Yang-Mills-free files are provided so each result group can
 be evaluated independently:
 
 - `PositiveDefiniteKernelMathlibCandidate.lean` — **priority candidate** —
-  Mercer-type positive-definite kernels (no group structure required).
+  Mercer-type positive-definite kernels (no group structure required). This
+  candidate has no known duplicate in any checked repository (Mathlib or
+  external); see §3 for the comparison with `Vilin97/lean-pool` which only
+  covers the group-theoretic case.
 - `PositiveDefiniteMathlibCandidate.lean` — group-theoretic positive-definite
   functions on a group.
 
@@ -27,6 +30,12 @@ group-theoretic notion of positive-definiteness (where `K(x, y) = φ(x⁻¹·y)`
 for a PD function `φ` on a group) to arbitrary spaces: the reduction
 group-PD ⟹ Mercer-PD is proved as `PositiveDefinite.toPositiveDefiniteKernel`.
 (Only this one direction is proved; no claim of proper containment is made.)
+
+**Why this is the priority candidate.** The group-theoretic `PositiveDefinite`
+(§1b) has a functionally similar counterpart in the external repo
+`Vilin97/lean-pool` (see §3). The Mercer-type `PositiveDefiniteKernel`
+presented here has no known duplicate in any checked repository — neither
+Mathlib nor any external. This makes it the stronger candidate for upstreaming.
 
 **Main theorem.** If `X` is a compact (pseudo)metric space with a probability
 measure `μ`, `K` is a continuous Mercer-PD kernel, and `f` is continuous,
@@ -158,6 +167,28 @@ condition. A search for any Mathlib file generalizing `Reproducing.lean`'s
 finite-matrix PD kernel to the continuous/measure-theoretic setting found
 nothing. The two notions are related but distinct; the candidate here is
 closer in spirit to the continuous side that Mathlib does not yet have.
+
+**Comparison with external repo `Vilin97/lean-pool`.**
+The repository `Vilin97/lean-pool` contains
+`LeanPool/OSforGFF/Bochner/PositiveDefinite.lean` (verified at
+`raw.githubusercontent.com/Vilin97/lean-pool/main/LeanPool/OSforGFF/Bochner/PositiveDefinite.lean`),
+which defines `IsPositiveDefinite` (as a `structure` bundling Hermitian symmetry and
+non-negativity) for functions on an additive group. That file proves: `conj_symm`
+(φ(-x) = conj(φ(x))), `eval_zero_nonneg` (0 ≤ (φ 0).re), `eval_zero_real`
+((φ 0).im = 0), `bounded_by_zero` (‖φ x‖ ≤ (φ 0).re), `mul` (Schur product
+theorem via the Kronecker product `⊗ₖ`), and `isPositiveDefinite_precomp_linear`
+(composition with a linear map). The same repo also has
+`LeanPool/OSforGFF/Bochner/FejerPD.lean` which proves that the Fourier transform
+of an L¹ continuous PD function on a finite-dimensional real inner product space
+has non-negative real part (`pd_l1_fourier_re_nonneg_theorem`).
+
+This is *not* a Mathlib file; the overlap is noted for reviewer awareness.
+The `lean-pool` definitions are functionally equivalent to the
+group-theoretic `PositiveDefinite` in this submission but differ in API
+(`structure` vs. bare `Prop`, `AddGroup` vs. `Group`, `Fin`-based index sets
+vs. `Finset`-based). The Mercer-type `PositiveDefiniteKernel` and the
+`integralOperator_nonneg` double-integral results (both group-theoretic and
+Mercer-type) have no equivalent in `lean-pool` or in Mathlib.
 
 **Limits of this search.** This is not an exhaustive proof of absence. It
 covers: full-text `grep` of the pinned Mathlib tree for the relevant

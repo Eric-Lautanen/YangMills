@@ -39,10 +39,7 @@ All lemmas depend only on `propext`, `Classical.choice`, `Quot.sound`
 import Mathlib.Analysis.Complex.Basic
 import Mathlib.Analysis.Complex.Norm
 import Mathlib.Analysis.Matrix.Order
-import Mathlib.LinearAlgebra.Matrix.PosDef
-import Mathlib.Data.Matrix.Mul
 import Mathlib.MeasureTheory.Integral.Bochner.Basic
-import Mathlib.MeasureTheory.Integral.Bochner.ContinuousLinearMap
 import Mathlib.MeasureTheory.Integral.Bochner.Set
 import Mathlib.MeasureTheory.Integral.Prod
 import Mathlib.MeasureTheory.Measure.Prod
@@ -51,7 +48,6 @@ import Mathlib.MeasureTheory.Constructions.BorelSpace.Basic
 import Mathlib.Topology.UniformSpace.HeineCantor
 import Mathlib.Topology.MetricSpace.Pseudo.Basic
 import Mathlib.Topology.MetricSpace.Bounded
-import Mathlib.Topology.Algebra.Group.Defs
 import Mathlib.Topology.Compactness.Compact
 import Mathlib.Order.Disjointed
 import Mathlib.Topology.Constructions.SumProd

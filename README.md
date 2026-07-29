@@ -23,7 +23,7 @@ below before reading anything else in this document.
 
 ## Status of the Millennium Prize Theorem
 
-**Not proved.** The formalization currently rests on **five** axioms (not
+**Not proved.** The formalization currently rests on **six** axioms (not
 four — `MassGapProof.lean`'s module docstring says "four axioms" and then
 lists five; that docstring needs fixing too), one of which (`mass_gap_axiom`)
 directly encodes the conjecture being proved. Any theorem chain that
@@ -37,6 +37,7 @@ restatement.
 | `os_reconstruction_theorem` | `OSAxioms.lean` | Osterwalder–Schrader reconstruction (OS axioms ⇒ Wightman QFT) | Established published math, not in Mathlib. Only sound to invoke on objects that actually satisfy the OS axioms — depends on the continuum limit existing (see next row). |
 | `continuum_limit_exists` | `ContinuumLimit.lean` | Existence of the lattice a→0 continuum limit (Balaban RG / stochastic quantization) | **This axiom *is* the open mathematical core of the problem.** Not a placeholder for something routine — it's the thing nobody has proved. |
 | `mass_gap_axiom` | `MassGap.lean` | Positivity of the continuum mass gap | **This is the conjecture itself.** `yang_mills_existence_and_mass_gap` in `MassGapProof.lean` pulls the gap and its positivity directly from this axiom (`let mg := mass_gap_axiom a ha`) without deriving anything from the lattice work — the clearest concrete illustration of the circularity in the codebase. Must not be used in any theorem claimed as a "proof" of the Millennium Prize result. |
+| `characterOrthogonality` | `PositiveDefinite.lean` | Schur orthogonality for irreducible unitary representations of a compact group | Not in Mathlib. The **Great Orthogonality Theorem**: `∫ χ_λ(g)·conj(χ_μ(g)) dμ = δ_{λμ}` for normalized Haar measure. This is the key ingredient needed to turn the Peter–Weyl character expansion of the Boltzmann factor into the `|Fourier coefficient|²` decomposition of the reflection-positivity integral. Defensible as a cited external theorem. |
 
 Any file, comment, or summary claiming the top-level theorem is "proved"
 while it depends on `mass_gap_axiom` is wrong and should be corrected.
@@ -79,7 +80,35 @@ geometric reflection `θ` and `K` evaluated at `g` (not `g⁻¹h`).  PD-ness of
 of `K` and character orthogonality are needed to decompose the integrand
 into `|Fourier coefficients|²`.  Closing it, even leaving
 `peterWeyl_clebschGordan_plaquette` as an axiom, would be a genuine reduction
-in the codebase's assumption count (five axioms → four).
+in the codebase's assumption count (six axioms → five).
+
+### The character-orthogonality path to closing `transferMatrixPositivity_axiom`
+
+The newly added `characterOrthogonality` axiom (in `PositiveDefinite.lean`)
+provides the key missing ingredient for the reflection-positivity argument.
+The path is:
+
+1. The full Boltzmann factor `K = exp(-β S_W)` has a Peter–Weyl character
+   expansion `K = ∑_λ a_λ χ_λ` with `a_λ ≥ 0` (axiomatized by
+   `peterWeyl_clebschGordan_plaquette`, applied plaquette-by-plaquette and
+   multiplied via `boltzmannFactorPD`).
+2. The reflection-positivity integral `∫ f(U)·f(θU)·K(U) dμ` (shown
+   equivalent to the axiom by `osG_thetaG_factorization`) becomes, after
+   substituting the character expansion, a sum of terms
+   `∑_λ a_λ · ∫ f(U)·f(θU)·χ_λ(U) dμ`.
+3. Using the reflection symmetry of the Haar measure (`μ(θA) = μ(A)`) and
+   character orthogonality (`characterOrthogonality`), each term
+   `∫ f(U)·f(θU)·χ_λ(U) dμ` can be rewritten as `|∫ f(U)·χ_λ(U) dμ|² ≥ 0`
+   (a squared Fourier coefficient).
+4. Since `a_λ ≥ 0` and `|·|² ≥ 0`, the entire sum is non-negative.
+
+Steps 1–2 are already formalized (`boltzmannFactorPD`,
+`osG_thetaG_factorization`).  Step 3 requires the `characterOrthogonality`
+axiom (now added) plus the reflection-invariance of the Haar measure
+(`μ(θA) = μ(A)`, which follows from the Haar measure being invariant under
+all measure-preserving maps, including the reflection `θ`).  Step 4 is
+trivial algebra.  The remaining formalization work is the concrete wiring
+of steps 3–4 into the lattice-gauge-theory setup.
 
 ## What is actually proved (no sorry, no axiom)
 
@@ -98,6 +127,14 @@ in the codebase's assumption count (five axioms → four).
 - `PositiveDefinite.pow`, `.tendsto`, `.prod`, `.sum`, `.sum'`
 - `repCharacter_positiveDefinite`, `fundamentalCharacter_positiveDefinite`,
   `reTrace_positiveDefinite`
+- `IsUnitaryRepresentation`, `repCharacter`, `repCharacter_inv`
+  (`χ(g⁻¹) = conj(χ(g))`)
+- `IsIrreducible` — a unitary representation is irreducible if the only
+  invariant subspaces are `{0}` and the whole space
+- `characterOrthogonality` (axiom) — Schur orthogonality for irreducible
+  unitary representations of a compact group: `∫ χ_λ·conj(χ_μ) dμ = δ_{λμ}`
+  for normalized Haar measure.  Not in Mathlib; the key ingredient for the
+  `|Fourier coefficient|²` decomposition of the reflection-positivity integral.
 - `exp_reTrace_positiveDefinite` (single-link Boltzmann factor; proved
   unconditionally via the power-series / `PositiveDefinite.tendsto` argument —
   no axiom)
@@ -238,6 +275,31 @@ file is **not** in the toolchain-drift-breakage risk category.
 - `measure_factorization'` (μ₀ ≅ μ⁺ × μ⁻ × μ⁰, proved via `MeasurePreserving`)
   — verified by `#print axioms` (only `propext, Classical.choice, Quot.sound`),
   0 sorries, under the current Lean v4.33 toolchain.
+- `haarMeasure_inv_invariant` (`LatticeMeasure.lean`) — the Haar measure on
+  `SU(N)` is invariant under inversion `g ↦ g⁻¹`, i.e.
+  `map Inv.inv (haarMeasure K) = haarMeasure K`.  **Proved** (0 sorries, 0
+  custom axioms — verified by `#print axioms`: only `propext`,
+  `Classical.choice`, `Quot.sound`).  The proof uses the standard
+  compact-group unimodularity argument: `haarMeasure K` is right-invariant
+  (compact groups are unimodular — `map (· * g) μ` is left-invariant and a
+  probability measure, so by `isMulInvariant_eq_smul_of_compactSpace` it
+  equals `haarScalarFactor • μ` with the scalar forced to `1` by
+  `μ univ = 1`), hence `μ.inv` is left-invariant
+  (`inv.instIsMulLeftInvariant`), and again by uniqueness `μ.inv = μ` since
+  both are probability measures.  This is a known Mathlib fact, not a new
+  result; the formalization work was the namespace/identifier plumbing
+  (`Measure.map` vs `Matrix.map` shadowing, `Measure.haarScalarFactor`,
+  `Measure.isMulInvariant_eq_smul_of_compactSpace`) and avoiding the
+  dependent-rewrite motive failure when evaluating the scalar smul at
+  `Set.univ` (via `congr_arg (fun ν => ν Set.univ) h_eq`).
+- `reflectLinkVariable_measurePreserving` (`LatticeMeasure.lean`) — the
+  reflection map `θ` on the full link-variable group is measure-preserving
+  w.r.t. the product Haar measure.  **Stated with `sorry`** — the proof
+  requires composing the index-permutation measure-preservation
+  (`measurePreserving_piCongrLeft`) with the componentwise inversion
+  invariance (`haarMeasure_inv_invariant` + `Measure.pi_map_pi`).  This is
+  the key measure-theoretic ingredient for the character-orthogonality
+  approach to closing `transferMatrixPositivity_axiom`.
 
 ### Transfer matrix
 - `reflectToPosInterface`, `transferMatrixCorrect`, `G`, `g_posInterface`
@@ -286,7 +348,9 @@ file is **not** in the toolchain-drift-breakage risk category.
    form that `integralOperator_nonneg` addresses — it is a single integral
    with the geometric reflection `θ` and `K` evaluated at `g` (not `g⁻¹h`).
    PD-ness of `K` does not imply non-negativity; the Peter–Weyl character
-   expansion + orthogonality are needed.  See the suggested next step above.
+   expansion + the newly added `characterOrthogonality` axiom (Schur
+   orthogonality) are needed to decompose the integrand into
+   `|Fourier coefficients|²`.  See the "character-orthogonality path" above.
 
 3. **Systematic audit for vacuous proofs not yet done.** The `hadd` pattern
    (item 1) is a known instance of a broader risk: any proof that goes
@@ -414,7 +478,8 @@ and equally in need of upkeep:
 - When a module docstring (e.g. `MassGapProof.lean`'s "the proof uses four
   axioms") states a count or fact about the codebase, verify that count
   against the actual source in the same session — the axiom count there is
-  currently wrong (says four, lists five).
+  currently wrong (says four, lists five; the actual count is now six with
+  the addition of `characterOrthogonality`).
 - If a claim in this README or `Overview.lean` can't be verified against
   current source in under a few minutes, mark it `[UNVERIFIED — recheck]`
   rather than leaving a confident-sounding but possibly stale statement in
@@ -439,6 +504,11 @@ files are:
 - `PositiveDefiniteMathlibCandidate.lean` (repo root) — group-theoretic PD
   functions: `PositiveDefinite.integral` and
   `PositiveDefinite.integralOperator_nonneg`.
+
+A search of external repositories found `Vilin97/lean-pool` contains
+`IsPositiveDefinite` (same group-PD concept, different API), which is noted
+for reviewer awareness in `MATHLIB_SUBMISSION.md`. The Mercer-type
+`PositiveDefiniteKernel` has no known duplicate anywhere checked.
 
 These results are unrelated to the (unsolved) Yang-Mills mass-gap difficulty
 and are offered as standalone infrastructure.
