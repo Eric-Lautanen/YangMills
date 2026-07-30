@@ -297,6 +297,151 @@ different factors). This decomposition is captured by the `peterWeyl_clebschGord
 
 See `docs/found_issues.md` §3 for the full analysis.
 
+### Precise analysis of why `character_expansion_positivity` does NOT directly apply (2025-07-02 session)
+
+A detailed analysis was performed of whether the abstract lemma
+`character_expansion_positivity` (proved 2025-07-01, 0 sorries, 0 axioms) can
+be directly wired into the lattice-gauge-theory setup to close
+`transferMatrixPositivity_axiom`.  **The answer is no — three interconnected
+obstructions prevent direct application.**  This section documents the precise
+mathematical situation.
+
+**Recap of the abstract lemma.**  `character_expansion_positivity` states: if
+`K : X → Y → ℂ` has a finite separable decomposition
+`K(x, y) = ∑_i a_i · Φ_i(x) · conj(Φ_i(θ y))` with `a_i ≥ 0` and
+`θ : Y → X` measure-preserving (`θ_*ν = μ`), then for real-valued `f`:
+`∫∫ f(x) · f(θ y) · K(x, y) dν dμ = ∑_i a_i · ‖∫ f · Φ_i dμ‖² ≥ 0`.
+
+The lattice integral we need to show is ≥ 0 is (after `osG_thetaG_factorization`
+and `integral_G_thetaG_eq_inner_g_Tg`):
+
+    I = ∫_u ∫_{U⁻} g(u) · g(θ⁻⁰(U⁻, u⁰)) · K_TM(u, U⁻) dμ⁻(U⁻) dμ⁺⁰(u)
+
+where `u = (u⁺, u⁰)` is a `PosInterfaceConfig` (positive + interface links),
+`U⁻` is a negative config, `θ⁻⁰(U⁻, u⁰)` is the reflection from negative +
+interface to positive + interface, and `K_TM` is the transfer-matrix kernel.
+
+**Obstruction 1: `θ⁻⁰` depends on both `x` and `y`.**  The lemma requires
+`θ : Y → X` (a function of `y` only).  But `θ⁻⁰(U⁻, u⁰)` depends on `u⁰`,
+which is part of `x = u = (u⁺, u⁰)`.  So `θ` is NOT a function of `y` only —
+it depends on `x` too.  The lemma's proof uses the change of variables
+`z = θ y` (for the inner integral over `y`), which requires `θ` to be a
+function of `y` only.  With `x`-dependent `θ`, the change of variables gives
+a result that depends on `x`, preventing the factorization into
+`|∫ f · Φ_i dμ|²`.
+
+**Obstruction 2: the pushforward of `μ⁻` by `θ⁻⁰(·, u⁰)` is singular.**  Even
+if we generalize the lemma to allow `x`-dependent `θ`, the proof requires
+(for each fixed `x`) that `θ(x, ·)` be measure-preserving from `ν` to `μ`
+(the FULL measure on `X`).  In our case, for fixed `u⁰`, the map
+`θ⁻⁰(·, u⁰) : U⁻ → PosInterfaceConfig` sends `μ⁻` to `μ⁺ × δ_{σ(u⁰)}`
+(the product of the positive Haar measure and a POINT MASS at the reflected
+interface config `σ(u⁰)`).  This is NOT the full measure `μ⁺⁰ = μ⁺ × μ⁰`.
+The image is a "slice" (fixed interface part), not the whole space.  So the
+change of variables gives an integral over a slice, not the full space, and
+the factorization into `|∫ f · Φ_i dμ|²` fails.
+
+**Obstruction 3: the `σ` reflection on interface time-like links.**  The
+reflection `θ` on link variables is:
+- `(θ U)(n, μ) = U(θn, μ)⁻¹` if `μ = 0` (time direction)
+- `(θ U)(n, μ) = U(θn, μ)` if `μ ≠ 0` (spatial direction)
+
+For interface sites (`signedTime = 0`), `θn = n` (since `-0 = 0` in `ZMod T`).
+So on interface links:
+- Time-like (`μ = 0`): `(θ U)(n, 0) = U(n, 0)⁻¹` — **inverted**
+- Spatial (`μ ≠ 0`): `(θ U)(n, μ) = U(n, μ)` — **unchanged**
+
+Define `σ` as this reflection on interface links (invert time-like, keep
+spatial).  Then `g(θ⁻⁰(U⁻, u⁰))` has interface part `σ(u⁰)`, while `g(u)`
+has interface part `u⁰`.  These are DIFFERENT (for time-like links).
+
+Even if we split the integral `∫_u = ∫_{u⁰} ∫_{u⁺}` and apply the lemma for
+each fixed `u⁰` (making `θ⁻⁰(·, u⁰)` a function of `y` only), the result is:
+
+    I = ∑_i a_i · ∫_{u⁰} A_i(u⁰) · conj(A_i(σ(u⁰))) dμ⁰(u⁰)
+
+where `A_i(u⁰) = ∫_{u⁺} g(u⁺, u⁰) · Φ_i(u⁺, u⁰) dμ⁺(u⁺)`.  This is
+`⟨A_i, A_i ∘ σ⟩_{L²(μ⁰)}`, which is **NOT necessarily non-negative** — it is
+the inner product of `A_i` with `A_i ∘ σ`, not `‖A_i‖²`.
+
+The root cause: for interface time-like links, the reflection inverts the
+link (`g ↦ g⁻¹`), and `χ(g⁻¹) = conj(χ(g))` by `repCharacter_inv`.  In the
+separable form `Φ_i(u) · conj(Φ_i(θ⁻⁰(U⁻, u⁰)))`, the inversion + conjugation
+gives `χ(g) · χ(g) = χ(g)²` for interface time-like links, NOT
+`χ(g) · conj(χ(g)) = |χ(g)|²`.  And `χ(g)²` is complex in general, not
+non-negative.
+
+**Why the OS proof still works.**  The Osterwalder–Seiler proof does NOT
+directly show the integral is a sum of `|Fourier coefficients|²` via
+`character_expansion_positivity`.  Instead, it shows the transfer matrix `T`
+is a **positive operator** by demonstrating `T = B* · B` for some operator `B`
+defined via the character expansion (or equivalently, by showing the kernel of
+`T` is a positive-definite kernel on the interface config space, after a
+proper change of variables that accounts for `σ`).  The positivity
+`⟨g, Tg⟩ ≥ 0` then follows from `⟨g, B* B g⟩ = ‖Bg‖² ≥ 0`.
+
+The operator `B` involves the Peter–Weyl character expansion of the Boltzmann
+factor, combined across plaquettes via the Clebsch–Gordan decomposition.  The
+key steps are:
+1. Expand each interface plaquette factor in characters (Peter–Weyl).
+2. For interface time-like links appearing in both a plaquette `p` and its
+   reflection `θp`, the product `χ_s(g) · conj(χ_t(g))` arises.  This is a
+   matrix coefficient of `ρ_s ⊗ ρ_t*`, decomposable via CG into
+   `∑_w N^w_{s,t*} χ_w(g)` with `N^w_{s,t*} ≥ 0`.
+3. For links appearing in multiple plaquettes, CG reduces products of
+   characters of the same link to single characters.
+4. The resulting decomposition defines the operator `B` (Fourier coefficient
+   extraction), and `T = B* · B` gives positivity.
+
+This is a fundamentally different argument from `character_expansion_positivity`,
+which tries to directly show the integral is a sum of `|coefficients|²`.  The
+lattice case requires the operator-theoretic approach (`T = B* B`), not the
+direct integral approach.
+
+**What's needed to close `transferMatrixPositivity_axiom`:**
+1. **Clebsch–Gordan axiom**: `χ_s(g) · χ_t(g) = ∑_w N^w_{st} χ_w(g)` with
+   `N^w_{st} ≥ 0` (Littlewood–Richardson).  **DONE (2025-07-03 session):**
+   the existing `peterWeyl_clebschGordan_plaquette` axiom has been
+   **strengthened** to also provide this decomposition (as additional
+   existential components `cg`, `hcg`, `hcg_decomp`).  Two new lemmas proved
+   from it (0 sorries, 0 custom axioms — verified by `#print axioms`):
+   `charProduct_PD` (product of two chars is PD via CG) and
+   `charProduct_finset_decomp` (finite product of chars of the same element
+   decomposes as a non-negative-weighted sum of single characters via iterated
+   CG).  Two further lemmas proved from the strengthened axiom (0 sorries, 0
+   custom axioms — verified by `#print axioms`): `charSum_product_decomp`
+   (product of two non-negative-weighted char sums decomposes as a
+   non-negative-weighted char sum via CG) and `charSum_finprod_decomp`
+   (finite product of non-negative-weighted char sums decomposes as a
+    non-negative-weighted char sum via iterated CG), and
+    `charSum_product_link_decomp` (product of per-link character sums decomposes
+    as a non-negative-weighted sum of products of characters — the separable
+    decomposition of the full Boltzmann factor).  The axiom count remains
+    **six** (the strengthening enriches an existing axiom, it does not add a
+    new one).
+2. **Formalization of the operator `B`**: define `B` via the character
+   expansion, show `T = B* · B`, and conclude `⟨g, Tg⟩ = ‖Bg‖² ≥ 0`.  This
+   requires the full combinatorial wiring of the interface plaquette expansion
+   (which links belong to which plaquettes, the reflection structure, the CG
+   reduction) — a major formalization effort.  **This is the remaining work.**
+3. **Alternatively**: axiomatize the separable decomposition of the TM kernel
+   directly (as a consequence of Peter–Weyl + CG + character orthogonality),
+   and prove positivity from it.  This would replace
+   `transferMatrixPositivity_axiom` with a more fundamental representation-
+   theoretic axiom, but would not reduce the axiom count (6 → 6) unless the
+   CG content is folded into the existing `peterWeyl_clebschGordan_plaquette`
+   axiom (6 → 5).  **The CG content is now folded in (step 1 done); closing
+   `transferMatrixPositivity_axiom` would reduce the count to 5.**
+
+**Key insight for future sessions**: the `character_expansion_positivity`
+lemma, while a valuable abstract result, is NOT the right scaffold for the
+lattice case.  The correct approach is the operator-theoretic `T = B* B`
+argument, which requires CG and the full plaquette combinatorics.  The
+abstract lemma's requirement that `θ : Y → X` be a function of `y` only (and
+measure-preserving to the FULL measure on `X`) is fundamentally incompatible
+with the lattice setup's shared interface structure and the `σ` reflection on
+interface time-like links.
+
 ### ✅ Clean factorization PROVEN (2025-06-29)
 
 The lemma `osG_thetaG_factorization` (in `ReflectionPositivity.lean`, 0 sorries,

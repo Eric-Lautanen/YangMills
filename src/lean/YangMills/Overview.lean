@@ -258,12 +258,48 @@ by `#print axioms` (only `propext`, `Classical.choice`, `Quot.sound`).
   variables `U⁻ ↦ θ⁻⁰(U⁻, u⁰)` (measure-preserving by
   `reflectLinkVariable_measurePreserving`) then turns the integral into a sum
   of `|Fourier coefficients|² ≥ 0`.  The key obstruction: the interface
-  Boltzmann factor is a **product of multiple plaquette factors**, and
+  Boltzmann factor is a **product of multiple interface plaquette factors**, and
   combining their character expansions requires the **Clebsch–Gordan
   decomposition** for products of characters of the same link variable — not
-  currently axiomatized.  An abstract lemma (no new axioms) connecting
-  separable kernel decompositions to integral positivity was identified as
-  the natural next formalization step.  See `docs/gap_analysis.md`.
+  currently axiomatized.  The abstract lemma (no new axioms) connecting
+  separable kernel decompositions to integral positivity is now **proved** as
+  `character_expansion_positivity` / `character_expansion_nonneg`
+  (`PositiveDefiniteIntegral.lean`): if `K(x, y) = ∑_i a_i · Φ_i(x) ·
+  conj(Φ_i(θ y))` with `θ` measure-preserving and `a_i ≥ 0`, then
+  `∫∫ f(x)·f(θ y)·K(x, y) dν dμ = ∑_i a_i · ‖∫ f·Φ_i dμ‖² ≥ 0` (0 sorries, 0
+  custom axioms — verified by `#print axioms`).  This is the scaffold the
+  concrete Peter–Weyl character expansion of the TM kernel would plug into; it
+  does **not** close `transferMatrixPositivity_axiom` (which requires showing
+  the TM kernel has the required separable decomposition — the Clebsch–Gordan
+  gap).  See `docs/gap_analysis.md`.
+  **Further analysis (2025-07-02 session):** a detailed investigation revealed
+  that `character_expansion_positivity` does NOT directly apply to the lattice
+  case, for three reasons: (1) `θ⁻⁰(U⁻, u⁰)` depends on both `x` (through
+  `u⁰`) and `y` (`U⁻`), while the lemma requires `θ : Y → X` (function of
+  `y` only); (2) the pushforward of `μ⁻` by `θ⁻⁰(·, u⁰)` is
+  `μ⁺ × δ_{σ(u⁰)}` (singular), not the full `μ⁺⁰`; (3) the `σ` reflection
+  on interface time-like links (inverting them) causes `χ(g)²` instead of
+  `|χ(g)|²`, giving `∑ a_i ∫ A_i(u⁰) conj(A_i(σ(u⁰))) dμ⁰(u⁰)`, which is NOT
+  necessarily non-negative.  The correct approach is the operator-theoretic
+  argument: show `T = B* · B` for some operator `B` defined via the character
+  expansion (Peter–Weyl + CG), then `⟨g, Tg⟩ = ‖Bg‖² ≥ 0`.  This requires a
+  Clebsch–Gordan axiom and the full combinatorial wiring of the interface
+  plaquette expansion.  See `docs/gap_analysis.md` for the full analysis.
+  **Progress (2025-07-03 session):** Step (a) — the Clebsch–Gordan axiom — is
+  now complete.  The `peterWeyl_clebschGordan_plaquette` axiom has been
+  **strengthened** to also provide the CG decomposition for character products
+  `χ_s(g)·χ_t(g) = ∑_w cg s t w · χ_w(g)` with `cg s t w ≥ 0` (Littlewood–
+  Richardson).  Two new lemmas proved from it (0 sorries, 0 custom axioms):
+  `charProduct_PD` and `charProduct_finset_decomp` (in `PeterWeyl.lean`).
+  Two further lemmas proved from the strengthened axiom (0 sorries, 0 custom
+  axioms): `charSum_product_decomp` (product of two non-negative-weighted char
+  sums decomposes as a non-negative-weighted char sum via CG) and
+  `charSum_finprod_decomp` (finite product of non-negative-weighted char sums
+  decomposes as a non-negative-weighted char sum via iterated CG), and
+  `charSum_product_link_decomp` (product of per-link character sums decomposes
+  as a non-negative-weighted sum of products of characters — the separable
+  decomposition of the full Boltzmann factor).  Step (b) — formalizing the
+  operator `B` and showing `T = B* · B` — remains.
 - Peter–Weyl theorem for SU(N) (or a bypass via spectral theory) — would remove
   the `peterWeyl_clebschGordan_plaquette` axiom.
 - Schur orthogonality for compact groups — would remove the

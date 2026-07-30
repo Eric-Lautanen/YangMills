@@ -45,12 +45,16 @@ The proof decomposes into five stages, each building on the previous:
 
 ## Axioms used
 
-The proof uses five axioms, each corresponding to a deep theorem not currently
+The proof uses six axioms, each corresponding to a deep theorem not currently
 in Mathlib:
 
 1. `peterWeyl_clebschGordan_plaquette` (PeterWeyl.lean):
    Peter-Weyl theorem + Clebsch-Gordan decomposition for the plaquette
-   Boltzmann factor.
+   Boltzmann factor, AND the Clebsch-Gordan decomposition for products of
+   characters of the same group element (across-plaquette CG, added
+   2025-07-03).  The latter provides `χ_s(g)·χ_t(g) = ∑_w cg s t w · χ_w(g)`
+   with `cg s t w ≥ 0`, the key ingredient for combining character expansions
+   across plaquettes that share a link variable.
 
 2. `transferMatrixPositivity_axiom` (ReflectionPositivity.lean):
    Transfer-matrix positivity: the integral `∫ G·G(θU) dμ₀ ≥ 0` follows
@@ -64,16 +68,22 @@ in Mathlib:
    a geometric operation, not group multiplication.  Closing the axiom requires
    either (a) a more general PD kernel theory (Mercer-type), (b) showing the
    TM kernel reduces to the group-theoretic form, or (c) applying the Peter–Weyl
-   character expansion directly to the TM kernel.  This is a fundamental
+   character expansion directly to the TM kernel (the operator-theoretic
+   `T = B* · B` approach — see `docs/gap_analysis.md`).  This is a fundamental
    mathematical gap, not just formalization work.
 
-3. `continuum_limit_exists` (ContinuumLimit.lean):
+3. `characterOrthogonality` (PositiveDefinite.lean):
+   Schur orthogonality for irreducible unitary representations of a compact
+   group: `∫ χ_i(g) · conj(χ_j(g)) dμ = δ_{ij}`.  Used in the
+   character-expansion approach to reflection positivity.
+
+4. `continuum_limit_exists` (ContinuumLimit.lean):
    Continuum limit existence (Balaban RG / stochastic quantization).
 
-4. `os_reconstruction_theorem` (OSAxioms.lean):
+5. `os_reconstruction_theorem` (OSAxioms.lean):
    OS reconstruction: OS axioms ⟹ Wightman QFT.
 
-5. `mass_gap_axiom` (MassGap.lean):
+6. `mass_gap_axiom` (MassGap.lean):
    Mass gap positivity for the continuum Yang-Mills theory.
 
 **⚠️ Circularity warning.** `mass_gap_axiom` directly encodes the conjecture
