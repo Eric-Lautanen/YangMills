@@ -414,16 +414,39 @@ direct integral approach.
    non-negative-weighted char sum via CG) and `charSum_finprod_decomp`
    (finite product of non-negative-weighted char sums decomposes as a
     non-negative-weighted char sum via iterated CG), and
-    `charSum_product_link_decomp` (product of per-link character sums decomposes
-    as a non-negative-weighted sum of products of characters — the separable
-    decomposition of the full Boltzmann factor).  The axiom count remains
-    **six** (the strengthening enriches an existing axiom, it does not add a
-    new one).
-2. **Formalization of the operator `B`**: define `B` via the character
-   expansion, show `T = B* · B`, and conclude `⟨g, Tg⟩ = ‖Bg‖² ≥ 0`.  This
-   requires the full combinatorial wiring of the interface plaquette expansion
-   (which links belong to which plaquettes, the reflection structure, the CG
-   reduction) — a major formalization effort.  **This is the remaining work.**
+     `charSum_product_link_decomp` (product of per-link character sums decomposes
+     as a non-negative-weighted sum of products of characters — the separable
+     decomposition of the full Boltzmann factor).  Two further lemmas proved
+     (2025-07-05 session, 0 sorries, 0 custom axioms — verified by `#print
+     axioms`: only `propext`, `Classical.choice`, `Quot.sound`):
+     `charProduct_finset_decomp'` (generalized CG decomposition for a product of
+     characters indexed by a finset of *appearances* `A` via `appChar : A → ι`,
+     handling the case where the same character index appears multiple times —
+     which happens when a single link variable appears in multiple plaquettes
+     with the same representation index) and `charProduct_link_separable_decomp`
+     (per-term separable decomposition: a product of characters grouped by link
+     `∏_l (∏_{a ∈ S_l} χ_{charIdx l a}(g_l))` decomposes as a non-negative-weighted
+     sum of products of single characters `∑_w F(w) · ∏_l χ_{w(l)}(g_l)` — this
+     is the key algebraic ingredient for the interface Boltzmann factor
+     decomposition, combining per-link CG with the product-of-sums identity).  The
+     axiom count remains **six** (the strengthening enriches an existing axiom,
+     it does not add a new one).
+ 2. **Formalization of the operator `B`**: define `B` via the character
+    expansion, show `T = B* · B`, and conclude `⟨g, Tg⟩ = ‖Bg‖² ≥ 0`.  This
+    requires the full combinatorial wiring of the interface plaquette expansion
+    (which links belong to which plaquettes, the reflection structure, the CG
+    reduction) — a major formalization effort.  **This is the remaining work.**
+    The per-term separable decomposition (`charProduct_link_separable_decomp`)
+    is now proved; the remaining steps are:
+    (a) Expand the product of plaquette factors (product of sums = sum of
+        products) and apply `charProduct_link_separable_decomp` to each term to
+        get the full separable decomposition of the interface Boltzmann factor.
+    (b) Change variables in the transfer-matrix integral (reflecting negative
+        links to positive), using `reflectLinkVariable_measurePreserving`.
+    (c) Use CG (with dual representations, via `repCharacter_inv`) to combine
+        the reflected characters with the unreflected ones.
+    (d) Use `characterOrthogonality` to evaluate the integrals and obtain
+        `∑_w a_w · |Fourier coefficient|² ≥ 0`.
 3. **Alternatively**: axiomatize the separable decomposition of the TM kernel
    directly (as a consequence of Peter–Weyl + CG + character orthogonality),
    and prove positivity from it.  This would replace

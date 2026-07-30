@@ -256,6 +256,25 @@ remains the major formalization effort.
   decomposition of the full Boltzmann factor.  0 sorries, 0 custom axioms
   beyond Peter–Weyl.  Verified by `#print axioms` (only `propext`,
   `Classical.choice`, `Quot.sound`).
+- `charProduct_finset_decomp'` (`PeterWeyl.lean`) — generalized CG
+  decomposition for a product of characters indexed by a finset of *appearances*
+  `A` via `appChar : A → ι`: `∏_{a ∈ s} χ_{appChar(a)}(g) = ∑_w coeff w · χ_w(g)`
+  with `coeff w ≥ 0`.  This handles the case where the same character index
+  appears multiple times (e.g., when a link variable appears in multiple
+  plaquettes with the same representation index).  0 sorries, 0 custom axioms
+  beyond Peter–Weyl.  Verified by `#print axioms` (only `propext`,
+  `Classical.choice`, `Quot.sound`).
+- `charProduct_link_separable_decomp` (`PeterWeyl.lean`) — per-term separable
+  decomposition: a product of characters grouped by link
+  `∏_l (∏_{a ∈ S_l} χ_{charIdx l a}(g_l))` decomposes as a non-negative-weighted
+  sum of products of single characters `∑_w F(w) · ∏_l χ_{w(l)}(g_l)` with
+  `F(w) ≥ 0`.  This is the key algebraic ingredient for the interface Boltzmann
+  factor decomposition: after expanding the product of plaquette factors
+  (product of sums = sum of products), each term is a product of characters
+  grouped by link, and this lemma shows each such term has a separable character
+  decomposition with non-negative coefficients.  0 sorries, 0 custom axioms
+  beyond Peter–Weyl.  Verified by `#print axioms` (only `propext`,
+  `Classical.choice`, `Quot.sound`).
   `exp(-β S_W) = ∏ exp(-S_p)` is PD on the full link-variable group
   `LinkVariable (SU N) Λ`, via `plaquetteContributionPD` (each plaquette
   factor PD by `comp_hom` from `plaquetteBoltzmannPD_inv`) and

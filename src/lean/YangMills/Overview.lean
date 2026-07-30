@@ -296,10 +296,25 @@ by `#print axioms` (only `propext`, `Classical.choice`, `Quot.sound`).
   sums decomposes as a non-negative-weighted char sum via CG) and
   `charSum_finprod_decomp` (finite product of non-negative-weighted char sums
   decomposes as a non-negative-weighted char sum via iterated CG), and
-  `charSum_product_link_decomp` (product of per-link character sums decomposes
-  as a non-negative-weighted sum of products of characters — the separable
-  decomposition of the full Boltzmann factor).  Step (b) — formalizing the
-  operator `B` and showing `T = B* · B` — remains.
+   `charSum_product_link_decomp` (product of per-link character sums decomposes
+   as a non-negative-weighted sum of products of characters — the separable
+   decomposition of the full Boltzmann factor).  Two further lemmas proved
+   (2025-07-05 session, 0 sorries, 0 custom axioms — verified by `#print
+   axioms`): `charProduct_finset_decomp'` (generalized CG decomposition for a
+   product of characters indexed by a finset of *appearances* `A` via
+   `appChar : A → ι`, handling duplicate character indices) and
+   `charProduct_link_separable_decomp` (per-term separable decomposition: a
+   product of characters grouped by link decomposes as a non-negative-weighted
+   sum of products of single characters — the key algebraic ingredient for the
+   interface Boltzmann factor decomposition).  Step (b) — formalizing the
+   operator `B` and showing `T = B* · B` — remains; the per-term separable
+   decomposition is now proved, and the remaining steps are: (a) expand the
+   product of plaquette factors and apply the per-term decomposition to get the
+   full separable decomposition of the interface Boltzmann factor, (b) change
+   variables in the transfer-matrix integral (reflecting negative links to
+   positive), (c) use CG with dual representations to combine reflected and
+   unreflected characters, (d) use `characterOrthogonality` to evaluate the
+   integrals and obtain `∑_w a_w · |Fourier coefficient|² ≥ 0`.
 - Peter–Weyl theorem for SU(N) (or a bypass via spectral theory) — would remove
   the `peterWeyl_clebschGordan_plaquette` axiom.
 - Schur orthogonality for compact groups — would remove the

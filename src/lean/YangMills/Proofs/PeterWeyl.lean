@@ -692,6 +692,156 @@ lemma charSum_product_link_decomp
   refine Finset.sum_congr rfl (fun x _ => ?_)
   rw [Finset.prod_mul_distrib, ← Complex.ofReal_prod]
 
+/-- **Generalized Clebsch–Gordan decomposition for a product of characters
+indexed by a finset of appearances.**  Given a finset `s` of appearances and a
+function `appChar : A → ι` assigning a representation index to each appearance,
+the product `∏_{a ∈ s} χ_{appChar(a)}(g)` decomposes as a non-negative-weighted
+sum of single characters `∑_w coeff w · χ_w(g)` with `coeff w ≥ 0`.
+
+This generalizes `charProduct_finset_decomp` by allowing the character index to
+depend on an auxiliary type `A` (the "appearance" type), so that the same
+character index can appear multiple times — which happens when a single link
+variable appears in multiple plaquettes with the same representation index. -/
+lemma charProduct_finset_decomp' {A : Type*} [Fintype A] [DecidableEq A]
+    {ι : Type*} [Fintype ι] {dims : ι → ℕ}
+    (ρ : ∀ i, SU N →* Matrix (Fin (dims i)) (Fin (dims i)) ℂ)
+    (hU : ∀ i, IsUnitaryRepresentation (ρ i))
+    (cg : ι → ι → ι → ℝ) (hcg : ∀ s t w, 0 ≤ cg s t w)
+    (hcg_decomp : ∀ s t (g : SU N),
+      repCharacter (ρ s) g * repCharacter (ρ t) g =
+      ∑ w : ι, (cg s t w : ℂ) * repCharacter (ρ w) g)
+    (s : Finset A) (appChar : A → ι) (hs : s.Nonempty) :
+    ∃ (coeff : ι → ℝ) (hcoeff : ∀ w, 0 ≤ coeff w),
+      ∀ (g : SU N),
+        (∏ a ∈ s, repCharacter (ρ (appChar a)) g) =
+        ∑ w : ι, (coeff w : ℂ) * repCharacter (ρ w) g := by
+  classical
+  induction s using Finset.induction_on with
+  | empty => exact (Finset.not_nonempty_empty hs).elim
+  | insert x s hx ih =>
+    by_cases hse : s = ∅
+    · -- Singleton: ∏_{a ∈ {x}} χ_{appChar(x)}(g) = 1 · χ_{appChar(x)}(g)
+      subst hse
+      refine ⟨fun w => if w = appChar x then 1 else 0, fun w => ?_, fun g => ?_⟩
+      · show 0 ≤ (if w = appChar x then 1 else 0)
+        split_ifs <;> norm_num
+      · rw [Finset.prod_insert hx, Finset.prod_empty, mul_one]
+        have h_eq : ∀ w : ι, ((if w = appChar x then 1 else 0 : ℝ) : ℂ) *
+            repCharacter (ρ w) g = if w = appChar x then repCharacter (ρ w) g else 0 :=
+          fun w => by by_cases hwx : w = appChar x <;> simp [hwx]
+        rw [show ∑ w : ι, ((if w = appChar x then 1 else 0 : ℝ) : ℂ) *
+            repCharacter (ρ w) g = ∑ w : ι,
+              (if w = appChar x then repCharacter (ρ w) g else 0) from
+            Finset.sum_congr rfl (fun w _ => h_eq w)]
+        simp
+    · -- s ≠ ∅: use ih to decompose ∏_{a ∈ s} χ_{appChar(a)}(g), then combine
+      have hs' : s.Nonempty := Finset.nonempty_iff_ne_empty.mpr hse
+      obtain ⟨coeff_s, hcoeff_s, hdecomp_s⟩ := ih hs'
+      refine ⟨fun v => ∑ w : ι, coeff_s w * cg (appChar x) w v, fun v => ?_, fun g => ?_⟩
+      · exact Finset.sum_nonneg (fun w _ => mul_nonneg (hcoeff_s w) (hcg (appChar x) w v))
+      · rw [Finset.prod_insert hx, hdecomp_s g, Finset.mul_sum]
+        have h1 :
+          ∑ j : ι, repCharacter (ρ (appChar x)) g * ((coeff_s j : ℂ) * repCharacter (ρ j) g) =
+          ∑ j : ι, (coeff_s j : ℂ) *
+            (repCharacter (ρ (appChar x)) g * repCharacter (ρ j) g) :=
+          Finset.sum_congr rfl (fun j _ => by ring)
+        rw [h1]
+        have h2 :
+          ∑ j : ι, (coeff_s j : ℂ) *
+            (repCharacter (ρ (appChar x)) g * repCharacter (ρ j) g) =
+          ∑ j : ι, (coeff_s j : ℂ) *
+            ∑ k : ι, (cg (appChar x) j k : ℂ) * repCharacter (ρ k) g :=
+          Finset.sum_congr rfl (fun j _ => by rw [hcg_decomp (appChar x) j g])
+        rw [h2]
+        have h3 :
+          ∑ j : ι, (coeff_s j : ℂ) *
+            ∑ k : ι, (cg (appChar x) j k : ℂ) * repCharacter (ρ k) g =
+          ∑ j : ι, ∑ k : ι,
+            (coeff_s j : ℂ) * ((cg (appChar x) j k : ℂ) * repCharacter (ρ k) g) :=
+          Finset.sum_congr rfl (fun j _ => by rw [Finset.mul_sum])
+        rw [h3]
+        rw [Finset.sum_comm]
+        have h5 :
+          ∑ k : ι, ∑ j : ι,
+            (coeff_s j : ℂ) * ((cg (appChar x) j k : ℂ) * repCharacter (ρ k) g) =
+          ∑ k : ι,
+            (∑ j : ι, (coeff_s j : ℂ) * (cg (appChar x) j k : ℂ)) *
+            repCharacter (ρ k) g := by
+          refine Finset.sum_congr rfl (fun k _ => ?_)
+          have hw :
+            ∑ j : ι, (coeff_s j : ℂ) *
+              ((cg (appChar x) j k : ℂ) * repCharacter (ρ k) g) =
+            ∑ j : ι,
+              ((coeff_s j : ℂ) * (cg (appChar x) j k : ℂ)) * repCharacter (ρ k) g :=
+            Finset.sum_congr rfl (fun j _ => by ring)
+          rw [hw, Finset.sum_mul]
+        rw [h5]
+        exact Finset.sum_congr rfl (fun k _ => by
+          have hcoe : ((fun v => ∑ w : ι, coeff_s w * cg (appChar x) w v) k : ℂ) =
+              ∑ j : ι, (coeff_s j : ℂ) * (cg (appChar x) j k : ℂ) := by
+            simp only [Complex.ofReal_sum, Complex.ofReal_mul]
+          rw [hcoe])
+
+/-- **Per-term separable decomposition**: a product of characters grouped by link
+decomposes as a non-negative-weighted sum of products of single characters.
+
+Given a finite type `L` of links and, for each link `l`, a nonempty finset `S l`
+of appearances with character indices `charIdx l : A → ι`, the product
+`∏_l (∏_{a ∈ S l} χ_{charIdx l a}(g l))` decomposes as
+`∑_w F(w) · ∏_l χ_{w(l)}(g l)` with `F(w) ≥ 0`.
+
+This is proved by:
+1. For each link `l`, applying `charProduct_finset_decomp'` to get the per-link
+   CG decomposition `∏_{a ∈ S l} χ_{charIdx l a}(g l) = ∑_w c_l(w) · χ_w(g l)`.
+2. Applying `charSum_product_link_decomp` to combine the per-link character sums
+   into a separable decomposition.
+
+This is the key algebraic ingredient for the interface Boltzmann factor
+decomposition: after expanding the product of plaquette factors (product of
+sums = sum of products), each term is a product of characters grouped by link.
+This lemma shows each such term has a separable character decomposition with
+non-negative coefficients.  The full separable decomposition of the interface
+Boltzmann factor is obtained by summing over all terms (with non-negative
+plaquette coefficients), preserving non-negativity of the overall coefficients. -/
+lemma charProduct_link_separable_decomp
+    {L : Type*} [Fintype L] [DecidableEq L]
+    {ι : Type*} [Fintype ι] [DecidableEq ι] {dims : ι → ℕ}
+    (ρ : ∀ i, SU N →* Matrix (Fin (dims i)) (Fin (dims i)) ℂ)
+    (hU : ∀ i, IsUnitaryRepresentation (ρ i))
+    (cg : ι → ι → ι → ℝ) (hcg : ∀ s t w, 0 ≤ cg s t w)
+    (hcg_decomp : ∀ s t (g : SU N),
+      repCharacter (ρ s) g * repCharacter (ρ t) g =
+      ∑ w : ι, (cg s t w : ℂ) * repCharacter (ρ w) g)
+    {A : Type*} [Fintype A] [DecidableEq A]
+    (S : L → Finset A) (charIdx : L → A → ι)
+    (hS : ∀ l, (S l).Nonempty) :
+    ∃ (F : (L → ι) → ℝ) (hF : ∀ w, 0 ≤ F w),
+      ∀ (g : L → SU N),
+        (∏ l, ∏ a ∈ S l, repCharacter (ρ (charIdx l a)) (g l)) =
+        ∑ w : L → ι, (F w : ℂ) * ∏ l, repCharacter (ρ (w l)) (g l) := by
+  -- Step 1: For each link l, apply charProduct_finset_decomp' to get the per-link
+  -- CG decomposition
+  have hdecomp : ∀ l, ∃ (c : ι → ℝ) (hc : ∀ w, 0 ≤ c w),
+      ∀ (g : SU N), (∏ a ∈ S l, repCharacter (ρ (charIdx l a)) g) =
+        ∑ w : ι, (c w : ℂ) * repCharacter (ρ w) g := by
+    intro l
+    exact charProduct_finset_decomp' ρ hU cg hcg hcg_decomp (S l) (charIdx l) (hS l)
+  -- Step 2: Choose the coefficient function for each link
+  let f : L → ι → ℝ := fun l => (hdecomp l).choose
+  have hf : ∀ l w, 0 ≤ f l w := fun l w => (hdecomp l).choose_spec.choose w
+  have hf_decomp : ∀ l (g : SU N),
+      (∏ a ∈ S l, repCharacter (ρ (charIdx l a)) g) =
+      ∑ w : ι, (f l w : ℂ) * repCharacter (ρ w) g :=
+    fun l g => (hdecomp l).choose_spec.choose_spec g
+  -- Step 3: Apply charSum_product_link_decomp
+  obtain ⟨F, hF, hF_decomp⟩ := charSum_product_link_decomp ρ hU f hf
+  -- Step 4: Show the product equals the separable decomposition
+  refine ⟨F, hF, fun g => ?_⟩
+  have hprod : (∏ l, ∏ a ∈ S l, repCharacter (ρ (charIdx l a)) (g l)) =
+      (∏ l, ∑ w : ι, (f l w : ℂ) * repCharacter (ρ w) (g l)) := by
+    refine Finset.prod_congr rfl (fun l _ => hf_decomp l (g l))
+  rw [hprod, hF_decomp g]
+
 end PlaquetteBoltzmann
 
 end YangMills
