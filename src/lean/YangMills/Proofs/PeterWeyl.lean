@@ -107,7 +107,7 @@ section PlaquetteBoltzmann
 /-- **Axiom (Peter-Weyl + Clebsch-Gordan for the plaquette Boltzmann factor
 and character products).**
 
-This axiom provides two things in a single existential:
+This axiom provides three things in a single existential:
 
 1. **Plaquette character expansion.**  For `c ≥ 0`, the plaquette Boltzmann
    factor `exp(c · Re Tr(g₁ g₂ g₃ g₄))` admits a character expansion
@@ -138,7 +138,24 @@ This axiom provides two things in a single existential:
    which must be reduced to a single sum via CG before the kernel can be
    written in separable form.
 
-This axiom fuses three deep theorems of compact-Lie-group representation theory
+3. **Dual (contragredient) representations.**  The index set `ι` is closed
+   under taking duals: there is a map `dual : ι → ι` such that the character of
+   `ρ_{dual(i)}` is the complex conjugate of the character of `ρ_i`:
+
+       χ_{dual(i)}(g) = conj(χ_i(g)).
+
+   This is the standard fact that the contragredient (dual) of a unitary
+   representation has character `conj(χ(g))` (since `ρ*(g) = ρ(g⁻¹)^H` and
+   `Tr(M^H) = conj(Tr(M))`).  For `SU(N)`, the dual of an irreducible is
+   another irreducible, so `ι` (taken large enough) is closed under duals.
+   This is needed because the lattice plaquette product has **inverted links**
+   (`g₃⁻¹, g₄⁻¹`), and `χ(g⁻¹) = conj(χ(g)) = χ_{dual}(g)` by
+   `repCharacter_inv`.  When a link appears in multiple plaquettes with mixed
+   orientations (some as `g`, some as `g⁻¹`), the product involves both `χ(g)`
+   and `conj(χ(g))`; the dual map converts `conj(χ)` to `χ_{dual}`, allowing
+   the CG decomposition to combine them into a single character sum.
+
+This axiom fuses four deep theorems of compact-Lie-group representation theory
 that are not currently in Mathlib:
 
   * **Peter-Weyl theorem**: `exp(c · Re Tr(g)) = ∑_r a_r χ_r(g)` with `a_r ≥ 0`.
@@ -148,10 +165,13 @@ that are not currently in Mathlib:
   * **Clebsch-Gordan decomposition** (across plaquettes): `χ_s(g) · χ_t(g) =
     ∑_w N^w_{st} χ_w(g)` with `N^w_{st} ≥ 0`, needed to combine character
     expansions when the same link appears in multiple plaquettes.
+  * **Duality of representations**: `χ_{dual(i)}(g) = conj(χ_i(g))`, needed to
+    handle inverted links in the plaquette product.
 
 The index set `ι` is required to be closed under tensor-product decomposition
-(so that the CG sum stays within `ι`); this is guaranteed by taking `ι` large
-enough to contain all irreducibles appearing in any relevant tensor product.
+and under duals (so that the CG sum and the dual map stay within `ι`); this is
+guaranteed by taking `ι` large enough to contain all irreducibles appearing in
+any relevant tensor product or dual.
 
 See `docs/found_issues.md` §3 and `docs/gap_analysis.md` for the mathematical
 obstruction that necessitates this expansion. -/
@@ -165,7 +185,10 @@ axiom peterWeyl_clebschGordan_plaquette (N : ℕ) (c : ℝ) (hc : 0 ≤ c) :
       (hcg : ∀ s t w, 0 ≤ cg s t w)
       (hcg_decomp : ∀ s t (g : SU N),
         repCharacter (ρ s) g * repCharacter (ρ t) g =
-        ∑ w : ι, (cg s t w : ℂ) * repCharacter (ρ w) g),
+        ∑ w : ι, (cg s t w : ℂ) * repCharacter (ρ w) g)
+      (dual : ι → ι)
+      (hdual : ∀ i (g : SU N),
+        repCharacter (ρ (dual i)) g = conj (repCharacter (ρ i) g)),
       ∀ (g₁ g₂ g₃ g₄ : SU N),
         (Real.exp (c * (Matrix.trace ((g₁ * g₂ * g₃ * g₄ : SU N) :
             Matrix (Fin N) (Fin N) ℂ)).re) : ℂ) =
@@ -222,7 +245,7 @@ theorem plaquetteBoltzmannPD (N : ℕ) (c : ℝ) (hc : 0 ≤ c) :
       (λ (p : ((SU N × SU N) × SU N) × SU N) =>
         (Real.exp (c * (Matrix.trace ((p.1.1.1 * p.1.1.2 * p.1.2 * p.2 : SU N) :
             Matrix (Fin N) (Fin N) ℂ)).re) : ℂ)) := by
-  obtain ⟨ι, hι, dims, ρ, hU, coeff, hcoeff, cg, hcg, hcg_decomp, hexp4⟩ :=
+  obtain ⟨ι, hι, dims, ρ, hU, coeff, hcoeff, cg, hcg, hcg_decomp, dual, hdual, hexp4⟩ :=
     peterWeyl_clebschGordan_plaquette N c hc
   letI : Fintype ι := hι
   -- The four-character product, as a function of the plaquette links.
@@ -320,7 +343,7 @@ theorem plaquetteBoltzmannPD_inv (N : ℕ) (c : ℝ) (hc : 0 ≤ c) :
       (λ (p : ((SU N × SU N) × SU N) × SU N) =>
         (Real.exp (c * (Matrix.trace ((p.1.1.1 * p.1.1.2 * p.1.2⁻¹ * p.2⁻¹ : SU N) :
             Matrix (Fin N) (Fin N) ℂ)).re) : ℂ)) := by
-  obtain ⟨ι, hι, dims, ρ, hU, coeff, hcoeff, cg, hcg, hcg_decomp, hexp4⟩ :=
+  obtain ⟨ι, hι, dims, ρ, hU, coeff, hcoeff, cg, hcg, hcg_decomp, dual, hdual, hexp4⟩ :=
     peterWeyl_clebschGordan_plaquette N c hc
   letI : Fintype ι := hι
   -- The four-character product with conj on 3rd and 4th factors.
@@ -838,6 +861,123 @@ lemma charProduct_link_separable_decomp
   -- Step 4: Show the product equals the separable decomposition
   refine ⟨F, hF, fun g => ?_⟩
   have hprod : (∏ l, ∏ a ∈ S l, repCharacter (ρ (charIdx l a)) (g l)) =
+      (∏ l, ∑ w : ι, (f l w : ℂ) * repCharacter (ρ w) (g l)) := by
+    refine Finset.prod_congr rfl (fun l _ => hf_decomp l (g l))
+  rw [hprod, hF_decomp g]
+
+/-- **Mixed-conjugation Clebsch–Gordan decomposition for a product of
+characters.**  Given a finset `s` of appearances, character indices
+`appChar : A → ι`, and a conjugation flag `isConj : A → Bool`, the product
+
+    ∏_{a ∈ s} (if isConj a then conj(χ_{appChar(a)}(g)) else χ_{appChar(a)}(g))
+
+decomposes as a non-negative-weighted sum of single characters
+`∑_w coeff w · χ_w(g)` with `coeff w ≥ 0`.
+
+This is the key lemma for the interface Boltzmann factor decomposition: the
+plaquette product has inverted links (3rd and 4th), giving `conj(χ)` via
+`repCharacter_inv`.  When a link appears in multiple plaquettes with mixed
+orientations, the product involves both `χ(g)` and `conj(χ(g))`.  The dual
+map converts `conj(χ)` to `χ_{dual}`, allowing the CG decomposition
+(`charProduct_finset_decomp'`) to combine them into a single character sum. -/
+lemma charProduct_mixed_finset_decomp' {A : Type*} [Fintype A] [DecidableEq A]
+    {ι : Type*} [Fintype ι] {dims : ι → ℕ}
+    (ρ : ∀ i, SU N →* Matrix (Fin (dims i)) (Fin (dims i)) ℂ)
+    (hU : ∀ i, IsUnitaryRepresentation (ρ i))
+    (cg : ι → ι → ι → ℝ) (hcg : ∀ s t w, 0 ≤ cg s t w)
+    (hcg_decomp : ∀ s t (g : SU N),
+      repCharacter (ρ s) g * repCharacter (ρ t) g =
+      ∑ w : ι, (cg s t w : ℂ) * repCharacter (ρ w) g)
+    (dual : ι → ι) (hdual : ∀ i (g : SU N),
+      repCharacter (ρ (dual i)) g = conj (repCharacter (ρ i) g))
+    (s : Finset A) (appChar : A → ι) (isConj : A → Bool) (hs : s.Nonempty) :
+    ∃ (coeff : ι → ℝ) (hcoeff : ∀ w, 0 ≤ coeff w),
+      ∀ (g : SU N),
+        (∏ a ∈ s, if isConj a then conj (repCharacter (ρ (appChar a)) g)
+                   else repCharacter (ρ (appChar a)) g) =
+        ∑ w : ι, (coeff w : ℂ) * repCharacter (ρ w) g := by
+  obtain ⟨coeff, hcoeff, hdecomp⟩ :=
+    charProduct_finset_decomp' ρ hU cg hcg hcg_decomp s
+      (fun a => if isConj a then dual (appChar a) else appChar a) hs
+  refine ⟨coeff, hcoeff, fun g => ?_⟩
+  have h_eq : ∀ a ∈ s, (if isConj a then conj (repCharacter (ρ (appChar a)) g)
+                       else repCharacter (ρ (appChar a)) g) =
+                      repCharacter (ρ (if isConj a then dual (appChar a) else appChar a)) g := by
+    intro a ha
+    by_cases h : isConj a = true
+    · rw [if_pos h]
+      conv => rhs; rw [if_pos h]
+      exact (hdual (appChar a) g).symm
+    · rw [if_neg h]
+      conv => rhs; rw [if_neg h]
+  rw [Finset.prod_congr rfl h_eq, hdecomp g]
+
+/-- **Per-term separable decomposition with mixed conjugation**: a product of
+characters (some conjugated, some not) grouped by link decomposes as a
+non-negative-weighted sum of products of single (unconjugated) characters.
+
+Given a finite type `L` of links and, for each link `l`, a nonempty finset
+`S l` of appearances with character indices `charIdx l : A → ι` and conjugation
+flags `isConj l : A → Bool`, the product
+
+    ∏_l (∏_{a ∈ S l} (if isConj l a then conj(χ_{charIdx l a}(g_l))
+                                    else χ_{charIdx l a}(g_l)))
+
+decomposes as `∑_w F(w) · ∏_l χ_{w(l)}(g l)` with `F(w) ≥ 0`.
+
+This is proved by:
+1. For each link `l`, applying `charProduct_mixed_finset_decomp'` to get the
+   per-link CG decomposition (converting `conj(χ)` to `χ_{dual}` via the dual
+   map, then applying CG).
+2. Applying `charSum_product_link_decomp` to combine the per-link character
+   sums into a separable decomposition.
+
+This is the key algebraic ingredient for the interface Boltzmann factor
+decomposition with inverted links: after expanding the product of plaquette
+factors (product of sums = sum of products), each term is a product of
+characters (some conjugated from inverted links) grouped by link.  This lemma
+shows each such term has a separable character decomposition with non-negative
+coefficients, with all conjugation resolved via the dual map. -/
+lemma charProduct_mixed_link_separable_decomp
+    {L : Type*} [Fintype L] [DecidableEq L]
+    {ι : Type*} [Fintype ι] [DecidableEq ι] {dims : ι → ℕ}
+    (ρ : ∀ i, SU N →* Matrix (Fin (dims i)) (Fin (dims i)) ℂ)
+    (hU : ∀ i, IsUnitaryRepresentation (ρ i))
+    (cg : ι → ι → ι → ℝ) (hcg : ∀ s t w, 0 ≤ cg s t w)
+    (hcg_decomp : ∀ s t (g : SU N),
+      repCharacter (ρ s) g * repCharacter (ρ t) g =
+      ∑ w : ι, (cg s t w : ℂ) * repCharacter (ρ w) g)
+    (dual : ι → ι) (hdual : ∀ i (g : SU N),
+      repCharacter (ρ (dual i)) g = conj (repCharacter (ρ i) g))
+    {A : Type*} [Fintype A] [DecidableEq A]
+    (S : L → Finset A) (charIdx : L → A → ι) (isConj : L → A → Bool)
+    (hS : ∀ l, (S l).Nonempty) :
+    ∃ (F : (L → ι) → ℝ) (hF : ∀ w, 0 ≤ F w),
+      ∀ (g : L → SU N),
+        (∏ l, ∏ a ∈ S l,
+          (if isConj l a then conj (repCharacter (ρ (charIdx l a)) (g l))
+           else repCharacter (ρ (charIdx l a)) (g l))) =
+        ∑ w : L → ι, (F w : ℂ) * ∏ l, repCharacter (ρ (w l)) (g l) := by
+  have hdecomp : ∀ l, ∃ (c : ι → ℝ) (hc : ∀ w, 0 ≤ c w),
+      ∀ (g : SU N),
+        (∏ a ∈ S l, if isConj l a then conj (repCharacter (ρ (charIdx l a)) g)
+                     else repCharacter (ρ (charIdx l a)) g) =
+        ∑ w : ι, (c w : ℂ) * repCharacter (ρ w) g := by
+    intro l
+    exact charProduct_mixed_finset_decomp' ρ hU cg hcg hcg_decomp dual hdual
+      (S l) (charIdx l) (isConj l) (hS l)
+  let f : L → ι → ℝ := fun l => (hdecomp l).choose
+  have hf : ∀ l w, 0 ≤ f l w := fun l w => (hdecomp l).choose_spec.choose w
+  have hf_decomp : ∀ l (g : SU N),
+      (∏ a ∈ S l, if isConj l a then conj (repCharacter (ρ (charIdx l a)) g)
+                   else repCharacter (ρ (charIdx l a)) g) =
+      ∑ w : ι, (f l w : ℂ) * repCharacter (ρ w) g :=
+    fun l g => (hdecomp l).choose_spec.choose_spec g
+  obtain ⟨F, hF, hF_decomp⟩ := charSum_product_link_decomp ρ hU f hf
+  refine ⟨F, hF, fun g => ?_⟩
+  have hprod : (∏ l, ∏ a ∈ S l,
+      (if isConj l a then conj (repCharacter (ρ (charIdx l a)) (g l))
+       else repCharacter (ρ (charIdx l a)) (g l))) =
       (∏ l, ∑ w : ι, (f l w : ℂ) * repCharacter (ρ w) (g l)) := by
     refine Finset.prod_congr rfl (fun l _ => hf_decomp l (g l))
   rw [hprod, hF_decomp g]

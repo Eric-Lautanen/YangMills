@@ -193,7 +193,7 @@ measure-theoretic bookkeeping (`measure_factorization'`, change of variables,
 by `#print axioms` (only `propext`, `Classical.choice`, `Quot.sound`).
 
 ### Issues found and fixed:
-- **2025-06-28**: Discovered that `gibbsExpectationPeriodic_reflection_positive`
+- **2026-06-28**: Discovered that `gibbsExpectationPeriodic_reflection_positive`
   as originally stated (for ALL f) was mathematically false.  Added hypothesis
   `hf_supported : dependsOnlyOnPosInterface N T L f` (f depends only on
   positive-time and interface links).  The `transferMatrix_identity` in
@@ -249,7 +249,7 @@ by `#print axioms` (only `propext`, `Classical.choice`, `Quot.sound`).
   each term as `|∫ f·χ_λ|² ≥ 0`, (4) sum with `a_λ ≥ 0`.  Steps 1–2 are
   formalized (`boltzmannFactorPD`, `osG_thetaG_factorization`); steps 3–4
   are the remaining wiring.
-  **Precise analysis (2025-06-29 session):** the naive path at the level of
+  **Precise analysis (2026-06-29 session):** the naive path at the level of
   the full Boltzmann factor does NOT work directly, because
   `χ_λ(θU) ≠ conj(χ_λ(U))` — the reflection `θ` is not group inversion.
   The correct approach works at the level of the **transfer matrix kernel**
@@ -272,7 +272,7 @@ by `#print axioms` (only `propext`, `Classical.choice`, `Quot.sound`).
   does **not** close `transferMatrixPositivity_axiom` (which requires showing
   the TM kernel has the required separable decomposition — the Clebsch–Gordan
   gap).  See `docs/gap_analysis.md`.
-  **Further analysis (2025-07-02 session):** a detailed investigation revealed
+  **Further analysis (2026-07-02 session):** a detailed investigation revealed
   that `character_expansion_positivity` does NOT directly apply to the lattice
   case, for three reasons: (1) `θ⁻⁰(U⁻, u⁰)` depends on both `x` (through
   `u⁰`) and `y` (`U⁻`), while the lemma requires `θ : Y → X` (function of
@@ -285,7 +285,7 @@ by `#print axioms` (only `propext`, `Classical.choice`, `Quot.sound`).
   expansion (Peter–Weyl + CG), then `⟨g, Tg⟩ = ‖Bg‖² ≥ 0`.  This requires a
   Clebsch–Gordan axiom and the full combinatorial wiring of the interface
   plaquette expansion.  See `docs/gap_analysis.md` for the full analysis.
-  **Progress (2025-07-03 session):** Step (a) — the Clebsch–Gordan axiom — is
+  **Progress (2026-07-03 session):** Step (a) — the Clebsch–Gordan axiom — is
   now complete.  The `peterWeyl_clebschGordan_plaquette` axiom has been
   **strengthened** to also provide the CG decomposition for character products
   `χ_s(g)·χ_t(g) = ∑_w cg s t w · χ_w(g)` with `cg s t w ≥ 0` (Littlewood–
@@ -299,22 +299,38 @@ by `#print axioms` (only `propext`, `Classical.choice`, `Quot.sound`).
    `charSum_product_link_decomp` (product of per-link character sums decomposes
    as a non-negative-weighted sum of products of characters — the separable
    decomposition of the full Boltzmann factor).  Two further lemmas proved
-   (2025-07-05 session, 0 sorries, 0 custom axioms — verified by `#print
+   (2026-07-05 session, 0 sorries, 0 custom axioms — verified by `#print
    axioms`): `charProduct_finset_decomp'` (generalized CG decomposition for a
    product of characters indexed by a finset of *appearances* `A` via
    `appChar : A → ι`, handling duplicate character indices) and
-   `charProduct_link_separable_decomp` (per-term separable decomposition: a
-   product of characters grouped by link decomposes as a non-negative-weighted
-   sum of products of single characters — the key algebraic ingredient for the
-   interface Boltzmann factor decomposition).  Step (b) — formalizing the
-   operator `B` and showing `T = B* · B` — remains; the per-term separable
-   decomposition is now proved, and the remaining steps are: (a) expand the
-   product of plaquette factors and apply the per-term decomposition to get the
-   full separable decomposition of the interface Boltzmann factor, (b) change
-   variables in the transfer-matrix integral (reflecting negative links to
-   positive), (c) use CG with dual representations to combine reflected and
-   unreflected characters, (d) use `characterOrthogonality` to evaluate the
-   integrals and obtain `∑_w a_w · |Fourier coefficient|² ≥ 0`.
+    `charProduct_link_separable_decomp` (per-term separable decomposition: a
+    product of characters grouped by link decomposes as a non-negative-weighted
+    sum of products of single characters — the key algebraic ingredient for the
+    interface Boltzmann factor decomposition).  The axiom was **further
+    strengthened** (2026-07-30 session) to also provide a dual (contragredient)
+    map `dual : ι → ι` with `χ_{dual(i)}(g) = conj(χ_i(g))`, needed to handle
+    inverted links in the plaquette product (`χ(g⁻¹) = conj(χ(g)) =
+    χ_{dual}(g)` by `repCharacter_inv`).  Two further lemmas proved from the
+    strengthened axiom (2026-07-30 session, 0 sorries, 0 custom axioms —
+    verified by `#print axioms`): `charProduct_mixed_finset_decomp'`
+    (mixed-conjugation CG decomposition: a product of characters with mixed
+    conjugation — some `χ(g)`, some `conj(χ(g))` — of the same group element
+    decomposes as a non-negative-weighted sum of single characters, using the
+    dual map to convert `conj(χ)` to `χ_{dual}`) and
+    `charProduct_mixed_link_separable_decomp` (per-term separable decomposition
+    with mixed conjugation: a product of characters with mixed conjugation
+    grouped by link decomposes as a non-negative-weighted sum of products of
+    single unconjugated characters — the key algebraic ingredient for the
+    interface Boltzmann factor decomposition with inverted links).  Step (b) —
+    formalizing the operator `B` and showing `T = B* · B` — remains; the per-term
+    separable decomposition (with mixed conjugation) is now proved, and the
+    remaining steps are: (a) expand the product of plaquette factors and apply
+    the per-term decomposition to get the full separable decomposition of the
+    interface Boltzmann factor, (b) change variables in the transfer-matrix
+    integral (reflecting negative links to positive), (c) use CG with dual
+    representations to combine reflected and unreflected characters, (d) use
+    `characterOrthogonality` to evaluate the integrals and obtain
+    `∑_w a_w · |Fourier coefficient|² ≥ 0`.
 - Peter–Weyl theorem for SU(N) (or a bypass via spectral theory) — would remove
   the `peterWeyl_clebschGordan_plaquette` axiom.
 - Schur orthogonality for compact groups — would remove the

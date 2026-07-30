@@ -1,4 +1,4 @@
-# Found Issues (2025-06-28)
+# Found Issues (2026-06-28)
 
 ## 1. Reflection positivity lemma was stated with too-weak hypothesis
 
@@ -72,7 +72,7 @@ because:
    independent of U⁻.  This means T is a **multiplication operator**, not a
    genuine transfer matrix that couples positive and negative configurations.
 
-### Current status (2025-06-28, corrected)
+### Current status (2026-06-28, corrected)
 
 The corrected transfer matrix has been implemented in `TransferMatrix.lean`:
 
@@ -219,7 +219,7 @@ where `a_λ ≥ 0`, `C_{μνρσ}^λ ≥ 0` (Littlewood-Richardson coefficients)
 `χ_μ(g₁) χ_ν(g₂) χ_ρ(g₃) χ_σ(g₄)` is PD on `SU(N)^4` (product of PD functions on
 different factors). The sum of PD functions with non-negative coefficients is PD.
 
-**Progress (2025-06-29)**: The "product of PD on different factors" step has been
+**Progress (2026-06-29)**: The "product of PD on different factors" step has been
 formalized as `PositiveDefinite.prod` in `PositiveDefinite.lean` (0 sorries).
 This proves that if `φ : G → ℂ` is PD and `ψ : H → ℂ` is PD, then
 `(g,h) ↦ φ(g)·ψ(h)` is PD on `G × H`. The proof uses the Schur product theorem

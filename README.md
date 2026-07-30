@@ -32,7 +32,7 @@ restatement.
 
 | Axiom | Declared in | What it stands in for | Status / concern |
 |---|---|---|---|
-| `peterWeyl_clebschGordan_plaquette` | `PeterWeyl.lean` | Peter–Weyl theorem + Clebsch–Gordan decomposition for the plaquette Boltzmann factor **and** for products of characters of the same group element (across-plaquette CG) | Neither is in Mathlib. Defensible as a cited external theorem *if* correctly applied — needs audit. The axiom was **strengthened** (2025-07-03 session) to also provide the CG decomposition `χ_s(g)·χ_t(g) = ∑_w cg s t w · χ_w(g)` with `cg s t w ≥ 0` (Littlewood–Richardson), which is the key ingredient for combining character expansions across plaquettes that share a link variable. Two new lemmas proved from the strengthened axiom (0 sorries, 0 custom axioms): `charProduct_PD` (product of two chars is PD via CG) and `charProduct_finset_decomp` (finite product of chars of the same element decomposes as a non-negative-weighted sum of single characters via iterated CG). |
+| `peterWeyl_clebschGordan_plaquette` | `PeterWeyl.lean` | Peter–Weyl theorem + Clebsch–Gordan decomposition for the plaquette Boltzmann factor **and** for products of characters of the same group element (across-plaquette CG) **and** dual (contragredient) representations | Neither is in Mathlib. Defensible as a cited external theorem *if* correctly applied — needs audit. The axiom was **strengthened** (2026-07-03 session) to also provide the CG decomposition `χ_s(g)·χ_t(g) = ∑_w cg s t w · χ_w(g)` with `cg s t w ≥ 0` (Littlewood–Richardson), which is the key ingredient for combining character expansions across plaquettes that share a link variable. The axiom was **further strengthened** (2026-07-30 session) to also provide a dual map `dual : ι → ι` with `χ_{dual(i)}(g) = conj(χ_i(g))` (the contragredient representation has conjugate character), which is needed to handle inverted links in the plaquette product (`χ(g⁻¹) = conj(χ(g)) = χ_{dual}(g)` by `repCharacter_inv`). Two new lemmas proved from the strengthened axiom (0 sorries, 0 custom axioms): `charProduct_PD` (product of two chars is PD via CG) and `charProduct_finset_decomp` (finite product of chars of the same element decomposes as a non-negative-weighted sum of single characters via iterated CG). |
 | `transferMatrixPositivity_axiom` | `ReflectionPositivity.lean` (**confirmed** — not a `sorry`, and not in `TransferMatrix.lean` despite `Overview.lean` implying otherwise) | Positivity of `∫ G(U)·G(θU) dμ₀` for the periodic-lattice transfer matrix | Docstring gives a real justification chain (plaquette PD ⇒ transfer matrix positive ⇒ integral nonnegative). All abstract sub-steps are now proved (see "Suggested next step" below). The clean factorization `osG_thetaG_factorization` (0 sorries, 0 axioms) shows the axiom is equivalent to `∫ f(U)·f(θU)·exp(-β S_W(U)) dμ ≥ 0`. The full Boltzmann factor `exp(-β S_W)` is proved PD on the full link group by `boltzmannFactorPD` (modulo Peter–Weyl). **Key obstruction**: this integral is NOT the standard PD quadratic form `∫∫ f(g)·conj(f(h))·K(g⁻¹h) dμ dμ ≥ 0` (which follows from PD-ness of `K` and is proved as `integralOperator_nonneg`). It is a *single* integral `∫ f(g)·f(θg)·K(g) dμ` with the geometric reflection `θ` and `K` evaluated at `g` (not `g⁻¹h`). PD-ness of `K` does not imply this is non-negative; the Peter–Weyl character expansion of `K` and character orthogonality are needed to decompose the integrand into `|Fourier coefficients|²`. This is a fundamental mathematical gap, not just formalization work. |
 | `os_reconstruction_theorem` | `OSAxioms.lean` | Osterwalder–Schrader reconstruction (OS axioms ⇒ Wightman QFT) | Established published math, not in Mathlib. Only sound to invoke on objects that actually satisfy the OS axioms — depends on the continuum limit existing (see next row). |
 | `continuum_limit_exists` | `ContinuumLimit.lean` | Existence of the lattice a→0 continuum limit (Balaban RG / stochastic quantization) | **This axiom *is* the open mathematical core of the problem.** Not a placeholder for something routine — it's the thing nobody has proved. |
@@ -110,7 +110,7 @@ all measure-preserving maps, including the reflection `θ`).  Step 4 is
 trivial algebra.  The remaining formalization work is the concrete wiring
 of steps 3–4 into the lattice-gauge-theory setup.
 
-**Precise analysis (2025-06-29 session):** the naive path above (steps 1–4
+**Precise analysis (2026-06-29 session):** the naive path above (steps 1–4
 at the level of the full Boltzmann factor) does NOT work directly, because
 `χ_λ(θU) ≠ conj(χ_λ(U))` in general — the reflection `θ` is not group
 inversion.  The correct approach works at the level of the **transfer matrix
@@ -125,8 +125,8 @@ requires the **Clebsch–Gordan decomposition** for products of characters of
 the same link variable — not currently axiomatized.  See
 `docs/gap_analysis.md` for the full analysis.
 
-**Further analysis (2025-07-02 session):** a detailed investigation of whether
-the abstract lemma `character_expansion_positivity` (proved 2025-07-01, 0
+**Further analysis (2026-07-02 session):** a detailed investigation of whether
+the abstract lemma `character_expansion_positivity` (proved 2026-07-01, 0
 sorries, 0 axioms) can be directly wired into the lattice setup revealed
 **three interconnected obstructions** that prevent direct application:
 
@@ -153,7 +153,7 @@ of the interface plaquette expansion.  See `docs/gap_analysis.md` §"Precise
 analysis of why `character_expansion_positivity` does NOT directly apply" for
 the full analysis.
 
-**Progress (2025-07-03 session):** Step (a) is now complete.  The
+**Progress (2026-07-03 session):** Step (a) is now complete.  The
 `peterWeyl_clebschGordan_plaquette` axiom has been **strengthened** to also
 provide the Clebsch–Gordan decomposition for character products:
 `χ_s(g)·χ_t(g) = ∑_w cg s t w · χ_w(g)` with `cg s t w ≥ 0` (Littlewood–
@@ -275,7 +275,26 @@ remains the major formalization effort.
   decomposition with non-negative coefficients.  0 sorries, 0 custom axioms
   beyond Peter–Weyl.  Verified by `#print axioms` (only `propext`,
   `Classical.choice`, `Quot.sound`).
-  `exp(-β S_W) = ∏ exp(-S_p)` is PD on the full link-variable group
+- `charProduct_mixed_finset_decomp'` (`PeterWeyl.lean`) — mixed-conjugation CG
+  decomposition: a product of characters with mixed conjugation (some `χ(g)`,
+  some `conj(χ(g))`) of the same group element decomposes as a non-negative-
+  weighted sum of single characters `∑_w coeff w · χ_w(g)` with `coeff w ≥ 0`.
+  The dual map converts `conj(χ)` to `χ_{dual}`, allowing `charProduct_finset_decomp'`
+  to combine them.  This is the key lemma for the interface Boltzmann factor
+  decomposition with inverted links.  0 sorries, 0 custom axioms beyond Peter–Weyl.
+  Verified by `#print axioms` (only `propext`, `Classical.choice`, `Quot.sound`).
+- `charProduct_mixed_link_separable_decomp` (`PeterWeyl.lean`) — per-term
+  separable decomposition with mixed conjugation: a product of characters (some
+  conjugated, some not) grouped by link decomposes as a non-negative-weighted sum
+  of products of single (unconjugated) characters `∑_w F(w) · ∏_l χ_{w(l)}(g_l)`
+  with `F(w) ≥ 0`.  This is the key algebraic ingredient for the interface
+  Boltzmann factor decomposition with inverted links: after expanding the
+  product of plaquette factors, each term is a product of characters (some
+  conjugated from inverted links) grouped by link, and this lemma shows each
+  such term has a separable character decomposition with non-negative
+  coefficients, with all conjugation resolved via the dual map.  0 sorries,
+  0 custom axioms beyond Peter–Weyl.  Verified by `#print axioms` (only
+  `propext`, `Classical.choice`, `Quot.sound`).
   `LinkVariable (SU N) Λ`, via `plaquetteContributionPD` (each plaquette
   factor PD by `comp_hom` from `plaquetteBoltzmannPD_inv`) and
   `PositiveDefinite.finprod` (n-ary Schur product).  0 sorries, 0 axioms

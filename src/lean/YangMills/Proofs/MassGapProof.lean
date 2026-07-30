@@ -52,9 +52,14 @@ in Mathlib:
    Peter-Weyl theorem + Clebsch-Gordan decomposition for the plaquette
    Boltzmann factor, AND the Clebsch-Gordan decomposition for products of
    characters of the same group element (across-plaquette CG, added
-   2025-07-03).  The latter provides `χ_s(g)·χ_t(g) = ∑_w cg s t w · χ_w(g)`
-   with `cg s t w ≥ 0`, the key ingredient for combining character expansions
-   across plaquettes that share a link variable.
+   2026-07-03), AND the dual (contragredient) representation map
+   `dual : ι → ι` with `χ_{dual(i)}(g) = conj(χ_i(g))` (added 2026-07-30,
+   needed to handle inverted links in the plaquette product).  The CG
+   decomposition provides `χ_s(g)·χ_t(g) = ∑_w cg s t w · χ_w(g)` with
+   `cg s t w ≥ 0`, the key ingredient for combining character expansions
+   across plaquettes that share a link variable.  The dual map converts
+   `conj(χ)` to `χ_{dual}`, allowing CG to combine characters from inverted
+   links with characters from non-inverted links.
 
 2. `transferMatrixPositivity_axiom` (ReflectionPositivity.lean):
    Transfer-matrix positivity: the integral `∫ G·G(θU) dμ₀ ≥ 0` follows

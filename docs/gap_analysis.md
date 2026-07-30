@@ -6,7 +6,7 @@ The reflection positivity proof for the Wilson action on a finite periodic latti
 (`gibbsExpectationPeriodic_reflection_positive` in `ReflectionPositivity.lean`)
 is complete except for the final positivity step (the integral of G·θG).
 
-### ✅ Correction applied (2025-06-28)
+### ✅ Correction applied (2026-06-28)
 
 The `TransferMatrix.lean` file has been rewritten with the **correct** transfer matrix
 definitions.  The previous approach (using `G_plus` with negative links set to 1) was
@@ -45,7 +45,7 @@ $$\int_{\text{config}} G(U) \cdot G(\theta U) \, d\mu_0(U) \ge 0$$
 
 where $\mu_0$ is the product Haar measure on $\text{SU}(N)^{\text{links}}$.
 
-### ✅ Key identity PROVEN (2025-06-28)
+### ✅ Key identity PROVEN (2026-06-28)
 
 The measure-theoretic identity
 $$\int G(U) \cdot G(\theta U) \, d\mu_0(U) = \int_{\text{PosInt}} g(u) \cdot (Tg)(u) \, d\mu^{\pm 0}(u)$$
@@ -213,10 +213,10 @@ into `∫ f(U)·f(θU)·exp(-β S_W) dμ` (shown equivalent to the axiom by
 `characterOrthogonality` to rewrite each term as `|∫ f·χ_λ|² ≥ 0`, (4) sum
 with `a_λ ≥ 0`.  Steps 1–2 are formalized; steps 3–4 are the remaining wiring.
 
-### Precise analysis of the character-orthogonality path (2025-06-29 session)
+### Precise analysis of the character-orthogonality path (2026-06-29 session)
 
 A detailed analysis of the character-orthogonality path was performed in the
-2025-06-29 session.  The key findings are:
+2026-06-29 session.  The key findings are:
 
 **The correct abstract lemma** is NOT at the level of the full Boltzmann
 factor (where `χ_λ(θU) ≠ conj(χ_λ(U))` in general, so the naive
@@ -267,7 +267,7 @@ This is a pure measure-theory lemma (uses only `MeasurePreserving` for the
 change of variables, no group structure, no character orthogonality).  It is
 the abstract scaffold that the concrete character expansion would plug into.
 Formalizing it is the natural next step; it was sketched but not completed in
-the 2025-06-29 session (the integrability bookkeeping for exchanging the
+the 2026-06-29 session (the integrability bookkeeping for exchanging the
 finite sum with the integral needs care).
 
 **Key obstruction**: the TM kernel
@@ -297,10 +297,10 @@ different factors). This decomposition is captured by the `peterWeyl_clebschGord
 
 See `docs/found_issues.md` §3 for the full analysis.
 
-### Precise analysis of why `character_expansion_positivity` does NOT directly apply (2025-07-02 session)
+### Precise analysis of why `character_expansion_positivity` does NOT directly apply (2026-07-02 session)
 
 A detailed analysis was performed of whether the abstract lemma
-`character_expansion_positivity` (proved 2025-07-01, 0 sorries, 0 axioms) can
+`character_expansion_positivity` (proved 2026-07-01, 0 sorries, 0 axioms) can
 be directly wired into the lattice-gauge-theory setup to close
 `transferMatrixPositivity_axiom`.  **The answer is no — three interconnected
 obstructions prevent direct application.**  This section documents the precise
@@ -400,7 +400,7 @@ direct integral approach.
 
 **What's needed to close `transferMatrixPositivity_axiom`:**
 1. **Clebsch–Gordan axiom**: `χ_s(g) · χ_t(g) = ∑_w N^w_{st} χ_w(g)` with
-   `N^w_{st} ≥ 0` (Littlewood–Richardson).  **DONE (2025-07-03 session):**
+   `N^w_{st} ≥ 0` (Littlewood–Richardson).  **DONE (2026-07-03 session):**
    the existing `peterWeyl_clebschGordan_plaquette` axiom has been
    **strengthened** to also provide this decomposition (as additional
    existential components `cg`, `hcg`, `hcg_decomp`).  Two new lemmas proved
@@ -417,7 +417,7 @@ direct integral approach.
      `charSum_product_link_decomp` (product of per-link character sums decomposes
      as a non-negative-weighted sum of products of characters — the separable
      decomposition of the full Boltzmann factor).  Two further lemmas proved
-     (2025-07-05 session, 0 sorries, 0 custom axioms — verified by `#print
+     (2026-07-05 session, 0 sorries, 0 custom axioms — verified by `#print
      axioms`: only `propext`, `Classical.choice`, `Quot.sound`):
      `charProduct_finset_decomp'` (generalized CG decomposition for a product of
      characters indexed by a finset of *appearances* `A` via `appChar : A → ι`,
@@ -431,6 +431,28 @@ direct integral approach.
      decomposition, combining per-link CG with the product-of-sums identity).  The
      axiom count remains **six** (the strengthening enriches an existing axiom,
      it does not add a new one).
+     
+     The axiom was **further strengthened** (2026-07-30 session) to also provide a
+     dual (contragredient) map `dual : ι → ι` with
+     `repCharacter (ρ (dual i)) g = conj (repCharacter (ρ i) g)` — the standard
+     fact that the contragredient of a unitary representation has conjugate
+     character.  This is needed because the lattice plaquette product has
+     **inverted links** (`g₃⁻¹, g₄⁻¹`), and `χ(g⁻¹) = conj(χ(g)) = χ_{dual}(g)`
+     by `repCharacter_inv`.  Two further lemmas proved from the strengthened
+     axiom (2026-07-30 session, 0 sorries, 0 custom axioms — verified by
+     `#print axioms`: only `propext`, `Classical.choice`, `Quot.sound`):
+     `charProduct_mixed_finset_decomp'` (mixed-conjugation CG decomposition: a
+     product of characters with mixed conjugation — some `χ(g)`, some
+     `conj(χ(g))` — of the same group element decomposes as a non-negative-
+     weighted sum of single characters, using the dual map to convert
+     `conj(χ)` to `χ_{dual}` and then applying `charProduct_finset_decomp'`)
+     and `charProduct_mixed_link_separable_decomp` (per-term separable
+     decomposition with mixed conjugation: a product of characters with mixed
+     conjugation grouped by link decomposes as a non-negative-weighted sum of
+     products of single unconjugated characters — this is the key algebraic
+     ingredient for the interface Boltzmann factor decomposition with inverted
+     links, combining per-link mixed-conjugation CG with the product-of-sums
+     identity).  The axiom count remains **six**.
  2. **Formalization of the operator `B`**: define `B` via the character
     expansion, show `T = B* · B`, and conclude `⟨g, Tg⟩ = ‖Bg‖² ≥ 0`.  This
     requires the full combinatorial wiring of the interface plaquette expansion
@@ -465,7 +487,7 @@ measure-preserving to the FULL measure on `X`) is fundamentally incompatible
 with the lattice setup's shared interface structure and the `σ` reflection on
 interface time-like links.
 
-### ✅ Clean factorization PROVEN (2025-06-29)
+### ✅ Clean factorization PROVEN (2026-06-29)
 
 The lemma `osG_thetaG_factorization` (in `ReflectionPositivity.lean`, 0 sorries,
 0 axioms) proves the purely algebraic identity:
