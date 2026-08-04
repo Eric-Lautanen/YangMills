@@ -47,6 +47,10 @@ positive-definite algebra is fully formalized.
 
 import Mathlib.Analysis.SpecialFunctions.Exp
 import Mathlib.LinearAlgebra.Matrix.Trace
+import Mathlib.Algebra.BigOperators.Fin
+import Mathlib.Algebra.BigOperators.Ring.Finset
+import Mathlib.Data.Fintype.BigOperators
+import Mathlib.Tactic.Ring
 import YangMills.Proofs.PositiveDefinite
 
 set_option linter.unusedVariables false
@@ -54,6 +58,7 @@ set_option maxHeartbeats 4000000
 
 open Finset
 open Matrix
+open MeasureTheory
 open scoped ComplexConjugate
 
 namespace YangMills
@@ -168,10 +173,53 @@ that are not currently in Mathlib:
   * **Duality of representations**: `χ_{dual(i)}(g) = conj(χ_i(g))`, needed to
     handle inverted links in the plaquette product.
 
+The axiom also asserts that each `ρ i` is **irreducible** (`hIrr`) and has
+**positive dimension** (`hDims`); these are the hypotheses required to apply
+the Schur orthogonality axiom `characterOrthogonality` (matrix-element
+orthogonality) to the Peter–Weyl data, which is the key ingredient for closing
+`transferMatrixPositivity_axiom` via the `T = B*·B` argument.
+
 The index set `ι` is required to be closed under tensor-product decomposition
 and under duals (so that the CG sum and the dual map stay within `ι`); this is
 guaranteed by taking `ι` large enough to contain all irreducibles appearing in
 any relevant tensor product or dual.
+
+**Strengthened** (2026-08-02) to also provide the **L² completeness** (Peter–Weyl
+theorem, completeness part).  In addition to the finite `ι` (which suffices for
+the character expansion of the Boltzmann factor), the axiom now provides a
+**countable** index set `Λ` (with `Encodable Λ`) of *all* irreducible unitary
+representations of `SU(N)`, with matrix elements `(ρ_λ g)_{ij}` for `λ ∈ Λ`.
+The L² completeness is stated as: if `f ∈ L¹(G, μ)` is integrable and all its
+Fourier coefficients `∫ f · conj((ρ_λ g)_{ij}) dμ = 0` vanish (for all `λ`,
+`i`, `j`), then `f = 0` a.e.  This is the statement that the matrix elements
+form an orthonormal **basis** (not just an orthogonal family) of `L²(G, μ)`,
+so a function orthogonal to all of them is zero.  The embedding `emb : ι ↪ Λ`
+with `hemb` ensures the finite `ι` (used for the character expansion) is a
+subset of the countable `Λ` (used for the L² completeness), with matching
+characters.  The measure `μ` is the normalized Haar measure on `SU(N)` (a
+probability measure).  The L² completeness is the remaining ingredient needed
+to close `transferMatrixPositivity_axiom`: it allows expanding the arbitrary
+`L²` function `A_w` (arising from the test function `f`) in the matrix-element
+basis, which is required to evaluate the reflection-positivity integral as
+`∑ |Fourier coefficient|² ≥ 0`.  See `docs/transfer_matrix_positivity_design.md`
+§5a for the full analysis.
+
+**Strengthened** (2026-08-02 session 3) to also provide the **matrix-element
+Clebsch–Gordan coefficients** `cgME`.  In addition to the character-level CG
+decomposition `χ_s(g)·χ_t(g) = ∑_w cg s t w · χ_w(g)` (which gives the
+multiplicities but not the basis change), the axiom now provides the
+unitary change-of-basis matrices `cgME s t ν : Fin (dims s) → Fin (dims t) →
+Fin (dims ν) → ℂ` that implement the decomposition of the tensor-product
+representation `ρ_s ⊗ ρ_t → ⊕_ν ρ_ν` at the matrix-element level:
+
+    (ρ_s g)_{ab} · (ρ_t g)_{ij} = ∑_ν ∑_p ∑_q cgME s t ν a i p · (ρ_ν g)_{pq} · conj(cgME s t ν b j q)
+
+together with the unitarity (completeness) relation `∑_{ν,p} conj(cgME) · cgME = δ`.
+These matrix-element CG coefficients are needed to evaluate the triple-product
+integrals `∫ χ_w · (ρ_λ)_{ij} · conj((ρ_μ)_{kl}) dμ` that arise in the
+reflection-positivity reorganization, and to reorganize the sum as
+`∑ |Fourier coefficient|² ≥ 0`.  See `docs/transfer_matrix_positivity_design.md`
+§8.7 for the full analysis.
 
 See `docs/found_issues.md` §3 and `docs/gap_analysis.md` for the mathematical
 obstruction that necessitates this expansion. -/
@@ -179,6 +227,9 @@ axiom peterWeyl_clebschGordan_plaquette (N : ℕ) (c : ℝ) (hc : 0 ≤ c) :
     ∃ (ι : Type) (hι : Fintype ι) (dims : ι → ℕ)
       (ρ : ∀ i, SU N →* Matrix (Fin (dims i)) (Fin (dims i)) ℂ)
       (hU : ∀ i, IsUnitaryRepresentation (ρ i))
+      (hMeas : ∀ i, Measurable (repCharacter (ρ i)))
+      (hIrr : ∀ i, IsIrreducible (ρ i))
+      (hDims : ∀ i, 0 < dims i)
       (coeff : ι → ι → ι → ι → ι → ℝ)
       (hcoeff : ∀ r s t u v, 0 ≤ coeff r s t u v)
       (cg : ι → ι → ι → ℝ)
@@ -188,14 +239,45 @@ axiom peterWeyl_clebschGordan_plaquette (N : ℕ) (c : ℝ) (hc : 0 ≤ c) :
         ∑ w : ι, (cg s t w : ℂ) * repCharacter (ρ w) g)
       (dual : ι → ι)
       (hdual : ∀ i (g : SU N),
-        repCharacter (ρ (dual i)) g = conj (repCharacter (ρ i) g)),
-      ∀ (g₁ g₂ g₃ g₄ : SU N),
+        repCharacter (ρ (dual i)) g = conj (repCharacter (ρ i) g))
+      (cgME : ∀ (s t ν : ι), Fin (dims s) → Fin (dims t) → Fin (dims ν) → ℂ)
+      (hcgME_decomp : ∀ (s t : ι) (g : SU N) (a b : Fin (dims s)) (i j : Fin (dims t)),
+        (ρ s g) a b * (ρ t g) i j =
+        ∑ ν : ι, ∑ p : Fin (dims ν), ∑ q : Fin (dims ν),
+          cgME s t ν a i p * (ρ ν g) p q * conj (cgME s t ν b j q))
+      (hcgME_unitary : ∀ (s t : ι) (a b : Fin (dims s)) (i j : Fin (dims t)),
+        ∑ ν : ι, ∑ p : Fin (dims ν),
+          conj (cgME s t ν a i p) * cgME s t ν b j p =
+          if a = b ∧ i = j then (1 : ℂ) else 0)
+      (Λ : Type) (hΛ : Encodable Λ)
+      (dimsΛ : Λ → ℕ)
+      (ρΛ : ∀ ℓ, SU N →* Matrix (Fin (dimsΛ ℓ)) (Fin (dimsΛ ℓ)) ℂ)
+      (hUΛ : ∀ ℓ, IsUnitaryRepresentation (ρΛ ℓ))
+      (hIrrΛ : ∀ ℓ, IsIrreducible (ρΛ ℓ))
+      (hDimsΛ : ∀ ℓ, 0 < dimsΛ ℓ)
+      (emb : ι ↪ Λ)
+      (hemb : ∀ i (g : SU N),
+        repCharacter (ρΛ (emb i)) g = repCharacter (ρ i) g)
+      (μ : Measure (SU N)) (hμ : IsProbabilityMeasure μ),
+      -- Part 1: character expansion of the plaquette Boltzmann factor
+      (∀ (g₁ g₂ g₃ g₄ : SU N),
         (Real.exp (c * (Matrix.trace ((g₁ * g₂ * g₃ * g₄ : SU N) :
             Matrix (Fin N) (Fin N) ℂ)).re) : ℂ) =
           ∑ r : ι, ∑ s : ι, ∑ t : ι, ∑ u : ι, ∑ v : ι,
             (coeff r s t u v : ℂ) *
             (repCharacter (ρ s) g₁ * repCharacter (ρ t) g₂ *
-             repCharacter (ρ u) g₃ * repCharacter (ρ v) g₄)
+             repCharacter (ρ u) g₃ * repCharacter (ρ v) g₄)) ∧
+      -- Part 2: L² completeness (Peter-Weyl theorem, completeness part).
+      -- If `f` is integrable and all its Fourier coefficients (w.r.t. the
+      -- matrix elements of all irreps in `Λ`) vanish, then `f = 0` a.e.
+      -- This is the completeness of the Peter-Weyl basis: the matrix
+      -- elements `{(ρ_ℓ g)_{ij} : ℓ ∈ Λ, i, j}` form an orthonormal basis
+      -- of `L²(G, μ)`, so a function orthogonal to all of them is zero.
+      (∀ (f : SU N → ℂ),
+        Integrable f μ →
+        (∀ (ℓ : Λ) (i : Fin (dimsΛ ℓ)) (j : Fin (dimsΛ ℓ)),
+          ∫ g, f g * conj ((ρΛ ℓ g) i j) ∂μ = 0) →
+        f =ᵐ[μ] 0)
 
 /-- The character of a unitary representation of `SU(N)` is positive-definite. -/
 lemma repCharacter_SU_positiveDefinite {ι : Type*} {dims : ι → ℕ}
@@ -245,7 +327,9 @@ theorem plaquetteBoltzmannPD (N : ℕ) (c : ℝ) (hc : 0 ≤ c) :
       (λ (p : ((SU N × SU N) × SU N) × SU N) =>
         (Real.exp (c * (Matrix.trace ((p.1.1.1 * p.1.1.2 * p.1.2 * p.2 : SU N) :
             Matrix (Fin N) (Fin N) ℂ)).re) : ℂ)) := by
-  obtain ⟨ι, hι, dims, ρ, hU, coeff, hcoeff, cg, hcg, hcg_decomp, dual, hdual, hexp4⟩ :=
+  obtain ⟨ι, hι, dims, ρ, hU, hMeas, hIrr, hDims, coeff, hcoeff, cg, hcg, hcg_decomp, dual, hdual,
+      cgME, hcgME_decomp, hcgME_unitary,
+      Λ, hΛ, dimsΛ, ρΛ, hUΛ, hIrrΛ, hDimsΛ, emb, hemb, μ, hμ, hexp4, hL2⟩ :=
     peterWeyl_clebschGordan_plaquette N c hc
   letI : Fintype ι := hι
   -- The four-character product, as a function of the plaquette links.
@@ -343,7 +427,9 @@ theorem plaquetteBoltzmannPD_inv (N : ℕ) (c : ℝ) (hc : 0 ≤ c) :
       (λ (p : ((SU N × SU N) × SU N) × SU N) =>
         (Real.exp (c * (Matrix.trace ((p.1.1.1 * p.1.1.2 * p.1.2⁻¹ * p.2⁻¹ : SU N) :
             Matrix (Fin N) (Fin N) ℂ)).re) : ℂ)) := by
-  obtain ⟨ι, hι, dims, ρ, hU, coeff, hcoeff, cg, hcg, hcg_decomp, dual, hdual, hexp4⟩ :=
+  obtain ⟨ι, hι, dims, ρ, hU, hMeas, hIrr, hDims, coeff, hcoeff, cg, hcg, hcg_decomp, dual, hdual,
+      cgME, hcgME_decomp, hcgME_unitary,
+      Λ, hΛ, dimsΛ, ρΛ, hUΛ, hIrrΛ, hDimsΛ, emb, hemb, μ, hμ, hexp4, hL2⟩ :=
     peterWeyl_clebschGordan_plaquette N c hc
   letI : Fintype ι := hι
   -- The four-character product with conj on 3rd and 4th factors.
@@ -982,6 +1068,470 @@ lemma charProduct_mixed_link_separable_decomp
     refine Finset.prod_congr rfl (fun l _ => hf_decomp l (g l))
   rw [hprod, hF_decomp g]
 
+/-! ## Separable decomposition of the product of plaquette Boltzmann factors
+
+The following is the key algebraic ingredient for sub-step (a) of the
+`transferMatrixPositivity_axiom` closure plan (see
+`docs/transfer_matrix_positivity_design.md`).  It shows that a product of
+plaquette Boltzmann factors (each with inverted 3rd/4th links, as in the lattice
+plaquette product) admits a **separable character decomposition** with
+non-negative coefficients.
+
+The proof combines:
+1. The Peter-Weyl character expansion of each plaquette factor (axiom
+   `hexp4`), with `repCharacter_inv` converting `χ(g⁻¹)` to `conj(χ(g))` for
+   the inverted 3rd/4th links.
+2. The product-of-sums expansion (distributive law): a product of finite sums
+   equals a sum over choice functions of the product of the individual terms.
+3. Per-term application of `charProduct_mixed_link_separable_decomp`: for each
+   choice of expansion index per plaquette, the product of characters (some
+   conjugated) grouped by link decomposes as a non-negative-weighted sum of
+   products of single characters.
+4. Summing over all choices: the total coefficient for each separable term is
+   a sum of products of non-negative reals, hence non-negative.
+
+This lemma is stated abstractly (parameterized by a finite plaquette type `P`,
+a finite link type `L`, and a link assignment `links : P → Fin 4 → L`) so that
+it can be instantiated for the concrete interface plaquette structure later.
+-/
+
+/-- Convert a 5-fold nested `Fintype` sum to a single sum over the
+right-nested product type `ι × ι × ι × ι × ι`.  This is `Fintype.sum_prod_type`
+applied four times, from innermost to outermost. -/
+lemma sum_fin5_to_single {ι : Type*} [Fintype ι] (f : ι → ι → ι → ι → ι → ℂ) :
+    ∑ r : ι, ∑ s : ι, ∑ t : ι, ∑ u : ι, ∑ v : ι, f r s t u v =
+    ∑ idx : ι × ι × ι × ι × ι,
+      f idx.1 idx.2.1 idx.2.2.1 idx.2.2.2.1 idx.2.2.2.2 := by
+  simp only [Fintype.sum_prod_type]
+
+/-- Convert `∏ j : Fin 4, f j` to the explicit 4-fold product `f 0 * f 1 * f 2 * f 3`. -/
+lemma fin4_prod_eq (f : Fin 4 → ℂ) :
+    ∏ j : Fin 4, f j = f 0 * f 1 * f 2 * f 3 := by
+  simp only [Fin.prod_univ_succ, Fin.prod_univ_zero]
+  simp
+  ring
+
+/-- Extract the character index for link position `j` from a Peter-Weyl
+expansion index `(r, s, t, u, v)`.  Position 0 → `s`, 1 → `t`, 2 → `u`, 3 → `v`.
+(The `r` component is the Peter-Weyl heat-kernel expansion index and does not
+correspond to a link.) -/
+def pwCharIdx {ι : Type*} (idx : ι × ι × ι × ι × ι) (j : Fin 4) : ι :=
+  match j with
+  | 0 => idx.2.1
+  | 1 => idx.2.2.1
+  | 2 => idx.2.2.2.1
+  | 3 => idx.2.2.2.2
+
+/-- Conjugation flag for link position `j` in the plaquette product: `true`
+for positions 2 and 3 (the inverted links `g₃⁻¹, g₄⁻¹`). -/
+def pwIsConj (j : Fin 4) : Bool :=
+  match j with
+  | 0 => false
+  | 1 => false
+  | 2 => true
+  | 3 => true
+
+/-- **Character expansion of a single plaquette Boltzmann factor with inverted
+3rd/4th links.**  For `c ≥ 0`, the function
+`exp(c · Re Tr(g₁ · g₂ · g₃⁻¹ · g₄⁻¹))` expands as a 5-fold sum over
+Peter-Weyl indices `(r, s, t, u, v)` of `coeff(r,s,t,u,v) · χ_s(g₁) · χ_t(g₂) ·
+conj(χ_u(g₃)) · conj(χ_v(g₄))`, with `conj` arising from `repCharacter_inv`
+applied to the inverted links `g₃⁻¹, g₄⁻¹`. -/
+lemma plaquette_factor_char_expansion
+    {ι : Type*} [Fintype ι] {dims : ι → ℕ}
+    (ρ : ∀ i, SU N →* Matrix (Fin (dims i)) (Fin (dims i)) ℂ)
+    (hU : ∀ i, IsUnitaryRepresentation (ρ i))
+    (coeff : ι → ι → ι → ι → ι → ℝ)
+    (c : ℝ)
+    (hexp4 : ∀ g₁ g₂ g₃ g₄ : SU N,
+      (Real.exp (c * (Matrix.trace ((g₁ * g₂ * g₃ * g₄ : SU N) :
+          Matrix (Fin N) (Fin N) ℂ)).re) : ℂ) =
+        ∑ r : ι, ∑ s : ι, ∑ t : ι, ∑ u : ι, ∑ v : ι,
+          (coeff r s t u v : ℂ) *
+          (repCharacter (ρ s) g₁ * repCharacter (ρ t) g₂ *
+           repCharacter (ρ u) g₃ * repCharacter (ρ v) g₄))
+    (g₁ g₂ g₃ g₄ : SU N) :
+    (Real.exp (c * (Matrix.trace ((g₁ * g₂ * g₃⁻¹ * g₄⁻¹ : SU N) :
+        Matrix (Fin N) (Fin N) ℂ)).re) : ℂ) =
+      ∑ r : ι, ∑ s : ι, ∑ t : ι, ∑ u : ι, ∑ v : ι,
+        (coeff r s t u v : ℂ) *
+        (repCharacter (ρ s) g₁ * repCharacter (ρ t) g₂ *
+         conj (repCharacter (ρ u) g₃) * conj (repCharacter (ρ v) g₄)) := by
+  rw [hexp4 g₁ g₂ g₃⁻¹ g₄⁻¹]
+  refine Finset.sum_congr rfl (fun r _ => ?_)
+  refine Finset.sum_congr rfl (fun s _ => ?_)
+  refine Finset.sum_congr rfl (fun t _ => ?_)
+  refine Finset.sum_congr rfl (fun u _ => ?_)
+  refine Finset.sum_congr rfl (fun v _ => ?_)
+  rw [repCharacter_inv (ρ u) (hU u) g₃, repCharacter_inv (ρ v) (hU v) g₄]
+
+/-- **Separable decomposition of the product of plaquette Boltzmann factors.**
+
+Given the Peter-Weyl / Clebsch-Gordan axiom data, a finite type `P` of
+plaquettes, a finite type `L` of links, a surjective link assignment
+`links : P → Fin 4 → L` (every link appears in at least one plaquette), and
+link variables `g : L → SU N`, the product of plaquette Boltzmann factors
+
+    ∏_{p ∈ P} exp(c · Re Tr(g₁ · g₂ · g₃⁻¹ · g₄⁻¹))
+
+(where `g_i = g(links p i)`) decomposes as a **separable character
+decomposition**
+
+    ∑_{w : L → ι} F(w) · ∏_{l ∈ L} χ_{w(l)}(g_l)
+
+with `F(w) ≥ 0`.
+
+This is the key algebraic ingredient for the interface Boltzmann factor
+decomposition (sub-step (a) of the `transferMatrixPositivity_axiom` closure
+plan).  The proof combines the Peter-Weyl character expansion of each
+plaquette factor, the product-of-sums distributive expansion, per-term
+application of `charProduct_mixed_link_separable_decomp` (using the dual map
+to handle inverted links), and summation of non-negative coefficients.
+
+See `docs/transfer_matrix_positivity_design.md` for the full plan. -/
+lemma plaquette_product_separable_decomp
+    {ι : Type*} [Fintype ι] [DecidableEq ι] {dims : ι → ℕ}
+    (ρ : ∀ i, SU N →* Matrix (Fin (dims i)) (Fin (dims i)) ℂ)
+    (hU : ∀ i, IsUnitaryRepresentation (ρ i))
+    (coeff : ι → ι → ι → ι → ι → ℝ) (hcoeff : ∀ r s t u v, 0 ≤ coeff r s t u v)
+    (cg : ι → ι → ι → ℝ) (hcg : ∀ s t w, 0 ≤ cg s t w)
+    (hcg_decomp : ∀ s t (g : SU N),
+      repCharacter (ρ s) g * repCharacter (ρ t) g =
+      ∑ w : ι, (cg s t w : ℂ) * repCharacter (ρ w) g)
+    (dual : ι → ι) (hdual : ∀ i (g : SU N),
+      repCharacter (ρ (dual i)) g = conj (repCharacter (ρ i) g))
+    (c : ℝ) (hc : 0 ≤ c)
+    (hexp4 : ∀ g₁ g₂ g₃ g₄ : SU N,
+      (Real.exp (c * (Matrix.trace ((g₁ * g₂ * g₃ * g₄ : SU N) :
+          Matrix (Fin N) (Fin N) ℂ)).re) : ℂ) =
+        ∑ r : ι, ∑ s : ι, ∑ t : ι, ∑ u : ι, ∑ v : ι,
+          (coeff r s t u v : ℂ) *
+          (repCharacter (ρ s) g₁ * repCharacter (ρ t) g₂ *
+           repCharacter (ρ u) g₃ * repCharacter (ρ v) g₄))
+    (P : Type*) [Fintype P] [DecidableEq P]
+    (L : Type*) [Fintype L] [DecidableEq L]
+    (links : P → Fin 4 → L)
+    (hlinks_surj : ∀ l, ∃ p j, links p j = l) :
+    ∃ (F : (L → ι) → ℝ) (hF : ∀ w, 0 ≤ F w),
+      ∀ (g : L → SU N),
+      (∏ p : P, (Real.exp (c * (Matrix.trace
+          ((g (links p 0) * g (links p 1) * (g (links p 2))⁻¹ *
+           (g (links p 3))⁻¹ : SU N) :
+          Matrix (Fin N) (Fin N) ℂ)).re) : ℂ)) =
+        ∑ w : L → ι, (F w : ℂ) * ∏ l : L, repCharacter (ρ (w l)) (g l) := by
+  classical
+  -- Define the link partition: S l = {(p,j) : links p j = l}
+  let S : L → Finset (P × Fin 4) := fun l =>
+    (Finset.univ : Finset (P × Fin 4)).filter (fun x => links x.1 x.2 = l)
+  -- S l is nonempty (surjectivity of links)
+  have hS_nonempty : ∀ l, (S l).Nonempty := by
+    intro l
+    obtain ⟨p, j, hj⟩ := hlinks_surj l
+    refine ⟨(p, j), ?_⟩
+    show (p, j) ∈ (Finset.univ : Finset (P × Fin 4)).filter (fun x => links x.1 x.2 = l)
+    exact Finset.mem_filter.2 ⟨Finset.mem_univ _, hj⟩
+  -- S l are pairwise disjoint
+  have hS_disj : Set.PairwiseDisjoint (↑(Finset.univ : Finset L)) S := by
+    intro l _ m _ hlm
+    refine Finset.disjoint_left.mpr (fun x hx => ?_)
+    obtain ⟨p, j⟩ := x
+    intro h
+    have hx2 := Finset.mem_filter.1 hx
+    have h2 := Finset.mem_filter.1 h
+    have hxl : links p j = l := hx2.2
+    have hxm : links p j = m := h2.2
+    rw [hxl] at hxm
+    exact hlm hxm
+  -- biUnion S = univ
+  have hS_biUnion : (Finset.univ : Finset L).biUnion S = Finset.univ := by
+    ext x
+    constructor
+    · intro _
+      exact Finset.mem_univ _
+    · intro _
+      obtain ⟨p, j, hj⟩ := hlinks_surj (links x.1 x.2)
+      rw [Finset.mem_biUnion]
+      refine ⟨links p j, Finset.mem_univ _, ?_⟩
+      show x ∈ (Finset.univ : Finset (P × Fin 4)).filter (fun x => links x.1 x.2 = links p j)
+      exact Finset.mem_filter.2 ⟨Finset.mem_univ _, hj.symm⟩
+  -- Per-α separable decomposition via charProduct_mixed_link_separable_decomp
+  have hdecomp_α : ∀ (α : P → ι × ι × ι × ι × ι),
+      ∃ (F : (L → ι) → ℝ) (hF : ∀ w, 0 ≤ F w),
+        ∀ (g : L → SU N),
+          (∏ l, ∏ a ∈ S l,
+            (if pwIsConj a.2 then conj (repCharacter (ρ (pwCharIdx (α a.1) a.2)) (g l))
+             else repCharacter (ρ (pwCharIdx (α a.1) a.2)) (g l))) =
+          ∑ w : L → ι, (F w : ℂ) * ∏ l, repCharacter (ρ (w l)) (g l) := by
+    intro α
+    exact charProduct_mixed_link_separable_decomp ρ hU cg hcg hcg_decomp dual hdual
+      S (fun _ a => pwCharIdx (α a.1) a.2) (fun _ a => pwIsConj a.2) hS_nonempty
+  let F_α : (P → ι × ι × ι × ι × ι) → (L → ι) → ℝ := fun α => (hdecomp_α α).choose
+  have hF_α : ∀ α w, 0 ≤ F_α α w := fun α w => (hdecomp_α α).choose_spec.choose w
+  have hF_α_decomp : ∀ α (g : L → SU N),
+      (∏ l, ∏ a ∈ S l,
+        (if pwIsConj a.2 then conj (repCharacter (ρ (pwCharIdx (α a.1) a.2)) (g l))
+         else repCharacter (ρ (pwCharIdx (α a.1) a.2)) (g l))) =
+      ∑ w : L → ι, (F_α α w : ℂ) * ∏ l, repCharacter (ρ (w l)) (g l) :=
+    fun α g => (hdecomp_α α).choose_spec.choose_spec g
+  -- Coefficient extraction helper
+  let coeffIdx (idx : ι × ι × ι × ι × ι) : ℝ :=
+    coeff idx.1 idx.2.1 idx.2.2.1 idx.2.2.2.1 idx.2.2.2.2
+  have hcoeffIdx : ∀ idx, 0 ≤ coeffIdx idx := fun idx =>
+    hcoeff idx.1 idx.2.1 idx.2.2.1 idx.2.2.2.1 idx.2.2.2.2
+  -- Product of sums = sum of products (Stage 2)
+  -- Define the overall coefficient F(w) = ∑ α, (∏ p, coeffIdx (α p)) * F_α α w
+  refine ⟨fun w => ∑ α : P → ι × ι × ι × ι × ι,
+            (∏ p : P, coeffIdx (α p)) * F_α α w,
+          fun w => ?_, fun g => ?_⟩
+  · -- Non-negativity: F(w) = ∑ α, (∏ p, coeffIdx (α p)) * F_α α w ≥ 0
+    exact Finset.sum_nonneg (fun α _ => mul_nonneg
+      (Finset.prod_nonneg (fun p _ => hcoeffIdx (α p)))
+      (hF_α α w))
+  · -- Equality: ∏ p, exp(...) = ∑ w, (F w : ℂ) * ∏ l, χ_{w(l)}(g_l)
+    -- The explicit 4-fold character product for plaquette p with expansion index idx
+    let charProd (p : P) (idx : ι × ι × ι × ι × ι) : ℂ :=
+      repCharacter (ρ idx.2.1) (g (links p 0)) * repCharacter (ρ idx.2.2.1) (g (links p 1)) *
+      conj (repCharacter (ρ idx.2.2.2.1) (g (links p 2))) *
+      conj (repCharacter (ρ idx.2.2.2.2) (g (links p 3)))
+    -- charProd = ∏_j form (Fin 4 enumeration)
+    have h_charProd_fin4 : ∀ p idx,
+        charProd p idx =
+        ∏ j : Fin 4, (if pwIsConj j then conj (repCharacter (ρ (pwCharIdx idx j)) (g (links p j)))
+                       else repCharacter (ρ (pwCharIdx idx j)) (g (links p j))) := by
+      intro p idx
+      rw [fin4_prod_eq]
+      show charProd p idx =
+        repCharacter (ρ (pwCharIdx idx 0)) (g (links p 0)) *
+        repCharacter (ρ (pwCharIdx idx 1)) (g (links p 1)) *
+        (if pwIsConj 2 then conj (repCharacter (ρ (pwCharIdx idx 2)) (g (links p 2)))
+         else repCharacter (ρ (pwCharIdx idx 2)) (g (links p 2))) *
+        (if pwIsConj 3 then conj (repCharacter (ρ (pwCharIdx idx 3)) (g (links p 3)))
+         else repCharacter (ρ (pwCharIdx idx 3)) (g (links p 3)))
+      simp [pwCharIdx, pwIsConj, charProd]
+    -- Per-plaquette expansion: exp(...) = ∑ idx, (coeffIdx idx : ℂ) * charProd p idx
+    have h_plaq_exp : ∀ p,
+        (Real.exp (c * (Matrix.trace
+            ((g (links p 0) * g (links p 1) * (g (links p 2))⁻¹ *
+             (g (links p 3))⁻¹ : SU N) :
+            Matrix (Fin N) (Fin N) ℂ)).re) : ℂ) =
+        ∑ idx : ι × ι × ι × ι × ι, (coeffIdx idx : ℂ) * charProd p idx := by
+      intro p
+      have h := plaquette_factor_char_expansion ρ hU coeff c hexp4
+        (g (links p 0)) (g (links p 1)) (g (links p 2)) (g (links p 3))
+      rw [h, sum_fin5_to_single]
+    -- Regroup by link: ∏ p, charProd p (α p) = ∏ l, ∏ a ∈ S l, (...) (Stage 3+4)
+    have h_regroup : ∀ (α : P → ι × ι × ι × ι × ι),
+        ∏ p : P, charProd p (α p) =
+        ∏ l : L, ∏ a ∈ S l,
+          (if pwIsConj a.2 then conj (repCharacter (ρ (pwCharIdx (α a.1) a.2)) (g l))
+           else repCharacter (ρ (pwCharIdx (α a.1) a.2)) (g l)) := by
+      intro α
+      -- Step a: charProd p (α p) = ∏_j form
+      have h1 : ∏ p : P, charProd p (α p) =
+          ∏ p : P, ∏ j : Fin 4,
+            (if pwIsConj j then conj (repCharacter (ρ (pwCharIdx (α p) j)) (g (links p j)))
+             else repCharacter (ρ (pwCharIdx (α p) j)) (g (links p j))) := by
+        refine Finset.prod_congr rfl (fun p _ => h_charProd_fin4 p (α p))
+      -- Step b: ∏ p, ∏ j = ∏ (p,j) : P × Fin 4
+      have h2 : ∏ p : P, ∏ j : Fin 4,
+            (if pwIsConj j then conj (repCharacter (ρ (pwCharIdx (α p) j)) (g (links p j)))
+             else repCharacter (ρ (pwCharIdx (α p) j)) (g (links p j))) =
+          ∏ x : P × Fin 4,
+            (if pwIsConj x.2 then conj (repCharacter (ρ (pwCharIdx (α x.1) x.2)) (g (links x.1 x.2)))
+             else repCharacter (ρ (pwCharIdx (α x.1) x.2)) (g (links x.1 x.2))) := by
+        exact (Fintype.prod_prod_type' (fun p j =>
+          (if pwIsConj j then conj (repCharacter (ρ (pwCharIdx (α p) j)) (g (links p j)))
+           else repCharacter (ρ (pwCharIdx (α p) j)) (g (links p j))))).symm
+      -- Step c: ∏ (p,j) = ∏ l, ∏ a ∈ S l
+      have h3 : ∏ x : P × Fin 4,
+            (if pwIsConj x.2 then conj (repCharacter (ρ (pwCharIdx (α x.1) x.2)) (g (links x.1 x.2)))
+             else repCharacter (ρ (pwCharIdx (α x.1) x.2)) (g (links x.1 x.2))) =
+          ∏ l : L, ∏ a ∈ S l,
+            (if pwIsConj a.2 then conj (repCharacter (ρ (pwCharIdx (α a.1) a.2)) (g l))
+             else repCharacter (ρ (pwCharIdx (α a.1) a.2)) (g l)) := by
+        rw [← hS_biUnion, Finset.prod_biUnion hS_disj]
+        refine Finset.prod_congr rfl (fun l _ => ?_)
+        refine Finset.prod_congr rfl (fun a ha => ?_)
+        have ha' : links a.1 a.2 = l := (Finset.mem_filter.1 ha).2
+        rw [ha']
+      rw [h1, h2, h3]
+    -- Step 1: per-plaquette expansion
+    rw [show (∏ p : P, (Real.exp (c * (Matrix.trace
+        ((g (links p 0) * g (links p 1) * (g (links p 2))⁻¹ *
+         (g (links p 3))⁻¹ : SU N) :
+        Matrix (Fin N) (Fin N) ℂ)).re) : ℂ)) =
+      ∏ p : P, ∑ idx, (coeffIdx idx : ℂ) * charProd p idx from
+      Finset.prod_congr rfl (fun p _ => h_plaq_exp p)]
+    -- Step 2: product of sums = sum of products (Fintype.prod_sum)
+    rw [Fintype.prod_sum (fun p idx => (coeffIdx idx : ℂ) * charProd p idx)]
+    -- Per-α: split product + regroup by link + separable decomposition
+    have h_per_α : ∀ (α : P → ι × ι × ι × ι × ι),
+        ∏ p : P, (coeffIdx (α p) : ℂ) * charProd p (α p) =
+        (∏ p : P, (coeffIdx (α p) : ℂ)) *
+        ∑ w : L → ι, (F_α α w : ℂ) * ∏ l : L, repCharacter (ρ (w l)) (g l) := by
+      intro α
+      rw [Finset.prod_mul_distrib]
+      congr 1
+      rw [h_regroup α, hF_α_decomp α g]
+    -- Apply per-α transformation
+    simp only [h_per_α]
+    -- Stage 5: sum and collect
+    -- Step 1: distribute product over inner sum
+    have h1 : (∑ α, (∏ p, (coeffIdx (α p) : ℂ)) *
+        ∑ w, (F_α α w : ℂ) * ∏ l, repCharacter (ρ (w l)) (g l)) =
+        ∑ α, ∑ w, (∏ p, (coeffIdx (α p) : ℂ)) *
+          ((F_α α w : ℂ) * ∏ l, repCharacter (ρ (w l)) (g l)) := by
+      refine Finset.sum_congr rfl (fun α _ => ?_)
+      rw [Finset.mul_sum]
+    -- Step 2: exchange sums
+    have h2 : (∑ α, ∑ w, (∏ p, (coeffIdx (α p) : ℂ)) *
+          ((F_α α w : ℂ) * ∏ l, repCharacter (ρ (w l)) (g l))) =
+        ∑ w, ∑ α, (∏ p, (coeffIdx (α p) : ℂ)) *
+          ((F_α α w : ℂ) * ∏ l, repCharacter (ρ (w l)) (g l)) := by
+      exact Finset.sum_comm
+    -- Step 3: factor out ∏ l, χ_{w(l)}(g_l)
+    have h3 : (∑ w, ∑ α, (∏ p, (coeffIdx (α p) : ℂ)) *
+          ((F_α α w : ℂ) * ∏ l, repCharacter (ρ (w l)) (g l))) =
+        ∑ w, (∑ α, (∏ p, (coeffIdx (α p) : ℂ)) * (F_α α w : ℂ)) *
+          ∏ l, repCharacter (ρ (w l)) (g l) := by
+      refine Finset.sum_congr rfl (fun w _ => ?_)
+      rw [Finset.sum_mul]
+      refine Finset.sum_congr rfl (fun α _ => ?_)
+      ring
+    -- Combine: after h1, h2, h3 the LHS is ∑ w, (∑ α, (∏ p, ↑coeff) * ↑F_α) * ∏ l, χ
+    -- and the RHS is ∑ w, (F w : ℂ) * ∏ l, χ where F w beta-reduces to
+    -- ∑ α, (∏ p, coeffIdx (α p)) * F_α α w.  The coercion (F w : ℂ) = ↑(∑ α, ...)
+    -- unfolds via Complex.ofReal_sum/mul/prod to match the distributed LHS.
+    rw [h1, h2, h3]
+    simp only [Complex.ofReal_sum, Complex.ofReal_mul, Complex.ofReal_prod]
+
+/-- **V⁺ conjugation via the dual map.** For a product of characters
+`∏_l χ_{w(l)}(g_l)` over a finite link set `L`, and a Finset `L_V` of "V⁺
+links", the product can be rewritten as
+
+    (∏_{l ∉ L_V} χ_{w(l)}(g_l)) · conj(∏_{l ∈ L_V} χ_{dual(w(l))}(g_l))
+
+using the dual (contragredient) map: `χ_i(g) = conj(χ_{dual(i)}(g))` (from
+`hdual` + `conj_conj`).  This is the key identity that separates the V⁺
+links (which appear with conjugated characters after the reflection/change of
+variables) from the U⁺ and u⁰ links (which appear with unconjugated
+characters).  See `docs/transfer_matrix_positivity_design.md` §8.1. -/
+lemma prod_conj_partition_dual
+    {ι : Type*} [Fintype ι] [DecidableEq ι] {dims : ι → ℕ}
+    (ρ : ∀ i, SU N →* Matrix (Fin (dims i)) (Fin (dims i)) ℂ)
+    (hU : ∀ i, IsUnitaryRepresentation (ρ i))
+    (dual : ι → ι) (hdual : ∀ i (g : SU N),
+      repCharacter (ρ (dual i)) g = conj (repCharacter (ρ i) g))
+    (L : Type*) [Fintype L] [DecidableEq L]
+    (L_V : Finset L)
+    (w : L → ι) (g : L → SU N) :
+    ∏ l : L, repCharacter (ρ (w l)) (g l) =
+    (∏ l ∈ (Finset.univ : Finset L) \ L_V, repCharacter (ρ (w l)) (g l)) *
+    conj (∏ l ∈ L_V, repCharacter (ρ (dual (w l))) (g l)) := by
+  -- `conj` distributes over the `L_V` product, and `χ_{dual i} = conj(χ_i)` (hdual)
+  -- turns each conjugated dual character back into the original character.
+  have h_conj : conj (∏ l ∈ L_V, repCharacter (ρ (dual (w l))) (g l)) =
+      ∏ l ∈ L_V, repCharacter (ρ (w l)) (g l) := by
+    rw [map_prod]
+    exact Finset.prod_congr rfl fun l hl => by rw [hdual, Complex.conj_conj]
+  -- `univ` is the disjoint union of `univ \ L_V` and `L_V`.
+  have h_disj : Disjoint ((Finset.univ : Finset L) \ L_V) L_V :=
+    Finset.disjoint_left.mpr fun _ ha => (Finset.mem_sdiff.mp ha).2
+  have h_eq : ((Finset.univ : Finset L) \ L_V) ∪ L_V = Finset.univ := by
+    ext x; simp
+  rw [h_conj, ← Finset.prod_union h_disj, h_eq]
+
+#print axioms prod_conj_partition_dual
+#print axioms plaquetteBoltzmannPD_inv
+#print axioms charProduct_PD
+#print axioms plaquette_product_separable_decomp
+
+/-- **Interface kernel character expansion (separable form).** Given a product of
+plaquette Boltzmann factors `∏_p exp(c·Re Tr(g₁g₂g₃⁻¹g₄⁻¹))` over a finite set of
+interface plaquettes (with `c ≥ 0`), and a partition of the link set `L` into three
+disjoint Finsets `L_U` (positive-time "U⁺" links), `L_0` (interface "u⁰" links), and
+`L_V` (the "V⁺" links that appear conjugated after the reflection / change of
+variables), the product admits the *separable* character expansion
+
+    ∏_p exp(c·Re Tr(…)) = ∑_w F(w) · Φ_w(U⁺) · Ψ_w(u⁰) · conj(Φ_w(V⁺))
+
+with `F(w) ≥ 0`, where `Φ_w(U⁺) = ∏_{l ∈ L_U} χ_{w(l)}(g_l)`,
+`Ψ_w(u⁰) = ∏_{l ∈ L_0} χ_{w(l)}(g_l)`, and the V⁺ factor uses the dual
+(contragredient) map: `conj(Φ_w(V⁺)) = conj(∏_{l ∈ L_V} χ_{dual(w(l))}(g_l))`.
+
+This is the key input to the reflection-positivity argument (§8.1 of
+`docs/transfer_matrix_positivity_design.md`): the V⁺ links always appear with
+conjugated characters, so the kernel factors as a positive-coefficient sum of
+separated U⁺/u⁰/V⁺ character products. The proof composes
+`plaquette_product_separable_decomp` (which gives `∑_w F(w)·∏_l χ_{w(l)}(g_l)`)
+with `prod_conj_partition_dual` (which separates the V⁺ links with conjugated
+dual characters) and the disjoint union split `univ \ L_V = L_U ∪ L_0`. -/
+lemma interface_kernel_character_expansion
+    {ι : Type*} [Fintype ι] [DecidableEq ι] {dims : ι → ℕ}
+    (ρ : ∀ i, SU N →* Matrix (Fin (dims i)) (Fin (dims i)) ℂ)
+    (hU : ∀ i, IsUnitaryRepresentation (ρ i))
+    (coeff : ι → ι → ι → ι → ι → ℝ) (hcoeff : ∀ r s t u v, 0 ≤ coeff r s t u v)
+    (cg : ι → ι → ι → ℝ) (hcg : ∀ s t w, 0 ≤ cg s t w)
+    (hcg_decomp : ∀ s t (g : SU N),
+      repCharacter (ρ s) g * repCharacter (ρ t) g =
+      ∑ w : ι, (cg s t w : ℂ) * repCharacter (ρ w) g)
+    (dual : ι → ι) (hdual : ∀ i (g : SU N),
+      repCharacter (ρ (dual i)) g = conj (repCharacter (ρ i) g))
+    (c : ℝ) (hc : 0 ≤ c)
+    (hexp4 : ∀ g₁ g₂ g₃ g₄ : SU N,
+      (Real.exp (c * (Matrix.trace ((g₁ * g₂ * g₃ * g₄ : SU N) :
+          Matrix (Fin N) (Fin N) ℂ)).re) : ℂ) =
+        ∑ r : ι, ∑ s : ι, ∑ t : ι, ∑ u : ι, ∑ v : ι,
+          (coeff r s t u v : ℂ) *
+          (repCharacter (ρ s) g₁ * repCharacter (ρ t) g₂ *
+           repCharacter (ρ u) g₃ * repCharacter (ρ v) g₄))
+    (P : Type*) [Fintype P] [DecidableEq P]
+    (L : Type*) [Fintype L] [DecidableEq L]
+    (links : P → Fin 4 → L)
+    (hlinks_surj : ∀ l, ∃ p j, links p j = l)
+    (L_U L_0 L_V : Finset L)
+    (hdisj : Disjoint L_U L_0 ∧ Disjoint (L_U ∪ L_0) L_V)
+    (hcover : L_U ∪ L_0 ∪ L_V = Finset.univ) :
+    ∃ (F : (L → ι) → ℝ) (hF : ∀ w, 0 ≤ F w),
+      ∀ (g : L → SU N),
+      (∏ p : P, (Real.exp (c * (Matrix.trace
+          ((g (links p 0) * g (links p 1) * (g (links p 2))⁻¹ *
+           (g (links p 3))⁻¹ : SU N) :
+          Matrix (Fin N) (Fin N) ℂ)).re) : ℂ)) =
+        ∑ w : L → ι, (F w : ℂ) *
+          (∏ l ∈ L_U, repCharacter (ρ (w l)) (g l)) *
+          (∏ l ∈ L_0, repCharacter (ρ (w l)) (g l)) *
+          conj (∏ l ∈ L_V, repCharacter (ρ (dual (w l))) (g l)) := by
+  -- Step 1: the plain separable decomposition (all links unconjugated).
+  obtain ⟨F, hF, hF_decomp⟩ := plaquette_product_separable_decomp
+    ρ hU coeff hcoeff cg hcg hcg_decomp dual hdual c hc hexp4 P L links hlinks_surj
+  refine ⟨F, hF, fun g => ?_⟩
+  rw [hF_decomp g]
+  refine Finset.sum_congr rfl fun w hw => ?_
+  -- Step 2: separate the V⁺ links with conjugated dual characters.
+  rw [prod_conj_partition_dual ρ hU dual hdual L L_V w g]
+  -- Step 3: the remaining links `univ \ L_V` are exactly `L_U ∪ L_0`.
+  have h_split : (Finset.univ : Finset L) \ L_V = L_U ∪ L_0 := by
+    ext x
+    simp only [Finset.mem_sdiff, Finset.mem_univ, true_and, Finset.mem_union]
+    constructor
+    · intro hV
+      by_contra h
+      push_neg at h
+      obtain ⟨hU, h0⟩ := h
+      have hxu : x ∈ L_U ∪ L_0 ∪ L_V := by rw [hcover]; exact Finset.mem_univ _
+      rcases Finset.mem_union.mp hxu with h01 | hV'
+      · rcases Finset.mem_union.mp h01 with hU' | h0'
+        · exact hU hU'
+        · exact h0 h0'
+      · exact hV hV'
+    · rintro (hU | h0)
+      · exact (Finset.disjoint_left.mp hdisj.2) (Finset.mem_union.mpr (Or.inl hU))
+      · exact (Finset.disjoint_left.mp hdisj.2) (Finset.mem_union.mpr (Or.inr h0))
+  rw [h_split, Finset.prod_union hdisj.1]
+  ring
+
+#print axioms interface_kernel_character_expansion
 end PlaquetteBoltzmann
 
 end YangMills

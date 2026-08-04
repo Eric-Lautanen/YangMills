@@ -18,14 +18,19 @@ mathematically incorrect.  The file now contains:
   positive+interface space.
 - **`transferMatrixCorrect`**: The correct transfer matrix T acting on PosInterfaceConfig:
   `(T ψ)(u) = ∫ ψ(θ⁻⁰(U⁻,u⁰))·exp(-β·(S_OS⁻(U⁻)+S_OS_int(u,U⁻))/2) dμ⁻(U⁻)`
-- **`integral_G_thetaG_eq_inner_g_Tg`**: The key identity (proof is `sorry`).
-- **`transferMatrixCorrect_positive`**: Positivity of T (proof is `sorry`, requires Peter-Weyl).
-- **`integral_G_thetaG_nonneg'`**: The final positivity result under the hypothesis.
+- **`integral_G_thetaG_eq_inner_g_Tg`**: The key identity — **fully proved** (0 sorries;
+  `#print axioms`: only `propext`, `Classical.choice`, `Quot.sound`; see "Key identity
+  PROVEN" below).
+- **Positivity of T**: the remaining gap is the differently-named
+  `transferMatrixPositivity_axiom` axiom in `ReflectionPositivity.lean` (there is no
+  `transferMatrixCorrect_positive` lemma; see `docs/found_issues.md`).
+- **`integral_G_thetaG_eq_inner_g_Tg`** usage: the final positivity result lives in
+  `ReflectionPositivity.lean` (`gibbsExpectationPeriodic_reflection_positive`), which
+  closes via the `transferMatrixPositivity_axiom` axiom.
 
 The old incorrect `transferMatrix_identity` has been removed.  See `docs/found_issues.md`
 for details on the mathematical error.
 
-### What is proved (no gaps):
 ### What is proved (no gaps):
 
 1. **Action decomposition**: $S_W = S^+_{OS} + S^-_{OS} + S^0_{OS}$ (OS plaquette decomposition)
@@ -460,15 +465,62 @@ direct integral approach.
     reduction) — a major formalization effort.  **This is the remaining work.**
     The per-term separable decomposition (`charProduct_link_separable_decomp`)
     is now proved; the remaining steps are:
-    (a) Expand the product of plaquette factors (product of sums = sum of
-        products) and apply `charProduct_link_separable_decomp` to each term to
-        get the full separable decomposition of the interface Boltzmann factor.
-    (b) Change variables in the transfer-matrix integral (reflecting negative
-        links to positive), using `reflectLinkVariable_measurePreserving`.
-    (c) Use CG (with dual representations, via `repCharacter_inv`) to combine
-        the reflected characters with the unreflected ones.
-    (d) Use `characterOrthogonality` to evaluate the integrals and obtain
-        `∑_w a_w · |Fourier coefficient|² ≥ 0`.
+     (a) Expand the product of plaquette factors (product of sums = sum of
+          products) and apply `charProduct_mixed_link_separable_decomp` to each
+          term to get the full separable decomposition of the interface Boltzmann
+          factor.  **DONE (2026-07-30):** A detailed design document has been
+          written (`docs/transfer_matrix_positivity_design.md`) laying out
+          the full mathematical argument and formalization plan.  The abstract
+          lemma `plaquette_product_separable_decomp` has been **proved** in
+          `PeterWeyl.lean` (parameterized by a finite plaquette type `P`, a
+          finite link type `L`, and a surjective link assignment
+          `links : P → Fin 4 → L`), with **0 sorries and 0 custom axioms**
+          (verified by `#print axioms`: only `propext`, `Classical.choice`,
+          `Quot.sound`).  The proof implements all 5 stages: per-plaquette
+          character expansion (via `plaquette_factor_char_expansion`),
+          product-of-sums distributive expansion (`Fintype.prod_sum`),
+          regrouping by link (`Finset.prod_biUnion` with the partition
+          `S l = {(p,j) : links p j = l}`), per-term application of
+          `charProduct_mixed_link_separable_decomp`, and summation of
+          non-negative coefficients (the final coercion conversion uses
+          `Complex.ofReal_sum/mul/prod`).  Helper definitions `pwCharIdx`
+          and `pwIsConj` extract the character index and conjugation flag
+          from a Peter-Weyl expansion index `(r,s,t,u,v)` and link position
+          `j ∈ Fin 4`.  Step (a) is now **complete**; the remaining steps are
+          (b), (c), (d) below.
+     (b) Change variables in the transfer-matrix integral (reflecting negative
+         links to positive), using `reflectLinkVariable_measurePreserving`.
+         **IN PROGRESS (2026-07-30 session 7):** The key measure-theoretic
+         ingredient `reflectLinkVariable_measurePreserving_between`
+         (LatticeMeasure.lean) is **proved** — it generalizes
+         `reflectLinkVariable_measurePreserving` to the case where the source
+         and target site sets differ (e.g., `negativeSites` → `positiveSites`),
+         which is exactly what the change of variables `U⁻ ↦ V⁺ = reflect(U⁻)`
+         requires.  **0 sorries, 0 custom axioms** (verified by `#print axioms`:
+         only `propext`, `Classical.choice`, `Quot.sound`).
+         `reflectToPosInterface_involution`
+         (TransferMatrix.lean) shows `reflectToPosInterface(reflectPosToNeg(V⁺), u⁰) =
+         mergePosInterface(V⁺, σ(u⁰))` — **0 sorries, 0 custom axioms**.  New
+         definitions `reflectPosToNeg` (positive→negative config map) and
+         `sigmaInterface` (σ reflection on interface configs) added to
+         TransferMatrix.lean.  Helper lemmas about `reflectSite` mapping between
+         site sets added to ReflectionPositivity.lean.  Supporting lemmas
+         `restrictLinkVariable_negative_extendToFullConfig`,
+         `restrictPosInterface_extendToFullConfig`, and
+   `reflect_extendToFullConfig_posInterface` (the key lemma for rewriting
+   S⁺ under the change of variables) added to TransferMatrix.lean — all
+   **0 sorries, 0 custom axioms**.  The pointwise identity
+   `transferMatrix_integrand_change_of_variables` (the integrand at `U⁻` equals
+   the transformed integrand at `V⁺ = reflect(U⁻)`) is also PROVED — **0 sorries,
+   0 custom axioms**.  **Step (b) is now COMPLETE**: the integral-level change of
+   variables `transferMatrix_change_of_variables` (showing
+   `transferMatrixCorrect = transferMatrixReflected` via `integral_map` +
+   `reflectLinkVariable_measurePreserving_between`) is PROVED — 0 sorries, 0
+   custom axioms.  The remaining work is steps (c)–(d).
+     (c) Use CG (with dual representations, via `repCharacter_inv`) to combine
+         the reflected characters with the unreflected ones.
+     (d) Use `characterOrthogonality` to evaluate the integrals and obtain
+         `∑_w a_w · |Fourier coefficient|² ≥ 0`.
 3. **Alternatively**: axiomatize the separable decomposition of the TM kernel
    directly (as a consequence of Peter–Weyl + CG + character orthogonality),
    and prove positivity from it.  This would replace
@@ -486,6 +538,112 @@ abstract lemma's requirement that `θ : Y → X` be a function of `y` only (and
 measure-preserving to the FULL measure on `X`) is fundamentally incompatible
 with the lattice setup's shared interface structure and the `σ` reflection on
 interface time-like links.
+
+### ✅ Step (c) analysis complete (2026-07-31 session): L² expansion obstruction
+
+A detailed analysis of step (c) was performed.  **The key finding is a
+fundamental obstruction**: closing `transferMatrixPositivity_axiom` from the
+current axioms alone is NOT possible.  The obstruction is the **L² expansion
+(Peter-Weyl completeness)**, which is not provided by the current axioms.
+
+**The obstruction in detail.**  After steps (a)–(b), the integral to show ≥ 0 is:
+
+    I = ∫_u ∫_{V⁺} f(u) · f(V⁺, σ(u⁰)) · K(u, V⁺) dμ⁺(V⁺) dμ⁺⁰(u)
+
+where K(u, V⁺) = exp(-β·(S⁺(u) + S⁺(V⁺, σ(u⁰)) + S_int(U⁺, u⁰, reflect(V⁺)))).
+The character expansion of K (step a) gives K = ∑_w F(w) · Φ_w(U⁺) · Ψ_w(u⁰) · Ξ_w(V⁺)
+with F(w) ≥ 0.  By reflection symmetry, Ξ_w = Φ_w.  So:
+
+    I = ∑_w F(w) · ∫_{u⁰} Ψ_w(u⁰) · A_w(u⁰) · A_w(σ(u⁰)) dμ⁰(u⁰)
+
+where A_w(u⁰) = ∫_{u⁺} f(u⁺, u⁰) · Φ_w(u⁺) dμ⁺(u⁺).  This is
+⟨A_w · Ψ_w, A_w ∘ σ⟩_{L²(μ⁰)}, which is **obstruction 3**: NOT necessarily
+non-negative, because the σ reflection on interface time-like links gives
+A_w(u⁰) · A_w(σ(u⁰)) instead of |A_w(u⁰)|².
+
+**Why the current axioms are insufficient.**  To evaluate the u⁰ integral using
+character orthogonality, one must expand A_w(u⁰) in the character/matrix-element
+basis (the L² expansion).  But:
+- `peterWeyl_clebschGordan_plaquette` provides the character expansion of the
+  **Boltzmann factor** (a specific function), NOT the L² expansion of
+  **arbitrary** functions.
+- `characterOrthogonality` provides Schur orthogonality of characters
+  (∫ χ_λ · conj(χ_μ) = δ_{λμ}), which is an **orthogonality** statement, not a
+  **completeness** statement.
+
+The L² expansion is a completeness statement: the matrix elements
+{ρ_λ(g)_{ij}} span ALL of L²(G).  Since A_w(u⁰) depends on the arbitrary test
+function f, it is NOT a class function in general, so it cannot be expanded in
+characters alone — the full matrix element basis is needed.
+
+**Proposed path forward.** Strengthen `peterWeyl_clebschGordan_plaquette` to
+include the L² expansion (Peter-Weyl theorem: matrix elements form an
+orthonormal basis of L²(G)) and Schur orthogonality of matrix elements
+(∫ ρ_λ(g)_{ij} · conj(ρ_μ(g)_{kl}) dμ = δ_{λμ} δ_{ik} δ_{jl} / dim(λ)).
+This keeps the axiom count at 6 (strengthening, not adding) and provides the
+key ingredient to close `transferMatrixPositivity_axiom` (count → 5).
+
+**Progress (2026-08-01):** Schur orthogonality of matrix elements is DONE
+(strengthened `characterOrthogonality` axiom + derived `character_orthogonality_from_schur`
+lemma). Irreducibility + positive dimension (`hIrr`/`hDims`) is DONE (strengthened
+`peterWeyl_clebschGordan_plaquette`).
+
+**Progress (2026-08-02):** The L² expansion (completeness) is DONE — the
+`peterWeyl_clebschGordan_plaquette` axiom has been **strengthened** to also
+provide a countable `Λ` (with `Encodable Λ`) of all irreps, the matrix elements
+`ρ_ℓ`, an embedding `emb : ι ↪ Λ`, the Haar measure `μ`, and the L² completeness
+("trivial orthogonal complement" form: if all Fourier coefficients vanish, then
+`f = 0` a.e.). Axiom count STILL SIX (enriched existing axiom). 
+
+**Progress (2026-08-02 session 3):** The **matrix-element CG coefficients** are
+DONE — the `peterWeyl_clebschGordan_plaquette` axiom has been **further
+strengthened** to also provide `cgME : ∀ (s t ν : ι), Fin (dims s) → Fin (dims t)
+→ Fin (dims ν) → ℂ` — the unitary change-of-basis matrices implementing
+`ρ_s ⊗ ρ_t → ⊕_ν ρ_ν` at the matrix-element level, with the decomposition
+relation and unitarity. Axiom count STILL SIX. Full `lake build` GREEN (2972
+jobs). `#print axioms` confirms existing lemmas have unchanged axiom
+dependencies. All four required strengthenings are now COMPLETE. The remaining
+work is to USE these ingredients to evaluate the `u⁰` integral as
+`∑ |Fourier coefficient|² ≥ 0`, closing `transferMatrixPositivity_axiom`
+(count → 5). See `docs/transfer_matrix_positivity_design.md` §5a and §8.7 for
+the updated analysis.
+
+See `docs/transfer_matrix_positivity_design.md` §5a for the full analysis.
+
+### ✅ Step (c)-(d) formalization plan + repMatrixElement_inv (2026-08-02)
+
+A detailed formalization plan for steps (c)-(d) has been written in
+`docs/transfer_matrix_positivity_design.md` §8. Key findings:
+
+1. **V⁺ conjugation property** (§8.1): ALL V⁺ links in the interface plaquette
+   character expansion have conjugated characters (from reflection + plaquette
+   inversions). This gives the kernel the form
+   K = ∑_w F(w) · Φ_w(U⁺) · Ψ_w(u⁰) · conj(Φ_w(V⁺)) with F(w) ≥ 0.
+
+2. **Individual terms can be negative** (§8.3): Counterexample on SU(2) shows
+   that ∫ χ_w · A · conj(A(σ)) dμ can be < 0 for individual w. The SUM is ≥ 0,
+   but the proof requires the L² expansion.
+
+3. **Matrix-element CG coefficients needed** (§8.6-8.7): The reorganization of
+   the sum as ∑ |Fourier coefficient|² ≥ 0 requires the matrix-element CG
+   coefficients (the unitary change-of-basis for ρ_s ⊗ ρ_λ → ⊕_ν ρ_ν), NOT just
+   the character-level CG multiplicities cg(s,t,w) provided by the current axiom.
+   **DONE (2026-08-02 session 3):** The `peterWeyl_clebschGordan_plaquette` axiom
+   has been strengthened to provide `cgME` with the decomposition relation and
+   unitarity (axiom count stays at 6 — enriching existing axiom).
+
+4. **repMatrixElement_inv PROVED** (§8.4, PositiveDefinite.lean ~line 785):
+   The key relation (ρ g⁻¹)_{ij} = conj((ρ g)_{ji}) for unitary representations,
+   connecting the σ reflection to the matrix-element basis. **0 sorries, 0
+   custom axioms** (verified by `#print axioms`: only `propext`,
+   `Classical.choice`, `Quot.sound`).
+
+The formalization plan identifies 6 intermediate lemmas (§8.8) in dependency
+order. The axiom strengthening to provide matrix-element CG coefficients (§8.7)
+is **DONE** (2026-08-02 session 3). The next step is formalizing lemmas 1-2
+(character expansion + integral reduction), then lemmas 4-5 (triple-product
+integral evaluation + reflection-positivity reorganization — the hard part),
+then lemma 6 (close `transferMatrixPositivity_axiom`).
 
 ### ✅ Clean factorization PROVEN (2026-06-29)
 
@@ -680,10 +838,18 @@ The corrected transfer matrix framework has been implemented in `TransferMatrix.
 - **`g_posInterface`**: The restricted function `g(u) = f(u)·exp(-β·S_OS⁺(u)/2)`.
 - **`transferMatrixCorrect`**: The correct transfer matrix with reflection kernel.
 - **`integral_G_thetaG_eq_inner_g_Tg`**: ✅ PROVEN (0 sorries). The key identity.
-- **`transferMatrixCorrect_positive`**: ❌ BLOCKED — requires Peter-Weyl theorem.
-  See `docs/found_issues.md` §3 for the precise obstruction (counterexample showing
-  `Tr(gh)` is not PD on `SU(N) × SU(N)`).
-- **`integral_G_thetaG_nonneg'`**: Depends on the above.
+- **`transferMatrixPositivity_axiom`** (in `ReflectionPositivity.lean`; the
+  `transferMatrixCorrect_positive` name referenced in earlier versions of this doc
+  does not exist in source): ❌ still an axiom — the remaining gap.  Substantial
+  progress since the analysis below: the Peter–Weyl / Clebsch–Gordan ingredients it
+  was "BLOCKED" on are now **axiomatized** (`peterWeyl_clebschGordan_plaquette` +
+  `characterOrthogonality`), and the closure plan (`docs/transfer_matrix_positivity_design.md`
+  §8.11, README session log) has carried the character expansion through Lemma 2,
+  Fubini steps 4a–4e, and **Lemma 3 (σ-inversion)**; remaining: Lemma 5 (L²
+  expansion reorganization) + Lemma 6 (final assembly).
+- **`gibbsExpectationPeriodic_reflection_positive`**: closes via the
+  `transferMatrixPositivity_axiom` axiom (the final positivity result; there is no
+  `integral_G_thetaG_nonneg'` lemma — that name does not exist in source).
 
 ### Remaining Steps:
 
@@ -697,7 +863,16 @@ The corrected transfer matrix framework has been implemented in `TransferMatrix.
 
 ### Medium-term (requires representation theory — BLOCKED):
 
-2. **Prove `transferMatrixCorrect_positive`**: ❌ BLOCKED. The transfer matrix T is positive
+> **Status note (2026-08-04):** the "BLOCKED" analysis below is historical.  The
+> representation-theory ingredients are now axiomatized
+> (`peterWeyl_clebschGordan_plaquette`, `characterOrthogonality`), the character
+> expansion of the interface Boltzmann factor is proved, and the closure plan has
+> progressed through Fubini steps 4a–4e and Lemma 3 (σ-inversion).  The remaining
+> work is Lemma 5 (L²/matrix-element expansion reorganization) + Lemma 6 (final
+> assembly) — see `docs/transfer_matrix_positivity_design.md` §8.11.
+
+2. **Prove `transferMatrixPositivity_axiom`** (the real name of the gap; there is no
+   `transferMatrixCorrect_positive` lemma): ❌ still an axiom. The transfer matrix T is positive
    iff its kernel is a positive-definite function on the link-variable group. The kernel is a
    product of plaquette factors exp(c·Re Tr(U_∂p)), and each factor must be PD on SU(N)^4.
 

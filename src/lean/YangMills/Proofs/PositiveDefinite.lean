@@ -26,6 +26,10 @@ import Mathlib.Analysis.SpecialFunctions.Exponential
 import Mathlib.Topology.Algebra.Monoid
 import Mathlib.Topology.Order.OrderClosed
 import Mathlib.Topology.Algebra.InfiniteSum.NatInt
+import Mathlib.Algebra.Star.BigOperators
+import Mathlib.Algebra.BigOperators.Ring.Finset
+import Mathlib.Algebra.BigOperators.Group.Finset.Piecewise
+import Mathlib.MeasureTheory.Function.L1Space.Integrable
 import YangMills.SpecialUnitary
 open Finset
 open Complex
@@ -761,6 +765,56 @@ lemma repCharacter_inv (ρ : G →* Matrix (Fin n) (Fin n) ℂ)
   rw [repCharacter, repCharacter, ← h_star_eq]
   simp [Matrix.trace, Matrix.conjTranspose_apply, Complex.star_def]
 
+/-- For a unitary representation, the character is bounded by the dimension:
+`‖χ(g)‖ ≤ n` where `n = dim(ρ)`.
+
+This follows from `|Tr(A)| ≤ ∑ |A_jj| ≤ ∑ 1 = n` for a unitary `n×n` matrix `A`,
+using `entry_norm_bound_of_unitary` (each entry of a unitary matrix has norm ≤ 1).
+This bound is a key ingredient for proving integrability of the character-expansion
+terms w.r.t. the finite Haar measure (needed for the Fubini exchange in step 4c). -/
+lemma repCharacter_norm_le_dim (ρ : G →* Matrix (Fin n) (Fin n) ℂ)
+    (h_unitary : IsUnitaryRepresentation ρ) (g : G) :
+    ‖repCharacter ρ g‖ ≤ n := by
+  have hU : ρ g ∈ Matrix.unitaryGroup (Fin n) ℂ := h_unitary g
+  have h_entry : ∀ j : Fin n, ‖(ρ g) j j‖ ≤ 1 := fun j =>
+    entry_norm_bound_of_unitary hU j j
+  rw [repCharacter]
+  simp only [Matrix.trace]
+  calc ‖∑ j : Fin n, (ρ g) j j‖
+      ≤ ∑ j : Fin n, ‖(ρ g) j j‖ := norm_sum_le _ _
+    _ ≤ ∑ j : Fin n, (1 : ℝ) := Finset.sum_le_sum fun j _ => h_entry j
+    _ = n := by simp
+
+#print axioms repCharacter_norm_le_dim
+
+/-- For a unitary representation, the matrix element at `g⁻¹` equals the
+conjugate of the transposed matrix element at `g`:
+
+    (ρ g⁻¹)_{ij} = conj((ρ g)_{ji})
+
+This follows from `ρ(g⁻¹) = ρ(g)ᴴ` (unitary + homomorphism) and the definition
+of conjugate transpose `(Mᴴ)_{ij} = conj(M_{ji})`.
+
+This is the key relation connecting the σ reflection (inversion of time-like
+interface links) to the matrix-element basis. In the L² expansion approach to
+closing `transferMatrixPositivity_axiom`, the σ reflection on a time-like
+interface link `g ↦ g⁻¹` transforms matrix elements as
+`(ρ(σ(g)))_{ij} = conj((ρ g)_{ji})`, which is essential for evaluating the
+reflection-positivity integral using Schur orthogonality. -/
+lemma repMatrixElement_inv (ρ : G →* Matrix (Fin n) (Fin n) ℂ)
+    (h_unitary : IsUnitaryRepresentation ρ) (g : G)
+    (i j : Fin n) :
+    (ρ g⁻¹) i j = conj ((ρ g) j i) := by
+  have h_star_eq : (ρ g)ᴴ = ρ g⁻¹ := by
+    rw [conjTranspose_eq_inv_of_unitary (h_unitary g)]
+    have hmul : ρ g * ρ g⁻¹ = 1 := by
+      rw [← ρ.map_mul, show g * g⁻¹ = 1 from by simp, ρ.map_one]
+    exact Matrix.inv_eq_right_inv hmul
+  rw [← h_star_eq]
+  simp [Matrix.conjTranspose_apply]
+
+#print axioms repMatrixElement_inv
+
 /-! ## Irreducible representations and character orthogonality
 
 The Osterwalder–Seiler reflection-positivity argument requires not just that
@@ -799,32 +853,169 @@ def IsIrreducible {G : Type*} [Group G] {n : ℕ}
   ∀ (W : Submodule ℂ (Fin n → ℂ)),
     (∀ g : G, ∀ v ∈ W, ρ g *ᵥ v ∈ W) → (W = ⊥ ∨ W = ⊤)
 
-/-- **Axiom (Schur orthogonality for characters of irreducible unitary
+/-- **Axiom (Schur orthogonality for matrix elements of irreducible unitary
 representations of a compact group).**
 
 For a compact group `G` with normalized Haar measure `μ`, and irreducible
-unitary representations `ρ_λ, ρ_μ` with characters `χ_λ, χ_μ`, the integral
-`∫ χ_λ(g) · conj(χ_μ(g)) dμ(g)` equals `1` if `λ = μ` (the same irrep) and
-`0` otherwise (distinct irreps).
+unitary representations `ρ_λ, ρ_μ` with matrix elements `(ρ_λ g)_{ij}`,
+`(ρ_μ g)_{kl}`, the **Schur orthogonality relations** state:
 
-This is the **Great Orthogonality Theorem** for compact groups (Schur
-orthogonality), a cornerstone of the Peter–Weyl theorem.  It is not currently
-in Mathlib.  The axiom is stated for a *finite* index set of irreps (the
-Peter–Weyl theorem gives a countable family; for the lattice Boltzmann factor
-only finitely many irreps appear in the character expansion, so a finite
-family suffices).
+  ∫_G (ρ_λ g)_{ij} · conj((ρ_μ g)_{kl}) dμ(g) = δ_{λμ} δ_{ik} δ_{jl} / dim(λ)
 
-See `docs/gap_analysis.md` for how this axiom is used to close the
-reflection-positivity gap. -/
+i.e. the integral is `1 / dim(λ)` if `λ = μ`, `i = k`, and `j = l`, and `0`
+otherwise.
+
+This is the **Great Orthogonality Theorem** for compact groups, a cornerstone
+of the Peter–Weyl theorem.  It is not currently in Mathlib.  The axiom is
+stated for a *finite* index set of irreps (the Peter–Weyl theorem gives a
+countable family; for the lattice Boltzmann factor only finitely many irreps
+appear in the character expansion, so a finite family suffices).
+
+**Strengthened** (2026-08-01 session) from providing only character
+orthogonality (`∫ χ_λ · conj(χ_μ) = δ_{λμ}`) to providing the full Schur
+orthogonality of **matrix elements**.  The character-orthogonality version is
+the `i = j`, `k = l` special case (the diagonal matrix elements, whose sum is
+the character/trace).  The stronger matrix-element version is needed for the
+L² expansion approach to closing `transferMatrixPositivity_axiom`: the test
+function `f` produces arbitrary (non-class) functions of the interface links,
+which must be expanded in the matrix-element basis (not just the character
+basis) and evaluated using Schur orthogonality of matrix elements.  See
+`docs/transfer_matrix_positivity_design.md` §5a for the full analysis.
+
+The axiom is stated as a conjunction of three parts:
+* **Integrability** of all matrix-element products (needed for the
+  sum-integral exchange in `character_orthogonality_from_schur`).
+* **Diagonal** (same irrep `λ = μ`): the matrix elements of a single irrep
+  are orthogonal, with `∫ (ρ_λ g)_{ij} · conj((ρ_λ g)_{kl}) dμ = δ_{ik} δ_{jl} / dim(λ)`.
+* **Off-diagonal** (distinct irreps `λ ≠ μ`): matrix elements of distinct
+  irreps are orthogonal, with `∫ (ρ_λ g)_{ij} · conj((ρ_μ g)_{kl}) dμ = 0`.
+
+The two-part diagonal/off-diagonal formulation avoids dependent-type issues:
+in the diagonal case all indices share the type `Fin (dims r)`, and in the
+off-diagonal case the result is `0` regardless of the (different-typed)
+indices.  The hypothesis `hDims : ∀ i, 0 < dims i` ensures the representations
+are non-degenerate (positive dimension), which is needed for
+`dims r * (1 / dims r) = 1` in the character-orthogonality derivation. -/
 axiom characterOrthogonality {G : Type*} [Group G] [TopologicalSpace G]
     [CompactSpace G] [MeasurableSpace G] [BorelSpace G]
     (μ : Measure G) [IsProbabilityMeasure μ]
     (ι : Type) [Fintype ι] [DecidableEq ι] (dims : ι → ℕ)
+    (hDims : ∀ i, 0 < dims i)
+    (ρ : ∀ i, G →* Matrix (Fin (dims i)) (Fin (dims i)) ℂ)
+    (hU : ∀ i, IsUnitaryRepresentation (ρ i))
+    (hIrr : ∀ i, IsIrreducible (ρ i)) :
+    -- Integrability of all matrix-element products
+    (∀ (r s : ι) (i : Fin (dims r)) (j : Fin (dims r)) (k : Fin (dims s)) (l : Fin (dims s)),
+      Integrable (fun g => (ρ r g) i j * conj ((ρ s g) k l)) μ) ∧
+    -- Schur orthogonality of matrix elements (diagonal: same irrep)
+    (∀ (r : ι) (i j k l : Fin (dims r)),
+      ∫ g, (ρ r g) i j * conj ((ρ r g) k l) ∂μ =
+        if i = k ∧ j = l then (1 / dims r : ℂ) else 0) ∧
+    -- Schur orthogonality of matrix elements (off-diagonal: distinct irreps)
+    (∀ (r s : ι) (i j : Fin (dims r)) (k l : Fin (dims s)),
+      r ≠ s →
+      ∫ g, (ρ r g) i j * conj ((ρ s g) k l) ∂μ = 0)
+
+/-- **Character orthogonality from Schur orthogonality of matrix elements.**
+
+The character `χ_r(g) = Tr(ρ_r(g)) = ∑_a (ρ_r g)_{aa}` is the trace (sum of
+diagonal matrix elements).  Schur orthogonality of matrix elements implies
+character orthogonality:
+
+  ∫ χ_r(g) · conj(χ_s(g)) dμ = ∑_{a,b} ∫ (ρ_r g)_{aa} · conj((ρ_s g)_{bb}) dμ
+
+For `r = s`: each term is `1/dim(r)` if `a = b`, `0` otherwise; the sum is
+`dim(r) · (1/dim(r)) = 1`.  For `r ≠ s`: each term is `0`; the sum is `0`.
+
+This lemma derives the (weaker) character-orthogonality statement — previously
+an axiom in its own right — from the strengthened `characterOrthogonality`
+axiom that now provides the full Schur orthogonality of matrix elements.
+Verified by `#print axioms` to depend only on `propext`, `Classical.choice`,
+`Quot.sound` (plus `characterOrthogonality`). -/
+lemma character_orthogonality_from_schur
+    {G : Type*} [Group G] [TopologicalSpace G]
+    [CompactSpace G] [MeasurableSpace G] [BorelSpace G]
+    (μ : Measure G) [IsProbabilityMeasure μ]
+    (ι : Type) [Fintype ι] [DecidableEq ι] (dims : ι → ℕ)
+    (hDims : ∀ i, 0 < dims i)
     (ρ : ∀ i, G →* Matrix (Fin (dims i)) (Fin (dims i)) ℂ)
     (hU : ∀ i, IsUnitaryRepresentation (ρ i))
     (hIrr : ∀ i, IsIrreducible (ρ i))
-    (i j : ι) :
-    ∫ g, repCharacter (ρ i) g * conj (repCharacter (ρ j) g) ∂μ =
-      if i = j then (1 : ℂ) else 0
+    (r s : ι) :
+    ∫ g, repCharacter (ρ r) g * conj (repCharacter (ρ s) g) ∂μ =
+      if r = s then (1 : ℂ) else 0 := by
+  obtain ⟨hInt, hSchur_diag, hSchur_offdiag⟩ :=
+    characterOrthogonality μ ι dims hDims ρ hU hIrr
+  -- repCharacter (ρ k) g = ∑ a, (ρ k g) a a  (trace = sum of diagonal entries)
+  have hchar : ∀ (k : ι) (g : G),
+      repCharacter (ρ k) g = ∑ a : Fin (dims k), (ρ k g) a a := by
+    intro k g; simp [repCharacter, Matrix.trace]
+  -- conj pushes through a finite sum: conj (∑ a, f a) = ∑ a, conj (f a)
+  -- (since `conj = starRingEnd ℂ` and `star = starRingEnd ℂ` definitionally)
+  have hconj_sum : ∀ {n : ℕ} (f : Fin n → ℂ),
+      conj (∑ a, f a) = ∑ a, conj (f a) := by
+    intro n f; rw [starRingEnd_apply, star_sum]
+    apply Finset.sum_congr rfl
+    intro x _
+    rw [starRingEnd_apply]
+  by_cases h : r = s
+  · -- Case r = s: ∫ χ_r · conj(χ_r) dμ = 1
+    subst h
+    -- Expand the integrand to a double sum of matrix elements
+    have hprod : ∀ (g : G),
+        repCharacter (ρ r) g * conj (repCharacter (ρ r) g) =
+          ∑ a : Fin (dims r), ∑ b : Fin (dims r), (ρ r g) a a * conj ((ρ r g) b b) := by
+      intro g; simp only [hchar]; rw [hconj_sum, Fintype.sum_mul_sum]
+    rw [show (∫ g, repCharacter (ρ r) g * conj (repCharacter (ρ r) g) ∂μ) =
+          ∫ g, (∑ a : Fin (dims r), ∑ b : Fin (dims r),
+            (ρ r g) a a * conj ((ρ r g) b b)) ∂μ from by
+        congr 1 with g; exact hprod g]
+    -- Exchange the outer sum with the integral
+    have hInt_inner : ∀ (a : Fin (dims r)),
+        Integrable (fun g => ∑ b : Fin (dims r), (ρ r g) a a * conj ((ρ r g) b b)) μ := by
+      intro a; exact integrable_finsetSum Finset.univ (fun b _ => hInt r r a a b b)
+    rw [integral_finsetSum Finset.univ (fun a _ => hInt_inner a)]
+    -- Exchange the inner sum with the integral
+    rw [show (∑ a : Fin (dims r), ∫ g, ∑ b : Fin (dims r),
+            (ρ r g) a a * conj ((ρ r g) b b) ∂μ) =
+        ∑ a : Fin (dims r), ∑ b : Fin (dims r),
+          ∫ g, (ρ r g) a a * conj ((ρ r g) b b) ∂μ from by
+      apply Finset.sum_congr rfl
+      intro a _
+      rw [integral_finsetSum Finset.univ (fun b _ => hInt r r a a b b)]]
+    -- Apply Schur orthogonality (diagonal case) and evaluate the sums
+    simp only [hSchur_diag, and_self, Finset.sum_ite_eq, Finset.mem_univ, if_true]
+    -- Goal: ∑ a : Fin (dims r), (1 / dims r : ℂ) = 1
+    have hn : (dims r : ℂ) ≠ 0 := by exact_mod_cast (hDims r).ne'
+    rw [Finset.sum_const, Finset.card_fin, nsmul_eq_mul, mul_div_cancel₀ (1 : ℂ) hn]
+  · -- Case r ≠ s: ∫ χ_r · conj(χ_s) dμ = 0
+    have hprod : ∀ (g : G),
+        repCharacter (ρ r) g * conj (repCharacter (ρ s) g) =
+          ∑ a : Fin (dims r), ∑ b : Fin (dims s), (ρ r g) a a * conj ((ρ s g) b b) := by
+      intro g; simp only [hchar]; rw [hconj_sum, Fintype.sum_mul_sum]
+    rw [show (∫ g, repCharacter (ρ r) g * conj (repCharacter (ρ s) g) ∂μ) =
+          ∫ g, (∑ a : Fin (dims r), ∑ b : Fin (dims s),
+            (ρ r g) a a * conj ((ρ s g) b b)) ∂μ from by
+        congr 1 with g; exact hprod g]
+    -- Exchange the outer sum with the integral
+    have hInt_inner : ∀ (a : Fin (dims r)),
+        Integrable (fun g => ∑ b : Fin (dims s), (ρ r g) a a * conj ((ρ s g) b b)) μ := by
+      intro a; exact integrable_finsetSum Finset.univ (fun b _ => hInt r s a a b b)
+    rw [integral_finsetSum Finset.univ (fun a _ => hInt_inner a)]
+    -- Exchange the inner sum with the integral
+    rw [show (∑ a : Fin (dims r), ∫ g, ∑ b : Fin (dims s),
+            (ρ r g) a a * conj ((ρ s g) b b) ∂μ) =
+        ∑ a : Fin (dims r), ∑ b : Fin (dims s),
+          ∫ g, (ρ r g) a a * conj ((ρ s g) b b) ∂μ from by
+      apply Finset.sum_congr rfl
+      intro a _
+      rw [integral_finsetSum Finset.univ (fun b _ => hInt r s a a b b)]]
+    -- Apply Schur orthogonality (off-diagonal case): every term is 0
+    have hzero : (∑ a : Fin (dims r), ∑ b : Fin (dims s),
+        ∫ g, (ρ r g) a a * conj ((ρ s g) b b) ∂μ) = (0 : ℂ) := by
+      refine Finset.sum_eq_zero (fun a _ => ?_)
+      refine Finset.sum_eq_zero (fun b _ => ?_)
+      exact hSchur_offdiag r s a a b b h
+    rw [hzero, if_neg h]
 
 end UnitaryRepresentation

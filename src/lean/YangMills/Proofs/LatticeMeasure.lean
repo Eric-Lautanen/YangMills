@@ -379,7 +379,106 @@ lemma reflectLinkVariable_measurePreserving
   rw [hμ, h_eq]
   exact h_comp
 
-/-- The partition function for a finite lattice with Wilson action. -/
+/-- The reflection maps link configs on `sourceSites` to link configs on `targetSites`
+in a measure-preserving way, when `reflectSite` gives a bijection between the two
+site sets (via `h_reflect` and `h_reflect_inv`).
+
+This generalizes `reflectLinkVariable_measurePreserving` (which is the special case
+`sourceSites = targetSites = sites` with `h_reflect = h_reflect_inv = hsites`).
+
+The key application is the change of variables `U⁻ ↦ V⁺ = reflect(U⁻)` in the
+transfer-matrix integral (step (b) of the `transferMatrixPositivity_axiom` closure
+plan), where `sourceSites = negativeSites` and `targetSites = positiveSites`.
+
+The proof is the same two-step composition as `reflectLinkVariable_measurePreserving`:
+1. An index bijection `FiniteLinkIndex Λ sourceSites ≃ FiniteLinkIndex Λ targetSites`
+   via `(n, μ) ↦ (reflectSite n, μ)` — preserves the product measure since all factors
+   are identical (`measurePreserving_piCongrLeft`).
+2. Componentwise inversion on time-like links — preserves the product measure
+   since the Haar measure on `SU(N)` is inversion-invariant (`haarMeasure_inv_invariant`). -/
+lemma reflectLinkVariable_measurePreserving_between
+    (N : ℕ) {Λ : Type} [DecidableEq Λ] [ReflectSite Λ]
+    (sourceSites targetSites : Finset Λ)
+    (h_reflect : ∀ n, n ∈ sourceSites → ReflectSite.reflectSite n ∈ targetSites)
+    (h_reflect_inv : ∀ n, n ∈ targetSites → ReflectSite.reflectSite n ∈ sourceSites) :
+    MeasurePreserving
+      (fun (cfg : FiniteLinkConfig N Λ sourceSites) =>
+        restrictLinkVariable N Λ targetSites
+          (reflectLinkVariable N (extendLinkVariable N Λ sourceSites cfg)))
+      (productHaarMeasure N Λ sourceSites) (productHaarMeasure N Λ targetSites) := by
+  let K : TopologicalSpace.PositiveCompacts (SU N) :=
+    ⟨⟨Set.univ, isCompact_univ⟩, by simpa using Set.univ_nonempty (α := SU N)⟩
+  set ν : Measure (SU N) := MeasureTheory.Measure.haarMeasure K with hν_def
+  have hμ_src : productHaarMeasure N Λ sourceSites =
+      Measure.pi (fun _ : FiniteLinkIndex Λ sourceSites => ν) := by
+    simp only [productHaarMeasure, ν, K, hν_def]
+  have hμ_tgt : productHaarMeasure N Λ targetSites =
+      Measure.pi (fun _ : FiniteLinkIndex Λ targetSites => ν) := by
+    simp only [productHaarMeasure, ν, K, hν_def]
+  -- The index bijection via reflection
+  let perm : FiniteLinkIndex Λ sourceSites ≃ FiniteLinkIndex Λ targetSites :=
+    { toFun := fun ⟨⟨n, μ⟩, hn⟩ => ⟨⟨ReflectSite.reflectSite n, μ⟩, h_reflect n hn⟩
+      invFun := fun ⟨⟨n, μ⟩, hn⟩ => ⟨⟨ReflectSite.reflectSite n, μ⟩, h_reflect_inv n hn⟩
+      left_inv := fun ⟨⟨n, μ⟩, hn⟩ => by
+        simp only [ReflectSite.involution]
+        rfl
+      right_inv := fun ⟨⟨n, μ⟩, hn⟩ => by
+        simp only [ReflectSite.involution]
+        rfl }
+  -- Step 1: the index permutation preserves the product measure.
+  have h_perm : MeasurePreserving
+      (MeasurableEquiv.piCongrLeft (fun _ => SU N) perm)
+      (Measure.pi (fun _ : FiniteLinkIndex Λ sourceSites => ν))
+      (Measure.pi (fun _ : FiniteLinkIndex Λ targetSites => ν)) :=
+    measurePreserving_piCongrLeft (fun _ => ν) perm
+  -- With the constant fibre `SU N`, `piCongrLeft perm` acts as `cfg (perm.symm i)`.
+  have h_perm_eq : ∀ (cfg : FiniteLinkConfig N Λ sourceSites) (i : FiniteLinkIndex Λ targetSites),
+      MeasurableEquiv.piCongrLeft (fun _ => SU N) perm cfg i = cfg (perm.symm i) := by
+    intro cfg i
+    have h := @MeasurableEquiv.piCongrLeft_apply_apply _ _ perm
+      (fun _ => SU N) _ cfg (perm.symm i)
+    rw [Equiv.apply_symm_apply] at h
+    exact h
+  -- Step 2: componentwise inversion on time-like links preserves the product measure.
+  have h_inv : MeasurePreserving
+      (fun (cfg : FiniteLinkConfig N Λ targetSites) (i : FiniteLinkIndex Λ targetSites) =>
+        if i.1.2 = 0 then (cfg i)⁻¹ else cfg i)
+      (Measure.pi (fun _ : FiniteLinkIndex Λ targetSites => ν))
+      (Measure.pi (fun _ : FiniteLinkIndex Λ targetSites => ν)) := by
+    have h := measurePreserving_pi (fun _ : FiniteLinkIndex Λ targetSites => ν) (fun _ => ν)
+      (f := fun i => if i.1.2 = 0 then (Inv.inv : SU N → SU N) else id)
+      (by
+        intro i
+        by_cases h : i.1.2 = 0
+        · simp only [h, ↓reduceIte]
+          exact ⟨continuous_inv.measurable, haarMeasure_inv_invariant N⟩
+        · simp only [h, ↓reduceIte]
+          exact MeasurePreserving.id ν)
+    convert h using 1
+    funext cfg i
+    by_cases h : i.1.2 = 0 <;> simp only [h, ↓reduceIte, Function.id_def]
+  -- Compose the two measure-preserving maps.
+  have h_comp := h_inv.comp h_perm
+  -- The stated map equals the composition.
+  have h_eq :
+      (fun (cfg : FiniteLinkConfig N Λ sourceSites) =>
+        restrictLinkVariable N Λ targetSites
+          (reflectLinkVariable N (extendLinkVariable N Λ sourceSites cfg))) =
+      (fun cfg i =>
+        if i.1.2 = 0 then (MeasurableEquiv.piCongrLeft (fun _ => SU N) perm cfg i)⁻¹
+        else MeasurableEquiv.piCongrLeft (fun _ => SU N) perm cfg i) := by
+    funext cfg i
+    rcases i with ⟨⟨n, μ⟩, hn⟩
+    simp only [restrictLinkVariable, reflectLinkVariable, extendLinkVariable,
+      dif_pos (h_reflect_inv n hn)]
+    rw [h_perm_eq cfg ⟨(n, μ), hn⟩]
+    rfl
+  rw [hμ_src, hμ_tgt, h_eq]
+  exact h_comp
+
+#print axioms reflectLinkVariable_measurePreserving_between
+
+/-- The partition function for a finite lattice with Wilson action. --/
 noncomputable def partitionFunctionFinite (N : ℕ) (β : ℝ) (Λ : Type) [DecidableEq Λ] [AddVector Λ]
     (sites : Finset Λ) : ℝ :=
   ∫ (U : FiniteLinkConfig N Λ sites), Real.exp (-β * wilsonActionFiniteConfig N β Λ sites U)

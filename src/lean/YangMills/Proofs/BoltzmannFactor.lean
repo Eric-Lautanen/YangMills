@@ -116,6 +116,26 @@ theorem plaquetteContributionPD (N : ℕ)
   push_cast
   rfl
 
+/-- **G1 building block.** The Boltzmann factor `exp(-S_W)` factorises as a product
+of per-plaquette Boltzmann factors:
+
+    exp(-S_W[U]) = ∏_{n ∈ sites} ∏_{μ : Fin 4} ∏_{ν : Fin 4} exp(-S_p(n,μ,ν))
+
+This is the exp-of-sum = product-of-exps identity (`Real.exp_sum`) applied to the
+Wilson action `S_W = ∑_{n,μ,ν} S_p(n,μ,ν)`, with the negation pushed through the
+nested sums via `Finset.sum_neg_distrib`. Pure algebra — no representation theory,
+no axioms beyond the standard three. This is the first piece (G1) of the
+concrete-kernel ↔ abstract-plaquette-product connection needed for the transfer-matrix
+positivity argument (§8.8 of `docs/transfer_matrix_positivity_design.md`). -/
+lemma exp_neg_wilsonActionFinite_eq_prod (N : ℕ) (β : ℝ)
+    (sites : Finset Λ) (U : Lattice.LinkVariable (SU N) Λ) :
+    Real.exp (-Lattice.wilsonActionFinite N β sites U) =
+    ∏ n ∈ sites, ∏ μ : Fin 4, ∏ ν : Fin 4,
+      Real.exp (-Lattice.plaquetteContribution N β U n μ ν) := by
+  simp only [Lattice.wilsonActionFinite, ← Finset.sum_neg_distrib, Real.exp_sum]
+
+#print axioms exp_neg_wilsonActionFinite_eq_prod
+
 /-- The full Boltzmann factor `exp(-S_W)` is positive-definite on the full
 link-variable group `LinkVariable (SU N) Λ`.
 

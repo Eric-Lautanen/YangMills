@@ -203,6 +203,86 @@ The set of lattice sites at the time interface (signed time = 0).
 noncomputable def interfaceSites (T L : ℕ) [NeZero T] [NeZero L] : Finset (PeriodicSite T L) :=
   Finset.filter (λ n => signedTime T n.time = 0) Finset.univ
 
+/-- The signed time of a reflected site is the negation of the original. -/
+lemma signedTime_reflectSite {T L : ℕ} [NeZero T] [NeZero L] (hT : Odd T)
+    (n : PeriodicSite T L) :
+    signedTime T (ReflectSite.reflectSite n).time = -signedTime T n.time := by
+  simp [ReflectSite.reflectSite, reflectSitePeriodic, signedTime_neg T n.time hT]
+
+/-- Reflection maps positive-time sites to negative-time sites. -/
+lemma reflectSite_mem_negative_of_positive {T L : ℕ} [NeZero T] [NeZero L] (hT : Odd T)
+    {n : PeriodicSite T L} (hn : n ∈ positiveSites T L) :
+    ReflectSite.reflectSite n ∈ negativeSites T L := by
+  have h_signed : signedTime T n.time > 0 := by
+    simpa [positiveSites, Finset.mem_filter] using hn
+  have h_neg_signed : signedTime T (ReflectSite.reflectSite n).time < 0 := by
+    rw [signedTime_reflectSite hT n]; linarith
+  simpa [negativeSites, Finset.mem_filter] using h_neg_signed
+
+/-- Reflection maps interface sites to interface sites. -/
+lemma reflectSite_mem_interface_of_interface {T L : ℕ} [NeZero T] [NeZero L] (hT : Odd T)
+    {n : PeriodicSite T L} (hn : n ∈ interfaceSites T L) :
+    ReflectSite.reflectSite n ∈ interfaceSites T L := by
+  have h_signed : signedTime T n.time = 0 := by
+    simpa [interfaceSites, Finset.mem_filter] using hn
+  have h_int_signed : signedTime T (ReflectSite.reflectSite n).time = 0 := by
+    rw [signedTime_reflectSite hT n, h_signed]; simp
+  simpa [interfaceSites, Finset.mem_filter] using h_int_signed
+
+/-- Reflection does not map interface sites to positive sites. -/
+lemma reflectSite_not_mem_positive_of_interface {T L : ℕ} [NeZero T] [NeZero L] (hT : Odd T)
+    {n : PeriodicSite T L} (hn : n ∈ interfaceSites T L) :
+    ReflectSite.reflectSite n ∉ positiveSites T L := by
+  have h_reflect_int := reflectSite_mem_interface_of_interface hT hn
+  have h_disjoint : Disjoint (positiveSites T L) (interfaceSites T L) := by
+    unfold positiveSites interfaceSites
+    rw [Finset.disjoint_filter]
+    intro m hm hpos hint; linarith
+  exact Finset.disjoint_right.mp h_disjoint h_reflect_int
+
+/-- Reflection does not map interface sites to negative sites. -/
+lemma reflectSite_not_mem_negative_of_interface {T L : ℕ} [NeZero T] [NeZero L] (hT : Odd T)
+    {n : PeriodicSite T L} (hn : n ∈ interfaceSites T L) :
+    ReflectSite.reflectSite n ∉ negativeSites T L := by
+  have h_reflect_int := reflectSite_mem_interface_of_interface hT hn
+  have h_disjoint : Disjoint (negativeSites T L) (interfaceSites T L) := by
+    unfold negativeSites interfaceSites
+    rw [Finset.disjoint_filter]
+    intro m hm hneg hint; linarith
+  exact Finset.disjoint_right.mp h_disjoint h_reflect_int
+
+/-- Reflection does not map positive sites to positive sites. -/
+lemma reflectSite_not_mem_positive_of_positive {T L : ℕ} [NeZero T] [NeZero L] (hT : Odd T)
+    {n : PeriodicSite T L} (hn : n ∈ positiveSites T L) :
+    ReflectSite.reflectSite n ∉ positiveSites T L := by
+  have h_reflect_neg := reflectSite_mem_negative_of_positive hT hn
+  have h_disjoint : Disjoint (positiveSites T L) (negativeSites T L) := by
+    unfold positiveSites negativeSites
+    rw [Finset.disjoint_filter]
+    intro m hm hpos hneg; linarith
+  exact Finset.disjoint_right.mp h_disjoint h_reflect_neg
+
+/-- Reflection maps negative-time sites to positive-time sites. -/
+lemma reflectSite_mem_positive_of_negative {T L : ℕ} [NeZero T] [NeZero L] (hT : Odd T)
+    {n : PeriodicSite T L} (hn : n ∈ negativeSites T L) :
+    ReflectSite.reflectSite n ∈ positiveSites T L := by
+  have h_signed : signedTime T n.time < 0 := by
+    simpa [negativeSites, Finset.mem_filter] using hn
+  have h_pos_signed : signedTime T (ReflectSite.reflectSite n).time > 0 := by
+    rw [signedTime_reflectSite hT n]; linarith
+  simpa [positiveSites, Finset.mem_filter] using h_pos_signed
+
+/-- Reflection does not map negative sites to negative sites. -/
+lemma reflectSite_not_mem_negative_of_negative {T L : ℕ} [NeZero T] [NeZero L] (hT : Odd T)
+    {n : PeriodicSite T L} (hn : n ∈ negativeSites T L) :
+    ReflectSite.reflectSite n ∉ negativeSites T L := by
+  have h_reflect_pos := reflectSite_mem_positive_of_negative hT hn
+  have h_disjoint : Disjoint (positiveSites T L) (negativeSites T L) := by
+    unfold positiveSites negativeSites
+    rw [Finset.disjoint_filter]
+    intro m hm hpos hneg; linarith
+  exact Finset.disjoint_left.mp h_disjoint h_reflect_pos
+
 /--
 The positive-time part of the Wilson action.
 -/
@@ -551,6 +631,750 @@ lemma total_decomposition_os_periodic (N T L : ℕ) (β : ℝ) [NeZero T] [NeZer
     exact h_split n μ ν
   rw [h_sum]
   simp [Finset.sum_add_distrib]
+
+/-! ### Concrete-to-abstract plaquette-product bridge
+
+These lemmas connect the *concrete* Wilson action (with its specific sign
+convention `S_p = β(1 - (1/N) Re Tr(U_∂p))`) to the *abstract* plaquette-product
+form `∏_p exp(c · Re Tr(g₁g₂g₃⁻¹g₄⁻¹))` with `c ≥ 0` that the
+`interface_kernel_character_expansion` lemma (in `PeterWeyl.lean`) operates on.
+
+This is the "exp-of-sum = product-of-exps" step of the KEY GAP identified in
+`docs/transfer_matrix_positivity_design.md` §8.8 (task #46): the concrete
+transfer-matrix kernel `exp(-β·S_OS)` must be rewritten as a product of
+plaquette Boltzmann factors before the abstract character-expansion lemma can
+be applied.  These lemmas are pure algebra (0 axioms, 0 sorries). -/
+
+/-- The single-plaquette Boltzmann factor `exp(-S_p)` factors as a positive
+constant `exp(-β)` times `exp(c·Re Tr(U_∂p))` with `c = β/N ≥ 0` (for `β ≥ 0`,
+`1 ≤ N`).
+
+This is the atomic building block of the concrete↔abstract bridge: it shows
+that each plaquette's contribution to the Boltzmann factor matches the abstract
+form `exp(c·Re Tr(g₁g₂g₃⁻¹g₄⁻¹))` (with `c ≥ 0`) up to a positive constant
+that can be absorbed into the overall normalization.  The plaquette product
+`plaquetteProduct = U(n,μ)·U(n+e_μ,ν)·U(n+e_μ+e_ν,μ)⁻¹·U(n+e_ν,ν)⁻¹` already has
+the 3rd/4th links inverted, matching the abstract form.
+
+This is the same decomposition used internally by `plaquetteContributionPD`
+(in `BoltzmannFactor.lean`); it is extracted here as a standalone equality lemma
+so it can be composed with `exp_neg_wilsonActionFinite_eq_prod` to bridge the
+concrete kernel `exp(-S_W)` to the abstract plaquette-product form. -/
+lemma plaquetteContribution_exp_decomp (N : ℕ) (β : ℝ)
+    {Λ : Type} [AddVector Λ] (U : LinkVariable (SU N) Λ) (n : Λ) (μ ν : Fin 4) :
+    Real.exp (-plaquetteContribution N β U n μ ν) =
+    Real.exp (-β) *
+    Real.exp ((β / N) *
+      Complex.re (Matrix.trace ((plaquetteProduct N U n μ ν : Matrix (Fin N) (Fin N) ℂ)))) := by
+  unfold plaquetteContribution
+  have h : -(β * (1 - (1 / (N : ℝ)) *
+      Complex.re (Matrix.trace ((plaquetteProduct N U n μ ν : Matrix (Fin N) (Fin N) ℂ))))) =
+      (-β) + (β / N) *
+      Complex.re (Matrix.trace ((plaquetteProduct N U n μ ν : Matrix (Fin N) (Fin N) ℂ))) := by
+    rw [div_eq_inv_mul]; ring
+  rw [h, Real.exp_add]
+
+/-- The coupling constant `c = β/N` for the abstract plaquette-product form is
+non-negative when `β ≥ 0` and `1 ≤ N`.  This is the hypothesis `0 ≤ c` required
+by `peterWeyl_clebschGordan_plaquette` and `interface_kernel_character_expansion`. -/
+lemma plaquetteBoltzmann_coupling_nonneg (N : ℕ) (β : ℝ) (hβ : 0 ≤ β) (hN : 1 ≤ N) :
+    0 ≤ β / N := by
+  exact div_nonneg hβ (Nat.cast_nonneg N)
+
+/-- The per-plaquette constant `exp(-β)` is positive. -/
+lemma plaquetteBoltzmann_const_pos (β : ℝ) : 0 < Real.exp (-β) :=
+  Real.exp_pos _
+
+/-- **Transfer-matrix kernel per-plaquette factorization.** The factor
+`exp(-β·S_p)` (which appears in the transfer-matrix kernel `exp(-β·S_W) =
+∏ exp(-β·S_p)`, since `osG(U)·osG(θU) = f(U)·f(θU)·exp(-β·S_W)`) decomposes as
+`exp(-β²)·exp((β²/N)·Re Tr(U_∂p))` with coupling `c = β²/N ≥ 0`.
+
+This is the version needed for the concrete transfer-matrix kernel: the `G`
+function uses `exp(-β·S⁺)` (with the extra β), so the per-plaquette factor is
+`exp(-β·S_p) = exp(-β²)·exp((β²/N)·Re Tr)`, NOT `exp(-S_p)`.  The coupling
+`c = β²/N` is non-negative for all `β` (since `β² ≥ 0`) and `1 ≤ N`. -/
+lemma plaquetteContribution_exp_decomp_tm (N : ℕ) (β : ℝ)
+    {Λ : Type} [AddVector Λ] (U : LinkVariable (SU N) Λ) (n : Λ) (μ ν : Fin 4) :
+    Real.exp (-β * plaquetteContribution N β U n μ ν) =
+    Real.exp (-(β * β)) *
+    Real.exp ((β * β / N) *
+      Complex.re (Matrix.trace ((plaquetteProduct N U n μ ν : Matrix (Fin N) (Fin N) ℂ)))) := by
+  unfold plaquetteContribution
+  have h : -β * (β * (1 - (1 / (N : ℝ)) *
+      Complex.re (Matrix.trace ((plaquetteProduct N U n μ ν : Matrix (Fin N) (Fin N) ℂ))))) =
+      -(β * β) + (β * β / N) *
+      Complex.re (Matrix.trace ((plaquetteProduct N U n μ ν : Matrix (Fin N) (Fin N) ℂ))) := by
+    field_simp; ring
+  rw [h, Real.exp_add]
+
+/-- The transfer-matrix coupling `c = β²/N` is non-negative for all `β` and `1 ≤ N`.
+Unlike `plaquetteBoltzmann_coupling_nonneg`, this does NOT require `β ≥ 0` (since
+`β² ≥ 0` always). -/
+lemma plaquetteBoltzmann_tm_coupling_nonneg (N : ℕ) (β : ℝ) (hN : 1 ≤ N) :
+    0 ≤ β * β / N := by
+  have hβ : 0 ≤ β * β := by nlinarith [sq_nonneg β, pow_two β]
+  exact div_nonneg hβ (Nat.cast_nonneg N)
+
+/-- The transfer-matrix per-plaquette constant `exp(-β²)` is positive. -/
+lemma plaquetteBoltzmann_tm_const_pos (β : ℝ) : 0 < Real.exp (-(β * β)) :=
+  Real.exp_pos _
+
+/-- **exp-of-sum = product-of-exps for the transfer-matrix kernel.** The
+transfer-matrix Boltzmann factor `exp(-β·S_W)` factorises as a product of
+per-plaquette factors `exp(-β·S_p)`:
+
+    exp(-β·S_W[U]) = ∏_{n ∈ sites} ∏_{μ : Fin 4} ∏_{ν : Fin 4} exp(-β·S_p(n,μ,ν))
+
+This is the transfer-matrix analogue of `exp_neg_wilsonActionFinite_eq_prod`
+(in `BoltzmannFactor.lean`), with the extra factor of `β` that the `G`/`osG`
+functions introduce.  Pure algebra — no representation theory, no axioms beyond
+the standard three. -/
+lemma exp_neg_beta_wilsonActionFinite_eq_prod (N : ℕ) (β : ℝ)
+    {Λ : Type} [AddVector Λ]
+    (sites : Finset Λ) (U : Lattice.LinkVariable (SU N) Λ) :
+    Real.exp (-β * Lattice.wilsonActionFinite N β sites U) =
+    ∏ n ∈ sites, ∏ μ : Fin 4, ∏ ν : Fin 4,
+      Real.exp (-β * Lattice.plaquetteContribution N β U n μ ν) := by
+  simp only [Lattice.wilsonActionFinite, ← Finset.sum_neg_distrib, Real.exp_sum,
+    Finset.mul_sum]
+
+#print axioms plaquetteContribution_exp_decomp
+#print axioms plaquetteBoltzmann_coupling_nonneg
+#print axioms plaquetteBoltzmann_const_pos
+#print axioms plaquetteContribution_exp_decomp_tm
+#print axioms plaquetteBoltzmann_tm_coupling_nonneg
+#print axioms plaquetteBoltzmann_tm_const_pos
+#print axioms exp_neg_beta_wilsonActionFinite_eq_prod
+
+/-! ### G3: Interface plaquette enumeration
+
+The third piece of the concrete↔abstract bridge (§8.11 of
+`docs/transfer_matrix_positivity_design.md`): restrict the product to
+*interface* plaquettes only.  The interface action `S_OS_int` is defined as
+`∑ (if isInterface then S_p else 0)`, so `exp(-β·S_int) = ∏ (if isInterface
+then exp(-β·S_p) else 1)` by exp-of-sum + if-splitting.  Non-interface
+plaquettes contribute a factor of 1, so the product is effectively over
+interface plaquettes only.  Pure algebra — 0 sorries, 0 custom axioms. -/
+
+/-- The interface plaquette predicate: a plaquette `(n, μ, ν)` is an "interface
+plaquette" iff its four corners do NOT all have positive signed time AND do NOT
+all have negative signed time (i.e., the corners straddle the time interface).
+This matches the condition in `wilsonActionOSInterface`.  Defined as an
+abbreviation so it unfolds to the inline condition (matching the `Decidable`
+instance used by `wilsonActionOSInterface`). -/
+abbrev isInterfacePlaquette (T L : ℕ) [NeZero T] [NeZero L]
+    (n : PeriodicSite T L) (μ ν : Fin 4) : Prop :=
+  ¬ (signedTime T n.time > 0 ∧ signedTime T (addVectorPeriodic T L n μ).time > 0 ∧
+     signedTime T (addVectorPeriodic T L (addVectorPeriodic T L n μ) ν).time > 0 ∧
+     signedTime T (addVectorPeriodic T L n ν).time > 0) ∧
+  ¬ (signedTime T n.time < 0 ∧ signedTime T (addVectorPeriodic T L n μ).time < 0 ∧
+     signedTime T (addVectorPeriodic T L (addVectorPeriodic T L n μ) ν).time < 0 ∧
+     signedTime T (addVectorPeriodic T L n ν).time < 0)
+
+/-- `wilsonActionOSInterface` equals the sum over all plaquettes with the
+interface predicate as the if-condition.  This is by definition (the condition
+in `wilsonActionOSInterface` is exactly `isInterfacePlaquette`). -/
+lemma wilsonActionOSInterface_eq (N T L : ℕ) (β : ℝ) [NeZero T] [NeZero L]
+    (U : LinkVariable (SU N) (PeriodicSite T L)) :
+    wilsonActionOSInterface N T L β U =
+    ∑ n : PeriodicSite T L, ∑ μ : Fin 4, ∑ ν : Fin 4,
+      (if isInterfacePlaquette T L n μ ν then plaquetteContribution N β U n μ ν else 0) := by
+  unfold wilsonActionOSInterface isInterfacePlaquette
+  rfl
+
+/-- The interface action is uniformly bounded: `|S_int| ≤ #(PeriodicSite T L)·32·|β|`.
+
+Each plaquette contribution satisfies `|plaquetteContribution| ≤ 2|β|`
+(`plaquetteContribution_bounded`), and the interface action is a sum of at most
+`#(PeriodicSite T L)·16` such terms (the `if isInterfacePlaquette` selects a subset).
+This gives `|S_int| ≤ #(PeriodicSite T L)·16·2|β| = #(PeriodicSite T L)·32·|β|`.
+
+This is ingredient 2 of the integrability discharge (design doc §8.11.10): it
+provides a uniform upper bound on `|S_int|`, hence a positive lower bound
+`exp(-β·S_int) ≥ exp(-|β|·#(PeriodicSite T L)·32·|β|) > 0`. 0 sorries, 0 custom axioms. -/
+lemma wilsonActionOSInterface_bounded (N T L : ℕ) (β : ℝ) [NeZero T] [NeZero L]
+    (U : LinkVariable (SU N) (PeriodicSite T L)) :
+    |wilsonActionOSInterface N T L β U| ≤ (Fintype.card (PeriodicSite T L) * 32) * |β| := by
+  rw [wilsonActionOSInterface_eq]
+  -- Each term is bounded: |if c then pc else 0| ≤ 2|β|
+  have h_bound : ∀ n μ ν,
+      |(if isInterfacePlaquette T L n μ ν then plaquetteContribution N β U n μ ν else 0)| ≤
+        2 * |β| := by
+    intro n μ ν
+    by_cases h : isInterfacePlaquette T L n μ ν
+    · rw [if_pos h]; exact plaquetteContribution_bounded N β U n μ ν
+    · rw [if_neg h]; simp
+  -- Upper bound: each term ≤ 2|β|
+  have h_upper : ∀ n μ ν,
+      (if isInterfacePlaquette T L n μ ν then plaquetteContribution N β U n μ ν else 0) ≤
+        2 * |β| := fun n μ ν => (abs_le.mp (h_bound n μ ν)).2
+  -- Lower bound: each term ≥ -(2|β|)
+  have h_lower : ∀ n μ ν,
+      -(2 * |β|) ≤
+        (if isInterfacePlaquette T L n μ ν then plaquetteContribution N β U n μ ν else 0) :=
+    fun n μ ν => (abs_le.mp (h_bound n μ ν)).1
+  -- S ≤ ∑ n μ ν 2|β|
+  have h_S_upper : (∑ n : PeriodicSite T L, ∑ μ : Fin 4, ∑ ν : Fin 4,
+      (if isInterfacePlaquette T L n μ ν then plaquetteContribution N β U n μ ν else 0)) ≤
+    ∑ n : PeriodicSite T L, ∑ μ : Fin 4, ∑ ν : Fin 4, 2 * |β| := by
+    apply Finset.sum_le_sum; intro n _
+    apply Finset.sum_le_sum; intro μ _
+    apply Finset.sum_le_sum; intro ν _
+    exact h_upper n μ ν
+  -- -(∑ n μ ν 2|β|) ≤ S
+  have h_S_lower : (∑ n : PeriodicSite T L, ∑ μ : Fin 4, ∑ ν : Fin 4, -(2 * |β|)) ≤
+    (∑ n : PeriodicSite T L, ∑ μ : Fin 4, ∑ ν : Fin 4,
+      (if isInterfacePlaquette T L n μ ν then plaquetteContribution N β U n μ ν else 0)) := by
+    apply Finset.sum_le_sum; intro n _
+    apply Finset.sum_le_sum; intro μ _
+    apply Finset.sum_le_sum; intro ν _
+    exact h_lower n μ ν
+  -- Constant sums
+  have h_const : (∑ n : PeriodicSite T L, ∑ μ : Fin 4, ∑ ν : Fin 4, 2 * |β|) =
+      (Fintype.card (PeriodicSite T L) * 32) * |β| := by
+    have h_ν : ∑ ν : Fin 4, (2 * |β| : ℝ) = 8 * |β| := by
+      rw [Finset.sum_const, Finset.card_fin, nsmul_eq_mul]; ring
+    have h_μ : ∑ μ : Fin 4, (8 * |β| : ℝ) = 32 * |β| := by
+      rw [Finset.sum_const, Finset.card_fin, nsmul_eq_mul]; ring
+    have h_n : ∑ n : PeriodicSite T L, (32 * |β| : ℝ) =
+        Fintype.card (PeriodicSite T L) * (32 * |β|) := by
+      rw [Finset.sum_const, Finset.card_univ, nsmul_eq_mul]
+    rw [h_ν, h_μ, h_n]; ring
+  have h_const_neg : (∑ n : PeriodicSite T L, ∑ μ : Fin 4, ∑ ν : Fin 4, -(2 * |β|)) =
+      -((Fintype.card (PeriodicSite T L) * 32) * |β|) := by
+    have h_ν : ∑ ν : Fin 4, (-(2 * |β|) : ℝ) = -(8 * |β|) := by
+      rw [Finset.sum_const, Finset.card_fin, nsmul_eq_mul]; ring
+    have h_μ : ∑ μ : Fin 4, (-(8 * |β|) : ℝ) = -(32 * |β|) := by
+      rw [Finset.sum_const, Finset.card_fin, nsmul_eq_mul]; ring
+    have h_n : ∑ n : PeriodicSite T L, (-(32 * |β|) : ℝ) =
+        -(Fintype.card (PeriodicSite T L) * (32 * |β|)) := by
+      rw [Finset.sum_const, Finset.card_univ, nsmul_eq_mul]; ring
+    rw [h_ν, h_μ, h_n]; ring
+  -- |S| ≤ C
+  rw [h_const] at h_S_upper
+  rw [h_const_neg] at h_S_lower
+  exact abs_le.mpr ⟨h_S_lower, h_S_upper⟩
+
+#print axioms wilsonActionOSInterface_bounded
+
+/-- The interface Boltzmann factor `exp(-β·S_int)` is bounded below by a positive
+constant independent of `U`:
+
+    exp(-|β|·#(PeriodicSite T L)·32·|β|) ≤ exp(-β·S_int(U))
+
+This follows from `wilsonActionOSInterface_bounded` (`|S_int| ≤ C`) and the
+monotonicity of `exp`: `-β·S_int ≥ -|β·S_int| ≥ -|β|·C`, so
+`exp(-β·S_int) ≥ exp(-|β|·C) > 0`.
+
+This is the key ingredient for the domination argument in the integrability
+discharge (design doc §8.11.10): it provides a uniform positive lower bound
+`m = exp(-|β|·C) > 0` on `exp(-β·S_int)`, allowing division by this factor to
+deduce integrability of `ψ(merge)·exp(-β·S⁺(merge)/2)` from the integrability
+of the full integrand `ψ(merge)·exp(-β·(S⁺(u)/2 + S⁺(merge)/2 + S_int(U)))`.
+0 sorries, 0 custom axioms. -/
+lemma exp_neg_beta_wilsonActionOSInterface_lower_bound (N T L : ℕ) (β : ℝ) [NeZero T] [NeZero L]
+    (U : LinkVariable (SU N) (PeriodicSite T L)) :
+    Real.exp (-|β| * ((Fintype.card (PeriodicSite T L) * 32) * |β|)) ≤
+      Real.exp (-β * wilsonActionOSInterface N T L β U) := by
+  apply Real.exp_le_exp.mpr
+  have h_bound := wilsonActionOSInterface_bounded N T L β U
+  have h_abs : |β * wilsonActionOSInterface N T L β U| ≤
+      |β| * ((Fintype.card (PeriodicSite T L) * 32) * |β|) := by
+    rw [abs_mul]; exact mul_le_mul_of_nonneg_left h_bound (abs_nonneg _)
+  have h_le : β * wilsonActionOSInterface N T L β U ≤
+      |β| * ((Fintype.card (PeriodicSite T L) * 32) * |β|) := by
+    have h_self : β * wilsonActionOSInterface N T L β U ≤
+        |β * wilsonActionOSInterface N T L β U| := le_abs_self _
+    linarith
+  linarith
+
+#print axioms exp_neg_beta_wilsonActionOSInterface_lower_bound
+
+/-- **G3: exp-of-sum for the interface action.** The interface Boltzmann factor
+`exp(-β·S_int)` factorises as a product of per-plaquette factors, where only
+interface plaquettes contribute (non-interface plaquettes contribute 1):
+
+    exp(-β·S_int) = ∏_{n,μ,ν} (if isInterfacePlaquette then exp(-β·S_p) else 1)
+
+This is the exp-of-sum = product-of-exps identity applied to
+`wilsonActionOSInterface_eq`, combined with if-splitting
+(`exp(-β·(if c then x else 0)) = if c then exp(-β·x) else 1`).  Pure algebra —
+0 sorries, 0 custom axioms. -/
+lemma exp_neg_beta_wilsonActionOSInterface_eq_prod (N T L : ℕ) (β : ℝ) [NeZero T] [NeZero L]
+    (U : LinkVariable (SU N) (PeriodicSite T L)) :
+    Real.exp (-β * wilsonActionOSInterface N T L β U) =
+    ∏ n : PeriodicSite T L, ∏ μ : Fin 4, ∏ ν : Fin 4,
+      (if isInterfacePlaquette T L n μ ν then
+        Real.exp (-β * plaquetteContribution N β U n μ ν) else 1) := by
+  rw [wilsonActionOSInterface_eq]
+  simp only [Finset.mul_sum, Real.exp_sum]
+  apply Finset.prod_congr rfl
+  intro n _
+  apply Finset.prod_congr rfl
+  intro μ _
+  apply Finset.prod_congr rfl
+  intro ν _
+  split_ifs
+  · rfl
+  · simp [Real.exp_zero]
+
+/-- **G3 composed with G2: the interface Boltzmann factor as a product of
+abstract plaquette Boltzmann factors.** Combining
+`exp_neg_beta_wilsonActionOSInterface_eq_prod` (G3) with
+`plaquetteContribution_exp_decomp_tm` (G2), the interface Boltzmann factor
+`exp(-β·S_int)` equals a product of `exp(c·Re Tr(P_p))` factors (with `c = β²/N
+≥ 0`) over interface plaquettes, times a positive constant `exp(-β²)` per
+interface plaquette:
+
+    exp(-β·S_int) = ∏_{n,μ,ν} (if isInterface then exp(-β²)·exp((β²/N)·Re Tr(P_p)) else 1)
+
+The non-interface terms are 1, so this is effectively a product over interface
+plaquettes only.  The `exp(-β²)` factors are a positive constant absorbable into
+normalization.  This is the form that `interface_kernel_character_expansion`
+operates on (with `c = β²/N`).  Pure algebra — 0 sorries, 0 custom axioms. -/
+lemma exp_neg_beta_wilsonActionOSInterface_eq_prod_abstract (N T L : ℕ) (β : ℝ) [NeZero T] [NeZero L]
+    (U : LinkVariable (SU N) (PeriodicSite T L)) :
+    Real.exp (-β * wilsonActionOSInterface N T L β U) =
+    ∏ n : PeriodicSite T L, ∏ μ : Fin 4, ∏ ν : Fin 4,
+      (if isInterfacePlaquette T L n μ ν then
+        Real.exp (-(β * β)) *
+        Real.exp ((β * β / N) *
+          Complex.re (Matrix.trace ((plaquetteProduct N U n μ ν : Matrix (Fin N) (Fin N) ℂ))))
+        else 1) := by
+  rw [exp_neg_beta_wilsonActionOSInterface_eq_prod]
+  apply Finset.prod_congr rfl
+  intro n _
+  apply Finset.prod_congr rfl
+  intro μ _
+  apply Finset.prod_congr rfl
+  intro ν _
+  split_ifs with h
+  · rw [plaquetteContribution_exp_decomp_tm]
+  · rfl
+
+#print axioms wilsonActionOSInterface_eq
+#print axioms exp_neg_beta_wilsonActionOSInterface_eq_prod
+#print axioms exp_neg_beta_wilsonActionOSInterface_eq_prod_abstract
+
+/-! ### Concrete link/plaquette structures for the character expansion
+
+These definitions set up the concrete combinatorial data needed to apply the
+abstract `interface_kernel_character_expansion` (in `PeterWeyl.lean`) to the
+concrete periodic lattice.  This is sub-step (i) of Lemma 2
+(`transfer_matrix_integral_reduction`) in
+`docs/transfer_matrix_positivity_design.md` §8.8: identifying the link
+partition `L = L_U ⊔ L_0 ⊔ L_V` (U⁺/u⁰/V⁺ links) for the concrete lattice.
+
+All definitions and lemmas here are pure combinatorics — 0 sorries, 0 custom
+axioms. -/
+
+/-- The j-th link of a plaquette `(n, μ, ν)`.  The four links of the plaquette
+product `U(n,μ) · U(n+e_μ,ν) · U(n+e_μ+e_ν,μ)⁻¹ · U(n+e_ν,ν)⁻¹` are:
+  - j=0: `(n, μ)`           — the link `U(n, μ)`
+  - j=1: `(n+e_μ, ν)`       — the link `U(n+e_μ, ν)`
+  - j=2: `(n+e_μ+e_ν, μ)`   — the link `U(n+e_μ+e_ν, μ)`, **inverted** in the product
+  - j=3: `(n+e_ν, ν)`       — the link `U(n+e_ν, ν)`, **inverted** in the product
+This matches the definition of `plaquetteProduct` in `Lattice.lean`. -/
+def plaquetteLinkIdx (T L : ℕ) [NeZero T] [NeZero L]
+    (p : PlaquetteIndex T L) (j : Fin 4) : PeriodicSite T L × Fin 4 :=
+  match j with
+  | 0 => (p.1, p.2.1)
+  | 1 => (addVectorPeriodic T L p.1 p.2.1, p.2.2)
+  | 2 => (addVectorPeriodic T L (addVectorPeriodic T L p.1 p.2.1) p.2.2, p.2.1)
+  | 3 => (addVectorPeriodic T L p.1 p.2.2, p.2.2)
+
+/-- The plaquette product equals the product of link variables at the four
+plaquette links (with the 3rd and 4th inverted).  This connects the concrete
+`plaquetteProduct` to the abstract form
+`g(links p 0)·g(links p 1)·g(links p 2)⁻¹·g(links p 3)⁻¹` that
+`interface_kernel_character_expansion` operates on. -/
+lemma plaquetteProduct_eq_linkIdx (N T L : ℕ) [NeZero T] [NeZero L]
+    (U : LinkVariable (SU N) (PeriodicSite T L)) (p : PlaquetteIndex T L) :
+    plaquetteProduct N U p.1 p.2.1 p.2.2 =
+    U.value (plaquetteLinkIdx T L p 0).1 (plaquetteLinkIdx T L p 0).2 *
+    U.value (plaquetteLinkIdx T L p 1).1 (plaquetteLinkIdx T L p 1).2 *
+    (U.value (plaquetteLinkIdx T L p 2).1 (plaquetteLinkIdx T L p 2).2)⁻¹ *
+    (U.value (plaquetteLinkIdx T L p 3).1 (plaquetteLinkIdx T L p 3).2)⁻¹ := by
+  unfold plaquetteLinkIdx plaquetteProduct
+  rfl
+
+/-- Interface plaquettes as a subtype of `PlaquetteIndex`. -/
+abbrev InterfacePlaquette (T L : ℕ) [NeZero T] [NeZero L] : Type :=
+  {p : PlaquetteIndex T L // isInterfacePlaquette T L p.1 p.2.1 p.2.2}
+
+noncomputable instance (T L : ℕ) [NeZero T] [NeZero L] : Fintype (InterfacePlaquette T L) := by
+  classical
+  exact inferInstanceAs (Fintype {p : PlaquetteIndex T L //
+    isInterfacePlaquette T L p.1 p.2.1 p.2.2})
+
+instance (T L : ℕ) [NeZero T] [NeZero L] : DecidableEq (InterfacePlaquette T L) :=
+  inferInstanceAs (DecidableEq {p : PlaquetteIndex T L //
+    isInterfacePlaquette T L p.1 p.2.1 p.2.2})
+
+/-- The Finset of all links appearing in at least one interface plaquette. -/
+noncomputable def interfacePlaqLinkFinset (T L : ℕ) [NeZero T] [NeZero L] :
+    Finset (PeriodicSite T L × Fin 4) :=
+  (Finset.univ : Finset (InterfacePlaquette T L × Fin 4)).image
+    (fun x => plaquetteLinkIdx T L x.1.val x.2)
+
+/-- The type of links appearing in interface plaquettes (subtype).  This is the
+concrete `L` for `interface_kernel_character_expansion`: by construction, every
+link in this type appears in at least one interface plaquette, so the
+surjectivity hypothesis `hlinks_surj` holds. -/
+abbrev InterfaceLink (T L : ℕ) [NeZero T] [NeZero L] : Type :=
+  {l : PeriodicSite T L × Fin 4 // l ∈ interfacePlaqLinkFinset T L}
+
+noncomputable instance (T L : ℕ) [NeZero T] [NeZero L] : Fintype (InterfaceLink T L) := by
+  classical
+  exact inferInstanceAs (Fintype {l : PeriodicSite T L × Fin 4 //
+    l ∈ interfacePlaqLinkFinset T L})
+
+instance (T L : ℕ) [NeZero T] [NeZero L] : DecidableEq (InterfaceLink T L) :=
+  inferInstanceAs (DecidableEq {l : PeriodicSite T L × Fin 4 //
+    l ∈ interfacePlaqLinkFinset T L})
+
+/-- The link assignment `InterfacePlaquette → Fin 4 → InterfaceLink`.  Maps each
+plaquette `p` and index `j` to the j-th link of `p`, packaged as an
+`InterfaceLink` (with the proof that it appears in an interface plaquette). -/
+def interfaceLinkAssign (T L : ℕ) [NeZero T] [NeZero L]
+    (p : InterfacePlaquette T L) (j : Fin 4) : InterfaceLink T L :=
+  ⟨plaquetteLinkIdx T L p.val j, by
+    simp only [interfacePlaqLinkFinset, Finset.mem_image, Finset.mem_univ, true_and,
+      Prod.exists, exists_prop]
+    exact ⟨p, j, rfl⟩⟩
+
+/-- The link assignment is surjective: every `InterfaceLink` arises as some
+plaquette's j-th link.  This is the `hlinks_surj` hypothesis for
+`interface_kernel_character_expansion`. -/
+lemma interfaceLinkAssign_surj (T L : ℕ) [NeZero T] [NeZero L] :
+    ∀ l : InterfaceLink T L, ∃ p j, interfaceLinkAssign T L p j = l := by
+  intro l
+  have hl : l.val ∈ interfacePlaqLinkFinset T L := l.prop
+  simp only [interfacePlaqLinkFinset, Finset.mem_image, Finset.mem_univ, true_and,
+    Prod.exists, exists_prop] at hl
+  obtain ⟨p, j, hj⟩ := hl
+  refine ⟨p, j, ?_⟩
+  simp only [interfaceLinkAssign, Subtype.mk_eq_mk, hj]
+
+/-- Extract the link variable `U(n, μ)` from a full configuration at an
+`InterfaceLink` `l = (n, μ)`. -/
+def interfaceLinkVar (N T L : ℕ) [NeZero T] [NeZero L]
+    (U : LinkVariable (SU N) (PeriodicSite T L)) (l : InterfaceLink T L) : SU N :=
+  U.value l.val.1 l.val.2
+
+/-- `interfaceLinkVar · l` is measurable in `U` (a coordinate projection from `U.value`). -/
+lemma measurable_interfaceLinkVar (N T L : ℕ) [NeZero T] [NeZero L]
+    (l : InterfaceLink T L) :
+    Measurable (fun (U : LinkVariable (SU N) (PeriodicSite T L)) => interfaceLinkVar N T L U l) := by
+  dsimp [interfaceLinkVar]
+  have h_value_map : Measurable (fun (U : LinkVariable (SU N) (PeriodicSite T L)) => U.value) :=
+    comap_measurable (fun (U : LinkVariable (SU N) (PeriodicSite T L)) => U.value)
+  have h_at_n : Measurable (fun (f : PeriodicSite T L → Fin 4 → SU N) => f l.val.1) :=
+    measurable_pi_apply l.val.1
+  have h_at_n_μ : Measurable (fun (f : Fin 4 → SU N) => f l.val.2) :=
+    measurable_pi_apply l.val.2
+  exact h_at_n_μ.comp (h_at_n.comp h_value_map)
+
+/-- The plaquette product of an interface plaquette equals the abstract form
+`g(links p 0)·g(links p 1)·g(links p 2)⁻¹·g(links p 3)⁻¹` where `g` extracts
+link variables via `interfaceLinkVar`. -/
+lemma plaquetteProduct_interface_eq (N T L : ℕ) [NeZero T] [NeZero L]
+    (U : LinkVariable (SU N) (PeriodicSite T L)) (p : InterfacePlaquette T L) :
+    plaquetteProduct N U p.val.1 p.val.2.1 p.val.2.2 =
+    interfaceLinkVar N T L U (interfaceLinkAssign T L p 0) *
+    interfaceLinkVar N T L U (interfaceLinkAssign T L p 1) *
+    (interfaceLinkVar N T L U (interfaceLinkAssign T L p 2))⁻¹ *
+    (interfaceLinkVar N T L U (interfaceLinkAssign T L p 3))⁻¹ := by
+  unfold interfaceLinkVar interfaceLinkAssign
+  exact plaquetteProduct_eq_linkIdx N T L U p.val
+
+/-- The positive-time links among the interface links (`L_U`). -/
+noncomputable def interfaceLinkPos (T L : ℕ) [NeZero T] [NeZero L] :
+    Finset (InterfaceLink T L) :=
+  (Finset.univ : Finset (InterfaceLink T L)).filter
+    (fun l => signedTime T l.val.1.time > 0)
+
+/-- The interface (time-0) links among the interface links (`L_0`). -/
+noncomputable def interfaceLinkInt (T L : ℕ) [NeZero T] [NeZero L] :
+    Finset (InterfaceLink T L) :=
+  (Finset.univ : Finset (InterfaceLink T L)).filter
+    (fun l => signedTime T l.val.1.time = 0)
+
+/-- The negative-time links among the interface links (`L_V`). -/
+noncomputable def interfaceLinkNeg (T L : ℕ) [NeZero T] [NeZero L] :
+    Finset (InterfaceLink T L) :=
+  (Finset.univ : Finset (InterfaceLink T L)).filter
+    (fun l => signedTime T l.val.1.time < 0)
+
+/-- Trichotomy of `signedTime`: exactly one of `> 0`, `= 0`, `< 0` holds. -/
+lemma signedTime_trichotomy (T : ℕ) (t : ZMod T) :
+    signedTime T t > 0 ∨ signedTime T t = 0 ∨ signedTime T t < 0 := by
+  omega
+
+/-- The three link sets are pairwise disjoint and cover all interface links. -/
+lemma interfaceLinkPartition_disjoint_cover (T L : ℕ) [NeZero T] [NeZero L] :
+    Disjoint (interfaceLinkPos T L) (interfaceLinkInt T L) ∧
+    Disjoint (interfaceLinkPos T L ∪ interfaceLinkInt T L) (interfaceLinkNeg T L) ∧
+    interfaceLinkPos T L ∪ interfaceLinkInt T L ∪ interfaceLinkNeg T L = Finset.univ := by
+  refine ⟨?_, ?_, ?_⟩
+  · -- Disjoint pos int
+    refine Finset.disjoint_left.mpr (fun l hl hl' => ?_)
+    rw [interfaceLinkPos, Finset.mem_filter] at hl
+    rw [interfaceLinkInt, Finset.mem_filter] at hl'
+    obtain ⟨_, hpos⟩ := hl
+    obtain ⟨_, hint⟩ := hl'
+    rw [hint] at hpos
+    exact lt_irrefl _ hpos
+  · -- Disjoint (pos ∪ int) neg
+    refine Finset.disjoint_left.mpr (fun l hl hl' => ?_)
+    rw [interfaceLinkNeg, Finset.mem_filter] at hl'
+    obtain ⟨_, hneg⟩ := hl'
+    rcases Finset.mem_union.mp hl with h | h
+    · rw [interfaceLinkPos, Finset.mem_filter] at h
+      obtain ⟨_, hpos⟩ := h
+      exact lt_irrefl _ (lt_of_lt_of_le hpos (le_of_lt hneg))
+    · rw [interfaceLinkInt, Finset.mem_filter] at h
+      obtain ⟨_, hint⟩ := h
+      rw [hint] at hneg
+      exact lt_irrefl _ hneg
+  · -- Cover
+    ext l
+    simp only [interfaceLinkPos, interfaceLinkInt, interfaceLinkNeg, Finset.mem_union,
+      Finset.mem_filter, Finset.mem_univ, true_and]
+    refine ⟨fun _ => trivial, fun _ => ?_⟩
+    rcases signedTime_trichotomy T l.val.1.time with h | h | h
+    · exact Or.inl (Or.inl h)
+    · exact Or.inl (Or.inr h)
+    · exact Or.inr h
+
+/-- The partition in the form required by `interface_kernel_character_expansion`:
+`hdisj : Disjoint L_U L_0 ∧ Disjoint (L_U ∪ L_0) L_V`. -/
+lemma interfaceLinkPartition_hdisj (T L : ℕ) [NeZero T] [NeZero L] :
+    Disjoint (interfaceLinkPos T L) (interfaceLinkInt T L) ∧
+    Disjoint (interfaceLinkPos T L ∪ interfaceLinkInt T L) (interfaceLinkNeg T L) :=
+  ⟨interfaceLinkPartition_disjoint_cover T L |>.1,
+   interfaceLinkPartition_disjoint_cover T L |>.2.1⟩
+
+/-- The partition in the form required by `interface_kernel_character_expansion`:
+`hcover : L_U ∪ L_0 ∪ L_V = Finset.univ`. -/
+lemma interfaceLinkPartition_hcover (T L : ℕ) [NeZero T] [NeZero L] :
+    interfaceLinkPos T L ∪ interfaceLinkInt T L ∪ interfaceLinkNeg T L = Finset.univ :=
+  interfaceLinkPartition_disjoint_cover T L |>.2.2
+
+/-- The product over all plaquettes with an if-condition equals the product over
+interface plaquettes only (non-interface terms contribute 1).  This is the
+"filter product" step connecting G3 (`exp_neg_beta_wilsonActionOSInterface_eq_prod`)
+to the abstract product `∏_{p ∈ InterfacePlaquette} exp(c·Re Tr(...))`. -/
+lemma prod_if_interface_eq_prod_subtype (T L : ℕ) [NeZero T] [NeZero L]
+    {α : Type*} (f : PlaquetteIndex T L → α) [CommMonoid α] :
+    ∏ n : PeriodicSite T L, ∏ μ : Fin 4, ∏ ν : Fin 4,
+        (if isInterfacePlaquette T L n μ ν then f (n, μ, ν) else 1) =
+    ∏ p : InterfacePlaquette T L, f p.val := by
+  classical
+  -- Merge the three nested products into one over `PlaquetteIndex T L`.
+  -- `simp only` does a bottom-up traversal, so it rewrites the innermost
+  -- `∏ μ, ∏ ν` first (→ `∏ q : Fin 4 × Fin 4`) and then `∏ n, ∏ q`
+  -- (→ `∏ p : PeriodicSite T L × (Fin 4 × Fin 4)`), producing the
+  -- *right-associated* product type `PlaquetteIndex T L`.
+  simp only [← Fintype.prod_prod_type']
+  -- Now: ∏ p : PlaquetteIndex T L,
+  --   (if isInterfacePlaquette T L p.1 p.2.1 p.2.2 then f (p.1, p.2.1, p.2.2) else 1)
+  -- Convert the if-product to a filtered product (non-interface terms are 1).
+  rw [← Finset.prod_filter]
+  -- Now: ∏ p ∈ Finset.univ.filter (isInterfacePlaquette …), f (p.1, p.2.1, p.2.2)
+  -- Convert the filtered product to a product over the subtype `InterfacePlaquette`.
+  -- (f (p.1, p.2.1, p.2.2) = f p by Prod-eta, and Subtype cond = InterfacePlaquette.)
+  exact Finset.prod_subtype _ (fun x => by
+    simp only [Finset.mem_filter, Finset.mem_univ, true_and]) (fun p => f p)
+
+#print axioms prod_if_interface_eq_prod_subtype
+
+/-- **Interface Boltzmann factor as a positive constant times the abstract plaquette
+product.** The concrete interface Boltzmann factor `exp(-β·S_int)` equals a positive
+constant `C = ∏_{p ∈ InterfacePlaquette} exp(-β²)` times the abstract plaquette product
+`∏_{p ∈ InterfacePlaquette} exp((β²/N)·Re Tr(g₀g₁g₂⁻¹g₃⁻¹))`, where the plaquette product
+is expressed via the concrete link structures (`interfaceLinkVar`, `interfaceLinkAssign`).
+
+This combines G3 (`exp_neg_beta_wilsonActionOSInterface_eq_prod_abstract`),
+`prod_if_interface_eq_prod_subtype` (restrict to interface plaquettes), and
+`plaquetteProduct_interface_eq` (concrete→abstract plaquette product).  The constant
+`C > 0` is absorbable into normalization.  This is sub-step (ii) of Lemma 2
+(`transfer_matrix_integral_reduction`) in
+`docs/transfer_matrix_positivity_design.md` §8.8: rewriting the concrete interface
+Boltzmann factor into the abstract form that `interface_kernel_character_expansion`
+operates on.  Pure algebra — 0 sorries, 0 custom axioms. -/
+lemma interface_boltzmann_eq_abstract_product (N T L : ℕ) (β : ℝ) [NeZero T] [NeZero L] :
+    ∃ (C : ℝ) (hC : 0 < C),
+      ∀ (U : LinkVariable (SU N) (PeriodicSite T L)),
+      Real.exp (-β * wilsonActionOSInterface N T L β U) =
+        C * ∏ p : InterfacePlaquette T L,
+          Real.exp ((β * β / N) * Complex.re (Matrix.trace
+            ((interfaceLinkVar N T L U (interfaceLinkAssign T L p 0) *
+              interfaceLinkVar N T L U (interfaceLinkAssign T L p 1) *
+              (interfaceLinkVar N T L U (interfaceLinkAssign T L p 2))⁻¹ *
+              (interfaceLinkVar N T L U (interfaceLinkAssign T L p 3))⁻¹ : SU N) :
+              Matrix (Fin N) (Fin N) ℂ))) := by
+  set C := ∏ p : InterfacePlaquette T L, Real.exp (-(β * β))
+  refine ⟨C, ?_, fun U => ?_⟩
+  · exact Finset.prod_pos (fun p _ => plaquetteBoltzmann_tm_const_pos β)
+  · rw [exp_neg_beta_wilsonActionOSInterface_eq_prod_abstract]
+    -- Step 1: rewrite the if-product to a subtype product via prod_if_interface_eq_prod_subtype.
+    -- h's LHS is defeq to the goal's LHS (beta + projection reduction); `simp only` handles this.
+    have h := prod_if_interface_eq_prod_subtype T L
+      (fun p : PlaquetteIndex T L =>
+        Real.exp (-(β * β)) *
+        Real.exp ((β * β / N) *
+          Complex.re (Matrix.trace ((plaquetteProduct N U p.1 p.2.1 p.2.2 :
+            Matrix (Fin N) (Fin N) ℂ)))))
+    simp only [h]
+    -- Step 2: split the product of products.
+    rw [Finset.prod_mul_distrib]
+    -- Step 3: C = ∏ p, exp(-β²) by `set`, so the first factor is C (closed by rfl below).
+    -- Step 4: rewrite plaquetteProduct to the abstract link form in the second factor.
+    have h_link : ∏ p : InterfacePlaquette T L,
+        Real.exp ((β * β / N) *
+          Complex.re (Matrix.trace ((plaquetteProduct N U p.val.1 p.val.2.1 p.val.2.2 :
+            Matrix (Fin N) (Fin N) ℂ)))) =
+      ∏ p : InterfacePlaquette T L,
+        Real.exp ((β * β / N) *
+          Complex.re (Matrix.trace
+            ((interfaceLinkVar N T L U (interfaceLinkAssign T L p 0) *
+              interfaceLinkVar N T L U (interfaceLinkAssign T L p 1) *
+              (interfaceLinkVar N T L U (interfaceLinkAssign T L p 2))⁻¹ *
+              (interfaceLinkVar N T L U (interfaceLinkAssign T L p 3))⁻¹ : SU N) :
+              Matrix (Fin N) (Fin N) ℂ))) := by
+      exact Finset.prod_congr rfl (fun p _ => by rw [plaquetteProduct_interface_eq N T L U p])
+    rw [h_link]
+
+#print axioms interface_boltzmann_eq_abstract_product
+
+/-- **Character expansion of the concrete interface plaquette product.** Applying
+`interface_kernel_character_expansion` (Peter-Weyl / Clebsch-Gordan) to the concrete
+lattice, the abstract interface plaquette product
+`∏_{p ∈ InterfacePlaquette} exp((β²/N)·Re Tr(g₀g₁g₂⁻¹g₃⁻¹))` (viewed in `ℂ`) admits the
+separable character expansion
+
+    ∏_p exp(c·Re Tr(...)) = ∑_w F(w) · Φ_w(U⁺) · Ψ_w(u⁰) · conj(Φ_w(V⁺))
+
+with `F(w) ≥ 0`, where `Φ_w(U⁺) = ∏_{l ∈ L_U} χ_{w(l)}(g_l)`,
+`Ψ_w(u⁰) = ∏_{l ∈ L_0} χ_{w(l)}(g_l)`, and the V⁺ factor uses the dual map.
+This is sub-step (ii) of Lemma 2 (`transfer_matrix_integral_reduction`):
+applying the abstract character expansion to the concrete lattice data.
+Uses the `peterWeyl_clebschGordan_plaquette` axiom (count 6); 0 sorries. -/
+lemma interface_product_character_expansion (N T L : ℕ) (β : ℝ) [NeZero T] [NeZero L]
+    (hN : 1 ≤ N) :
+    ∃ (ι : Type) (hι : Fintype ι) (dims : ι → ℕ)
+      (ρ : ∀ i, SU N →* Matrix (Fin (dims i)) (Fin (dims i)) ℂ)
+      (hU : ∀ i, IsUnitaryRepresentation (ρ i))
+      (hMeas : ∀ i, Measurable (repCharacter (ρ i)))
+      (dual : ι → ι)
+      (F : (InterfaceLink T L → ι) → ℝ) (hF : ∀ w, 0 ≤ F w),
+      ∀ (U : LinkVariable (SU N) (PeriodicSite T L)),
+      ∏ p : InterfacePlaquette T L,
+        (Real.exp ((β * β / N) * Complex.re (Matrix.trace
+          ((interfaceLinkVar N T L U (interfaceLinkAssign T L p 0) *
+            interfaceLinkVar N T L U (interfaceLinkAssign T L p 1) *
+            (interfaceLinkVar N T L U (interfaceLinkAssign T L p 2))⁻¹ *
+            (interfaceLinkVar N T L U (interfaceLinkAssign T L p 3))⁻¹ : SU N) :
+            Matrix (Fin N) (Fin N) ℂ))) : ℂ) =
+        ∑ w : InterfaceLink T L → ι, (F w : ℂ) *
+          (∏ l ∈ interfaceLinkPos T L, repCharacter (ρ (w l)) (interfaceLinkVar N T L U l)) *
+          (∏ l ∈ interfaceLinkInt T L, repCharacter (ρ (w l)) (interfaceLinkVar N T L U l)) *
+          star (∏ l ∈ interfaceLinkNeg T L, repCharacter (ρ (dual (w l))) (interfaceLinkVar N T L U l)) := by
+  obtain ⟨ι, hι, dims, ρ, hU, hMeas, hIrr, hDims, coeff, hcoeff, cg, hcg, hcg_decomp, dual, hdual,
+      cgME, hcgME_decomp, hcgME_unitary,
+      Λ, hΛ, dimsΛ, ρΛ, hUΛ, hIrrΛ, hDimsΛ, emb, hemb, μ, hμ, hexp4, hL2⟩ :=
+    peterWeyl_clebschGordan_plaquette N (β * β / N) (plaquetteBoltzmann_tm_coupling_nonneg N β hN)
+  letI : Fintype ι := hι
+  classical
+  obtain ⟨F, hF, hF_decomp⟩ := interface_kernel_character_expansion
+    ρ hU coeff hcoeff cg hcg hcg_decomp dual hdual
+    (β * β / N) (plaquetteBoltzmann_tm_coupling_nonneg N β hN) hexp4
+    (InterfacePlaquette T L) (InterfaceLink T L) (interfaceLinkAssign T L)
+    (interfaceLinkAssign_surj T L)
+    (interfaceLinkPos T L) (interfaceLinkInt T L) (interfaceLinkNeg T L)
+    (interfaceLinkPartition_hdisj T L) (interfaceLinkPartition_hcover T L)
+  refine ⟨ι, hι, dims, ρ, hU, hMeas, dual, F, hF, fun U => ?_⟩
+  exact hF_decomp (interfaceLinkVar N T L U)
+
+#print axioms interface_product_character_expansion
+
+/-- **Combined character expansion of the interface Boltzmann factor.** Composing
+`interface_boltzmann_eq_abstract_product` (exp(-β·S_int) = C · ∏_p exp(c·Re Tr(...)))
+with `interface_product_character_expansion` (∏_p exp(c·Re Tr(...)) = ∑_w F(w)·Φ_w·Ψ_w·V_w),
+the interface Boltzmann factor admits the character expansion (viewed in ℂ)
+
+    (exp(-β·S_int(U)) : ℂ) = (C : ℂ) · ∑_w F(w) · Φ_w(U) · Ψ_w(U) · V_w(U)
+
+with C > 0 and F(w) ≥ 0, where Φ_w(U) = ∏_{l ∈ L_U} χ_{w(l)}(g_l),
+Ψ_w(U) = ∏_{l ∈ L_0} χ_{w(l)}(g_l), V_w(U) = star(∏_{l ∈ L_V} χ_{dual(w(l))}(g_l)),
+and g_l = interfaceLinkVar U l.  This is step 3 of sub-step (iii) of Lemma 2
+(`transfer_matrix_integral_reduction`): substituting the character expansion
+into the transfer matrix inner product. Uses `peterWeyl_clebschGordan_plaquette`
+(axiom count 6, unchanged); 0 sorries. -/
+lemma interface_boltzmann_character_expansion (N T L : ℕ) (β : ℝ) [NeZero T] [NeZero L]
+    (hN : 1 ≤ N) :
+    ∃ (C : ℝ) (hC : 0 < C)
+      (ι : Type) (hι : Fintype ι) (dims : ι → ℕ)
+      (ρ : ∀ i, SU N →* Matrix (Fin (dims i)) (Fin (dims i)) ℂ)
+      (hU : ∀ i, IsUnitaryRepresentation (ρ i))
+      (hMeas : ∀ i, Measurable (repCharacter (ρ i)))
+      (dual : ι → ι)
+      (F : (InterfaceLink T L → ι) → ℝ) (hF : ∀ w, 0 ≤ F w),
+      ∀ (U : LinkVariable (SU N) (PeriodicSite T L)),
+      (Real.exp (-β * wilsonActionOSInterface N T L β U) : ℂ) =
+        (C : ℂ) * ∑ w : InterfaceLink T L → ι, (F w : ℂ) *
+          (∏ l ∈ interfaceLinkPos T L, repCharacter (ρ (w l)) (interfaceLinkVar N T L U l)) *
+          (∏ l ∈ interfaceLinkInt T L, repCharacter (ρ (w l)) (interfaceLinkVar N T L U l)) *
+          star (∏ l ∈ interfaceLinkNeg T L, repCharacter (ρ (dual (w l))) (interfaceLinkVar N T L U l)) := by
+  -- C = ∏_p exp(-β²) is independent of U; obtain it once (uniform abstract-product form).
+  obtain ⟨C, hC, hC_eq_all⟩ := interface_boltzmann_eq_abstract_product N T L β
+  -- The character-expansion data (ι, ρ, dual, F) is independent of U (uniform version).
+  obtain ⟨ι, hι, dims, ρ, hU, hMeas, dual, F, hF, hF_decomp⟩ :=
+    interface_product_character_expansion N T L β hN
+  letI : Fintype ι := hι
+  classical
+  refine ⟨C, hC, ι, hι, dims, ρ, hU, hMeas, dual, F, hF, fun U => ?_⟩
+  -- Per-U: combine the abstract-product form with the character expansion.
+  rw [hC_eq_all U]
+  have h := hF_decomp U
+  norm_cast at h
+  rw [Complex.ofReal_mul, h]
+
+#print axioms interface_boltzmann_character_expansion
+
+/-! ### Bridge lemmas: link partition ↔ site partition
+
+These lemmas connect the LINK-based partition (`interfaceLinkPos/Int/Neg`, used by
+the character expansion) with the SITE-based partition
+(`positiveSites/interfaceSites/negativeSites`, used by the measure factorization
+in `TransferMatrix.lean`).  A link `(n, μ)` is in `interfaceLinkPos` iff its base
+site `n` is in `positiveSites`, etc.  This compatibility is needed for sub-step
+(iii) of Lemma 2 (Fubini reduction).  All 0 sorries, 0 custom axioms. -/
+
+lemma interfaceLinkPos_mem_iff (T L : ℕ) [NeZero T] [NeZero L]
+    (l : InterfaceLink T L) :
+    l ∈ interfaceLinkPos T L ↔ l.val.1 ∈ positiveSites T L := by
+  simp only [interfaceLinkPos, Finset.mem_filter, Finset.mem_univ, true_and,
+    positiveSites]
+
+lemma interfaceLinkInt_mem_iff (T L : ℕ) [NeZero T] [NeZero L]
+    (l : InterfaceLink T L) :
+    l ∈ interfaceLinkInt T L ↔ l.val.1 ∈ interfaceSites T L := by
+  simp only [interfaceLinkInt, Finset.mem_filter, Finset.mem_univ, true_and,
+    interfaceSites]
+
+lemma interfaceLinkNeg_mem_iff (T L : ℕ) [NeZero T] [NeZero L]
+    (l : InterfaceLink T L) :
+    l ∈ interfaceLinkNeg T L ↔ l.val.1 ∈ negativeSites T L := by
+  simp only [interfaceLinkNeg, Finset.mem_filter, Finset.mem_univ, true_and,
+    negativeSites]
+
+#print axioms interfaceLinkPos_mem_iff
+#print axioms interfaceLinkInt_mem_iff
+#print axioms interfaceLinkNeg_mem_iff
+
 
 lemma reflectSite_addVector_comm (T L : ℕ) (n : PeriodicSite T L) (μ : Fin 4) (hμ0 : μ ≠ 0) :
     ReflectSite.reflectSite (AddVector.addVector n μ) =
@@ -1228,6 +2052,157 @@ lemma plaquetteContribution_reflect_eq_all (N T L : ℕ) [NeZero T] [NeZero L] (
   rcases p with ⟨n, μ, ν⟩
   unfold plaquetteContribution
   rw [trace_plaquetteProduct_reflect_all N T L U n μ ν]
+
+set_option maxHeartbeats 8000000 in
+/-- **Link correspondence under reflection.** For any plaquette `p` and link position `j`,
+the reflected link `(θ(link p j).1, (link p j).2)` equals `link (reflectPlaquetteIndex p) j'`
+for some `j'`. The position `j'` is a permutation of `j` depending on the directions:
+- (μ≠0, ν≠0): `j' = j` (spatial directions commute with reflection)
+- (μ=0, ν≠0): `j' = j + 3` (time direction reversed)
+- (μ≠0, ν=0): `j' = j + 1` (time direction reversed)
+- (μ=0, ν=0): `j' = j + 2` (both time directions reversed)
+
+This is the key lemma showing the reflection maps `interfacePlaqLinkFinset` to itself. -/
+lemma plaquetteLinkIdx_reflect (T L : ℕ) [NeZero T] [NeZero L]
+    (p : PlaquetteIndex T L) (j : Fin 4) :
+    ∃ j' : Fin 4, plaquetteLinkIdx T L (reflectPlaquetteIndex T L p) j' =
+      (ReflectSite.reflectSite (plaquetteLinkIdx T L p j).1, (plaquetteLinkIdx T L p j).2) := by
+  rcases p with ⟨n, μ, ν⟩
+  by_cases hμ : μ = 0
+  · by_cases hν : ν = 0
+    · subst hμ hν
+      refine ⟨j + 2, ?_⟩
+      fin_cases j <;>
+        simp [plaquetteLinkIdx, reflectPlaquetteIndex, ReflectSite.reflectSite,
+          reflectSitePeriodic, addVectorPeriodic]
+    · subst hμ
+      refine ⟨j + 3, ?_⟩
+      fin_cases j <;> fin_cases ν <;> first
+        | contradiction
+        | simp [plaquetteLinkIdx, reflectPlaquetteIndex, ReflectSite.reflectSite,
+            reflectSitePeriodic, addVectorPeriodic]
+  · by_cases hν : ν = 0
+    · subst hν
+      refine ⟨j + 1, ?_⟩
+      fin_cases j <;> fin_cases μ <;> first
+        | contradiction
+        | simp [plaquetteLinkIdx, reflectPlaquetteIndex, ReflectSite.reflectSite,
+            reflectSitePeriodic, addVectorPeriodic]
+    · refine ⟨j, ?_⟩
+      fin_cases j <;> fin_cases μ <;> fin_cases ν <;> first
+        | contradiction
+        | simp [plaquetteLinkIdx, reflectPlaquetteIndex, ReflectSite.reflectSite,
+            reflectSitePeriodic, addVectorPeriodic]
+
+#print axioms plaquetteLinkIdx_reflect
+
+set_option maxHeartbeats 1000000 in
+/-- Reflection preserves the interface plaquette predicate: a plaquette is an
+interface plaquette iff its reflection is. -/
+lemma isInterfacePlaquette_reflect (T L : ℕ) [NeZero T] [NeZero L] (hT : Odd T)
+    (p : PlaquetteIndex T L) :
+    isInterfacePlaquette T L (reflectPlaquetteIndex T L p).1 (reflectPlaquetteIndex T L p).2.1
+        (reflectPlaquetteIndex T L p).2.2 ↔
+    isInterfacePlaquette T L p.1 p.2.1 p.2.2 := by
+  have h1 := reflectPlaquetteIndex_sign T L hT p
+  have h2 : plaquetteNegative T L (reflectPlaquetteIndex T L p) ↔ plaquettePositive T L p := by
+    have h_inv : reflectPlaquetteIndex T L (reflectPlaquetteIndex T L p) = p :=
+      reflectPlaquetteIndex_involution T L p
+    have h' := reflectPlaquetteIndex_sign T L hT (reflectPlaquetteIndex T L p)
+    simpa [h_inv] using h'.symm
+  simp only [isInterfacePlaquette, plaquettePositive, plaquetteNegative]
+  constructor
+  · rintro ⟨hnpos, hnneg⟩
+    exact ⟨mt h2.symm.mp hnneg, mt h1.symm.mp hnpos⟩
+  · rintro ⟨hnpos, hnneg⟩
+    exact ⟨mt h1.mp hnneg, mt h2.mp hnpos⟩
+
+#print axioms isInterfacePlaquette_reflect
+
+/-- The reflection of an interface link: maps `l = (n, μ)` to `(θn, μ)`.
+The reflected link is again an interface link because reflection maps interface
+plaquettes to interface plaquettes (`isInterfacePlaquette_reflect`) and maps
+links of interface plaquettes to links of reflected interface plaquettes
+(`plaquetteLinkIdx_reflect`). -/
+def reflectInterfaceLink (T L : ℕ) [NeZero T] [NeZero L] (hT : Odd T)
+    (l : InterfaceLink T L) : InterfaceLink T L :=
+  ⟨(ReflectSite.reflectSite l.val.1, l.val.2), by
+    have hl := l.prop
+    simp only [interfacePlaqLinkFinset, Finset.mem_image, Finset.mem_univ, true_and,
+      Prod.exists, exists_prop] at hl
+    obtain ⟨p, j, hj⟩ := hl
+    have hp : isInterfacePlaquette T L (reflectPlaquetteIndex T L p.val).1
+        (reflectPlaquetteIndex T L p.val).2.1 (reflectPlaquetteIndex T L p.val).2.2 :=
+      (isInterfacePlaquette_reflect T L hT p.val).mpr p.prop
+    simp only [interfacePlaqLinkFinset, Finset.mem_image, Finset.mem_univ, true_and,
+      Prod.exists, exists_prop]
+    obtain ⟨j', hj'⟩ := plaquetteLinkIdx_reflect T L p.val j
+    refine ⟨⟨reflectPlaquetteIndex T L p.val, hp⟩, j', ?_⟩
+    rw [hj] at hj'
+    exact hj'⟩
+
+/-- `reflectInterfaceLink` is involutive: reflecting twice is the identity. -/
+lemma reflectInterfaceLink_involution (T L : ℕ) [NeZero T] [NeZero L] (hT : Odd T)
+    (l : InterfaceLink T L) :
+    reflectInterfaceLink T L hT (reflectInterfaceLink T L hT l) = l := by
+  simp only [reflectInterfaceLink, Subtype.mk_eq_mk]
+  ext <;> simp [ReflectSite.involution]
+
+#print axioms reflectInterfaceLink_involution
+
+/-- Reflection maps positive-time interface links to negative-time interface links. -/
+lemma reflectInterfaceLink_mem_neg_of_pos (T L : ℕ) [NeZero T] [NeZero L] (hT : Odd T)
+    {l : InterfaceLink T L} (hl : l ∈ interfaceLinkPos T L) :
+    reflectInterfaceLink T L hT l ∈ interfaceLinkNeg T L := by
+  rw [interfaceLinkPos, Finset.mem_filter] at hl
+  obtain ⟨_, hpos⟩ := hl
+  rw [interfaceLinkNeg, Finset.mem_filter]
+  simp only [Finset.mem_univ, true_and, reflectInterfaceLink]
+  rw [signedTime_reflectSite hT l.val.1]
+  omega
+
+/-- Reflection maps negative-time interface links to positive-time interface links. -/
+lemma reflectInterfaceLink_mem_pos_of_neg (T L : ℕ) [NeZero T] [NeZero L] (hT : Odd T)
+    {l : InterfaceLink T L} (hl : l ∈ interfaceLinkNeg T L) :
+    reflectInterfaceLink T L hT l ∈ interfaceLinkPos T L := by
+  rw [interfaceLinkNeg, Finset.mem_filter] at hl
+  obtain ⟨_, hneg⟩ := hl
+  rw [interfaceLinkPos, Finset.mem_filter]
+  simp only [Finset.mem_univ, true_and, reflectInterfaceLink]
+  rw [signedTime_reflectSite hT l.val.1]
+  omega
+
+/-- Reflection maps interface (time-0) interface links to interface interface links. -/
+lemma reflectInterfaceLink_mem_int_of_int (T L : ℕ) [NeZero T] [NeZero L] (hT : Odd T)
+    {l : InterfaceLink T L} (hl : l ∈ interfaceLinkInt T L) :
+    reflectInterfaceLink T L hT l ∈ interfaceLinkInt T L := by
+  rw [interfaceLinkInt, Finset.mem_filter] at hl
+  obtain ⟨_, hint⟩ := hl
+  rw [interfaceLinkInt, Finset.mem_filter]
+  simp only [Finset.mem_univ, true_and, reflectInterfaceLink]
+  rw [signedTime_reflectSite hT l.val.1, hint]
+  omega
+
+#print axioms reflectInterfaceLink_mem_neg_of_pos
+#print axioms reflectInterfaceLink_mem_pos_of_neg
+#print axioms reflectInterfaceLink_mem_int_of_int
+
+/-- The reflection bijection between positive-time and negative-time interface
+links.  This is the map `φ : interfaceLinkNeg → interfaceLinkPos` (read in
+reverse) used by the reindexing `θ` in the σ-inversion lemma. -/
+def reflectInterfaceLinkPosNegEquiv (T L : ℕ) [NeZero T] [NeZero L] (hT : Odd T) :
+    {l : InterfaceLink T L // l ∈ interfaceLinkPos T L} ≃
+    {l : InterfaceLink T L // l ∈ interfaceLinkNeg T L} where
+  toFun l := ⟨reflectInterfaceLink T L hT l.val, reflectInterfaceLink_mem_neg_of_pos T L hT l.prop⟩
+  invFun l := ⟨reflectInterfaceLink T L hT l.val, reflectInterfaceLink_mem_pos_of_neg T L hT l.prop⟩
+  left_inv l := by
+    apply Subtype.eq
+    exact reflectInterfaceLink_involution T L hT l.val
+  right_inv l := by
+    apply Subtype.eq
+    exact reflectInterfaceLink_involution T L hT l.val
+
+#print axioms reflectInterfaceLinkPosNegEquiv
 
 set_option maxHeartbeats 1000000 in
 lemma neg_action_reflection_os_periodic (N T L : ℕ) (β : ℝ) [NeZero T] [NeZero L]

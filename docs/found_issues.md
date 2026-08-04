@@ -104,8 +104,10 @@ The corrected transfer matrix has been implemented in `TransferMatrix.lean`:
    is fully proven using `measure_factorization'`, the action reflection lemmas, and the
    definitions of `transferMatrixCorrect` and `g_posInterface`.
 
-2. **`transferMatrixCorrect_positive`**: ❌ BLOCKED — requires Peter-Weyl theorem for SU(N).
-   See §3 below for the precise mathematical obstruction.
+2. **`transferMatrixPositivity_axiom`** (in `ReflectionPositivity.lean`, line ~2341;
+   the `transferMatrixCorrect_positive` name referenced in earlier versions of this
+   doc does not exist in source): ❌ still an axiom — the remaining gap.
+   See §3 below for the original mathematical obstruction.
 
    **Progress**: Both abstract sub-steps of the positivity chain are now proved
    in `PositiveDefiniteIntegral.lean` (0 sorries, 0 custom axioms):
@@ -132,23 +134,20 @@ The corrected transfer matrix has been implemented in `TransferMatrix.lean`:
    `PositiveDefinite.lean` / `PeterWeyl.lean`.  This handles the actual lattice
    plaquette product U(n,μ)·U(n+e_μ,ν)·U(n+e_μ+e_ν,μ)⁻¹·U(n+e_ν,ν)⁻¹ which has
    inverses on the 3rd and 4th links (orientation reversal).
-   The **remaining** work is the concrete wiring: showing the transfer-matrix
-   kernel is a PD function of the interface link variables (via
-   `PositiveDefinite.integral` applied to the plaquette factors, themselves PD
-   by `plaquetteBoltzmannPD_inv` modulo the Peter–Weyl axiom), then applying
-   `integralOperator_nonneg`.  **Key obstruction**: the TM kernel
-   `(Tψ)(u) = ∫ ψ(θ⁻⁰(U⁻,u⁰))·exp(-β·(...)) dμ⁻(U⁻)` is NOT of the form
-   `φ(u⁻¹·v)` for a PD function `φ` on a group — the reflection map `θ⁻⁰` is a
-   geometric operation, not group multiplication.  While `PosInterfaceConfig`
-   is a product of SU(N)'s (hence a group), the kernel does not factor through
-   the group structure.  The Mercer framework removes the *group-structure*
-   obstruction, but showing the TM kernel *is* Mercer-PD still requires the
-   Peter–Weyl character expansion to decompose the Boltzmann factor into
-   separable positive terms (approach (c)).  This is a fundamental mathematical
-   gap, not just formalization work.
+   **Status (2026-08-04):** the "fundamental gap" analysis below is historical —
+   the Peter–Weyl character expansion and Clebsch–Gordan decomposition are now
+   **axiomatized** (`peterWeyl_clebschGordan_plaquette` + `characterOrthogonality`),
+   and the closure plan (`docs/transfer_matrix_positivity_design.md` §8.11) has
+   carried the concrete character expansion through Lemma 2, Fubini steps 4a–4e,
+   and Lemma 3 (σ-inversion, `fourierCoeffNeg_eq_fourierCoeffPos_fullReflect`).
+   Remaining: Lemma 5 (L²/matrix-element expansion reorganization) + Lemma 6
+   (final assembly).
 
-3. **`gibbsExpectationPeriodic_reflection_positive`**: The final `sorry` in
-   `ReflectionPositivity.lean` (line 1437) that depends on (2).
+3. **`gibbsExpectationPeriodic_reflection_positive`**: The final step in
+   `ReflectionPositivity.lean` (line ~2356) is **not a `sorry`** — it closes via
+   `exact transferMatrixPositivity_axiom ...` (line ~2441), a genuine axiom
+   declared in `ReflectionPositivity.lean` (line ~2341).  The gap is that axiom,
+   i.e. item 2 above.
 
 See `docs/gap_analysis.md` and `src/lean/YangMills/Proofs/TransferMatrix.lean` for details.
 
@@ -240,8 +239,9 @@ are still not available in Mathlib.
 
 ### Conclusion
 
-The sorry in `gibbsExpectationPeriodic_reflection_positive` (ReflectionPositivity.lean:1437)
-**cannot be closed** without one of:
+The axiom `transferMatrixPositivity_axiom` (ReflectionPositivity.lean:2341; the
+final step of `gibbsExpectationPeriodic_reflection_positive`, ReflectionPositivity.lean:2356,
+closes via `exact transferMatrixPositivity_axiom`) **cannot be closed** without one of:
 - **Peter-Weyl theorem** for SU(N) (character expansion with non-negative coefficients)
 - **Heat kernel** on SU(N) (representing `exp(c · Re Tr(g))` as Fourier transform of a
   positive measure on the Lie algebra)
@@ -252,3 +252,10 @@ Mathlib currently provides. The `PositiveDefinite.lean` infrastructure (PD funct
 product theorem, `exp_reTrace_positiveDefinite`) is necessary but **not sufficient** — the
 missing ingredient is the decomposition of `exp(c · Re Tr(g₁...gₖ))` into a sum of products
 of PD functions on individual factors.
+
+**Status update (2026-08-04):** the project chose the axiomatization route: the
+Peter–Weyl + Clebsch–Gordan ingredients are declared as the strengthened
+`peterWeyl_clebschGordan_plaquette` axiom (plus `characterOrthogonality`), and the
+closure plan has since carried the character expansion through Lemma 2, Fubini steps
+4a–4e, and Lemma 3 (σ-inversion).  Remaining: Lemma 5 + Lemma 6 — see
+`docs/transfer_matrix_positivity_design.md` §8.11.

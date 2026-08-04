@@ -49,9 +49,12 @@ The periodic boundary condition approach is fully implemented in `ReflectionPosi
    - `plaquetteContribution_reflect_eq_all`: contribution equality for all plaquettes
 4. **Gibbs expectation proof**: `gibbsExpectationPeriodic_reflection_positive` reduces
    the reflection positivity condition to ∫ G·θG dμ₀ ≥ 0 (all algebraic steps completed).
-5. **One remaining `sorry`**: The final positivity ∫ G·θG dμ₀ ≥ 0 requires the
-   Peter–Weyl theorem on SU(N) (transfer matrix argument, Osterwalder-Seiler 1979, §3).
-   See `ReflectionPositivity.lean` for details.
+5. **One remaining gap — not a `sorry`**: The final positivity ∫ G·θG dμ₀ ≥ 0 requires
+   the Peter–Weyl theorem on SU(N) (transfer matrix argument, Osterwalder-Seiler 1979, §3).
+   In the current source, `gibbsExpectationPeriodic_reflection_positive` closes via
+   `exact transferMatrixPositivity_axiom ...` (ReflectionPositivity.lean:2341/2441), a
+   genuine axiom — the closure plan against it is tracked in
+   `docs/transfer_matrix_positivity_design.md` §8.11.
 
 ## Impact
 

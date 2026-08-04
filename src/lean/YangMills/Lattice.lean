@@ -267,6 +267,41 @@ noncomputable def plaquetteContribution (N : ℕ) (β : ℝ) {Λ : Type} [AddVec
     (U : LinkVariable (SU N) Λ) (n : Λ) (μ ν : Fin 4) : ℝ :=
   β * ((1 : ℝ) - (1 / (N : ℝ)) * ((trace ((plaquetteProduct N U n μ ν : Matrix (Fin N) (Fin N) ℂ))).re))
 
+/-- Each plaquette contribution is bounded by `2|β|` in absolute value.
+
+Since `plaquetteProduct ∈ SU N` (unitary), `|Re Tr(g)| ≤ N` (`trace_re_bound`),
+so `|(1/N)·Re Tr(g)| ≤ 1`, hence `|1 - (1/N)·Re Tr(g)| ≤ 2`, and
+`|plaquetteContribution| = |β|·|1 - (1/N)·Re Tr(g)| ≤ 2|β|`.
+
+This is ingredient 2 of the integrability discharge (design doc §8.11.10):
+it gives a uniform upper bound on `|wilsonActionOSInterface|`, hence a
+positive lower bound on `exp(-β·S_int)`. 0 sorries, 0 custom axioms. -/
+lemma plaquetteContribution_bounded (N : ℕ) (β : ℝ) {Λ : Type} [AddVector Λ]
+    (U : LinkVariable (SU N) Λ) (n : Λ) (μ ν : Fin 4) :
+    |plaquetteContribution N β U n μ ν| ≤ 2 * |β| := by
+  unfold plaquetteContribution
+  set x := (trace ((plaquetteProduct N U n μ ν : Matrix (Fin N) (Fin N) ℂ))).re
+  have hx : |x| ≤ (N : ℝ) := trace_re_bound N (plaquetteProduct N U n μ ν)
+  have h_inv_nonneg : 0 ≤ 1 / (N : ℝ) := by
+    rcases Nat.eq_zero_or_pos N with rfl | hN
+    · simp
+    · exact div_nonneg (by norm_num) (Nat.cast_nonneg _)
+  have h_inv_mul : 1 / (N : ℝ) * (N : ℝ) ≤ 1 := by
+    rcases Nat.eq_zero_or_pos N with rfl | hN
+    · simp
+    · rw [div_mul_cancel₀ _ (Nat.cast_ne_zero.mpr (ne_of_gt (Nat.cast_pos.mpr hN)))]
+  have h_prod_le : |1 / (N : ℝ) * x| ≤ 1 := by
+    rw [abs_mul, abs_of_nonneg h_inv_nonneg]
+    calc 1 / (N : ℝ) * |x| ≤ 1 / (N : ℝ) * (N : ℝ) := by gcongr
+      _ ≤ 1 := h_inv_mul
+  rcases abs_le.mp h_prod_le with ⟨h_y_ge, h_y_le⟩
+  have h_le_2 : |1 - 1 / (N : ℝ) * x| ≤ 2 := abs_le.mpr ⟨by linarith, by linarith⟩
+  calc |β * (1 - 1 / (N : ℝ) * x)| = |β| * |1 - 1 / (N : ℝ) * x| := abs_mul _ _
+    _ ≤ |β| * 2 := mul_le_mul_of_nonneg_left h_le_2 (abs_nonneg _)
+    _ = 2 * |β| := by ring
+
+#print axioms plaquetteContribution_bounded
+
 /--
 The total Wilson action for a finite set of lattice sites.
 For each site n ∈ sites, sum over all oriented plaquettes (n; μ, ν).
