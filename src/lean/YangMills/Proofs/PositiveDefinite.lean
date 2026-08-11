@@ -50,6 +50,14 @@ section BasicProperties
 
 variable {G : Type*} [Group G] {φ ψ : G → ℂ}
 
+/-- Positive-definiteness is invariant under function equality: if `φ = ψ`
+pointwise and `ψ` is PD, then `φ` is PD.  This avoids expensive `convert` /
+`exact` defeq checks on large functions — prove the equality with `funext` +
+`simp` (which handles stuck matches via case analysis), then transfer PD. -/
+lemma PositiveDefinite.congr (h : φ = ψ) (hψ : PositiveDefinite ψ) :
+    PositiveDefinite φ := by
+  rw [h]; exact hψ
+
 lemma PositiveDefinite.add (hφ : PositiveDefinite φ) (hψ : PositiveDefinite ψ) :
     PositiveDefinite (λ g => φ g + ψ g) := by
   intro s c
@@ -765,6 +773,35 @@ lemma repCharacter_inv (ρ : G →* Matrix (Fin n) (Fin n) ℂ)
   rw [repCharacter, repCharacter, ← h_star_eq]
   simp [Matrix.trace, Matrix.conjTranspose_apply, Complex.star_def]
 
+/-- The character is invariant under cyclic permutations of its argument:
+`χ(g * h * k) = χ(h * k * g)`.
+
+This is the *class-function* (conjugation-invariance) property of characters,
+expressed via the cyclic invariance of the trace: `Tr(ABC) = Tr(BCA)`.
+It follows from `Matrix.trace_mul_comm` applied twice.  No unitary hypothesis
+is needed — this is pure trace algebra. -/
+lemma repCharacter_cyclic (ρ : G →* Matrix (Fin n) (Fin n) ℂ) (g h k : G) :
+    repCharacter ρ (g * h * k) = repCharacter ρ (h * k * g) := by
+  simp only [repCharacter, MonoidHom.map_mul]
+  rw [Matrix.trace_mul_comm, ← mul_assoc, Matrix.trace_mul_comm, ← mul_assoc]
+
+/-- **Characters are class functions** (conjugation-invariant): `χ(g · h · g⁻¹) = χ(h)`.
+
+This follows from `repCharacter_cyclic` (cyclic invariance of the trace) plus the
+group inverse property `g⁻¹ · g = 1`. No unitary hypothesis is needed — this is
+pure trace algebra.
+
+This is the key property for the 3D Lüscher cascade (Step 3c of the roadmap):
+a "local" plaquette at site `x` in direction `ν` has plaquette variable
+`u_t(x) · W_ν(x) · u_t(x)⁻¹`, and since `B_p` is a sum of characters (each a
+class function), `B_p(u · W · u⁻¹) = B_p(W)` — the local plaquette contributes a
+CONSTANT (independent of `u_t(x)`), which factors out of the temporal-link
+integral. Only NON-LOCAL plaquettes (connecting different sites) contribute to
+the cascade. 0 sorries, 0 new axioms. -/
+lemma repCharacter_isClassFunction (ρ : G →* Matrix (Fin n) (Fin n) ℂ) (g h : G) :
+    repCharacter ρ (g * h * g⁻¹) = repCharacter ρ h := by
+  rw [repCharacter_cyclic, mul_assoc, inv_mul_cancel, mul_one]
+
 /-- For a unitary representation, the character is bounded by the dimension:
 `‖χ(g)‖ ≤ n` where `n = dim(ρ)`.
 
@@ -1018,4 +1055,1520 @@ lemma character_orthogonality_from_schur
       exact hSchur_offdiag r s a a b b h
     rw [hzero, if_neg h]
 
+/-- **Integral of a character equals 1 for the trivial representation, 0 otherwise.**
+
+For a compact group `G` with probability measure `μ`, a finite family of
+irreducible unitary representations `ρ_ν` of dimension `dims ν`, and a
+trivial representation `triv` (with `χ_{triv}(g) = 1` for all `g`):
+
+    ∫_G χ_γ(g) ∂μ(g) = if γ = triv then 1 else 0
+
+This follows from `character_orthogonality_from_schur` (`∫ χ_r · conj(χ_s) = δ_{rs}`)
+with `s = triv`: since `χ_{triv}(g) = 1`, we have `conj(χ_{triv}(g)) = 1`, so
+`∫ χ_γ · conj(χ_{triv}) = ∫ χ_γ · 1 = ∫ χ_γ`.
+
+This is step 5 sub-lemma 3 of the 6-step `transferMatrixPositivity_axiom` closure
+plan (§8.11.40): the temporal integral `∫ χ_γ(g) dg` collapses the character sum
+to terms where the temporal link carries the trivial representation. -/
+lemma integral_repCharacter_eq_iff_trivial
+    {G : Type*} [Group G] [TopologicalSpace G]
+    [CompactSpace G] [MeasurableSpace G] [BorelSpace G]
+    (μ : Measure G) [IsProbabilityMeasure μ]
+    (ι : Type) [Fintype ι] [DecidableEq ι] (dims : ι → ℕ)
+    (hDims : ∀ i, 0 < dims i)
+    (ρ : ∀ i, G →* Matrix (Fin (dims i)) (Fin (dims i)) ℂ)
+    (hU : ∀ i, IsUnitaryRepresentation (ρ i))
+    (hIrr : ∀ i, IsIrreducible (ρ i))
+    (triv : ι) (htriv : ∀ (g : G), repCharacter (ρ triv) g = 1)
+    (r : ι) :
+    ∫ g, repCharacter (ρ r) g ∂μ =
+      if r = triv then (1 : ℂ) else 0 := by
+  have h := character_orthogonality_from_schur μ ι dims hDims ρ hU hIrr r triv
+  have hcong : ∀ g,
+      repCharacter (ρ r) g = repCharacter (ρ r) g * conj (repCharacter (ρ triv) g) := by
+    intro g; simp [htriv]
+  exact (integral_congr_ae (ae_of_all μ hcong)).trans h
+
+#print axioms integral_repCharacter_eq_iff_trivial
+
+/-- **Lüscher key identity** (matrix-element level).
+
+For irreducible unitary representations `ρ_γ, ρ_{γ'}` of a compact group `G`
+with normalized Haar measure `μ`, and any `h, k : G`:
+
+    ∫_G χ_γ(g * h) · χ_{γ'}(g⁻¹ * k) ∂μ(g) = δ_{γγ'} · (1/d_γ) · χ_γ(h * k)
+
+This is the fundamental identity underlying the Lüscher mechanism: integrating
+out a "temporal" link variable `g`, the Schur orthogonality of matrix elements
+forces the representations to match (`δ_{γγ'}`), and the surviving term gives
+`(1/d_γ) · χ_γ(h * k)` with a strictly positive coefficient `1/d_γ > 0`.
+
+The proof expands both characters into matrix elements (using
+`Tr(AB) = ∑_{i,j} A_{ij} B_{ji}` and the unitary property
+`ρ(g⁻¹) = ρ(g)†`), exchanges the finite sums with the integral, and applies
+Schur orthogonality. -/
+lemma luscher_key_identity
+    {G : Type*} [Group G] [TopologicalSpace G]
+    [CompactSpace G] [MeasurableSpace G] [BorelSpace G]
+    (μ : Measure G) [IsProbabilityMeasure μ]
+    (ι : Type) [Fintype ι] [DecidableEq ι] (dims : ι → ℕ)
+    (hDims : ∀ i, 0 < dims i)
+    (ρ : ∀ i, G →* Matrix (Fin (dims i)) (Fin (dims i)) ℂ)
+    (hU : ∀ i, IsUnitaryRepresentation (ρ i))
+    (hIrr : ∀ i, IsIrreducible (ρ i))
+    (γ γ' : ι) (h k : G) :
+    ∫ g, repCharacter (ρ γ) (g * h) * repCharacter (ρ γ') (g⁻¹ * k) ∂μ =
+      if γ = γ' then (1 / dims γ : ℂ) * repCharacter (ρ γ) (h * k) else 0 := by
+  obtain ⟨hInt, hSchur_diag, hSchur_offdiag⟩ :=
+    characterOrthogonality μ ι dims hDims ρ hU hIrr
+  -- Helper: unitary matrix element (ρ i g⁻¹) c d = conj ((ρ i g) d c)
+  have h_unitary_elem : ∀ (i : ι) (g : G) (c d : Fin (dims i)),
+      (ρ i g⁻¹) c d = conj ((ρ i g) d c) := by
+    intro i g c d
+    have h_star : (ρ i g)ᴴ = ρ i g⁻¹ := by
+      rw [conjTranspose_eq_inv_of_unitary (hU i g)]
+      have hmul : ρ i g * ρ i g⁻¹ = 1 := by
+        rw [← MonoidHom.map_mul, show g * g⁻¹ = 1 from by simp, MonoidHom.map_one]
+      exact Matrix.inv_eq_right_inv hmul
+    rw [← h_star, Matrix.conjTranspose_apply]
+    simp [Complex.star_def]
+  -- Helper: trace of product Tr(AB) = ∑ i j, A i j * B j i
+  have htrace_mul : ∀ (n : ℕ) (A B : Matrix (Fin n) (Fin n) ℂ),
+      Matrix.trace (A * B) = ∑ i : Fin n, ∑ j : Fin n, A i j * B j i := by
+    intro n A B
+    simp [Matrix.trace, Matrix.mul_apply]
+  -- Step 1: Expand χ_γ(g * h) = ∑ a b, (ρ_γ g)_{ab} (ρ_γ h)_{ba}
+  have hchar_gh : ∀ (g : G),
+      repCharacter (ρ γ) (g * h) =
+        ∑ a : Fin (dims γ), ∑ b : Fin (dims γ), (ρ γ g) a b * (ρ γ h) b a := by
+    intro g
+    rw [repCharacter, MonoidHom.map_mul, htrace_mul]
+  -- Step 2: Expand χ_{γ'}(g⁻¹ * k) = ∑ c d, conj((ρ_{γ'} g)_{dc}) (ρ_{γ'} k)_{dc}
+  have hchar_ginv_k : ∀ (g : G),
+      repCharacter (ρ γ') (g⁻¹ * k) =
+        ∑ c : Fin (dims γ'), ∑ d : Fin (dims γ'),
+          conj ((ρ γ' g) d c) * (ρ γ' k) d c := by
+    intro g
+    rw [repCharacter, MonoidHom.map_mul, htrace_mul]
+    apply Finset.sum_congr rfl
+    intro c _
+    apply Finset.sum_congr rfl
+    intro d _
+    rw [h_unitary_elem γ' g c d]
+  -- Step 3: Pointwise identity — product of two double sums → 4-index sum
+  -- simp only [Fintype.sum_mul_sum] distributes both levels, giving order a, c, b, d
+  -- with body (f a b) * (g c d) = ((ρ γ g) a b * (ρ γ h) b a) * (conj ((ρ γ' g) d c) * (ρ γ' k) d c)
+  have hprod : ∀ (g : G),
+      repCharacter (ρ γ) (g * h) * repCharacter (ρ γ') (g⁻¹ * k) =
+        ∑ a : Fin (dims γ), ∑ c : Fin (dims γ'),
+          ∑ b : Fin (dims γ), ∑ d : Fin (dims γ'),
+            (ρ γ g) a b * (ρ γ h) b a * (conj ((ρ γ' g) d c) * (ρ γ' k) d c) := by
+    intro g
+    rw [hchar_gh, hchar_ginv_k]
+    simp only [Fintype.sum_mul_sum]
+  -- Step 4: Rewrite the integral using the pointwise identity
+  rw [show (∫ g, repCharacter (ρ γ) (g * h) * repCharacter (ρ γ') (g⁻¹ * k) ∂μ) =
+        ∫ g, (∑ a : Fin (dims γ), ∑ c : Fin (dims γ'),
+          ∑ b : Fin (dims γ), ∑ d : Fin (dims γ'),
+            (ρ γ g) a b * (ρ γ h) b a * (conj ((ρ γ' g) d c) * (ρ γ' k) d c)) ∂μ from by
+    congr 1 with g; exact hprod g]
+  -- Step 5: Integrability of each 4-index term (constant × Schur-integrable product)
+  have hInt_term : ∀ (a b : Fin (dims γ)) (c d : Fin (dims γ')),
+      Integrable (fun g =>
+        (ρ γ g) a b * (ρ γ h) b a * (conj ((ρ γ' g) d c) * (ρ γ' k) d c)) μ := by
+    intro a b c d
+    have h_gdep : Integrable (fun g => (ρ γ g) a b * conj ((ρ γ' g) d c)) μ :=
+      hInt γ γ' a b d c
+    -- The full integrand is const • g_dep where const = (ρ γ h) b a * (ρ γ' k) d c
+    refine (h_gdep.smul ((ρ γ h) b a * (ρ γ' k) d c)).congr ?_
+    exact Filter.Eventually.of_forall (fun g => by
+      simp only [Pi.smul_def, smul_eq_mul]
+      ring)
+  -- Step 6: Exchange sums with integral, factor constants, apply Schur orthogonality
+  -- Integrability helpers for each sum level (order: a, c, b, d)
+  have hInt_d : ∀ (a : Fin (dims γ)) (c : Fin (dims γ')) (b : Fin (dims γ)),
+      Integrable (fun g => ∑ d : Fin (dims γ'),
+        (ρ γ g) a b * (ρ γ h) b a * (conj ((ρ γ' g) d c) * (ρ γ' k) d c)) μ :=
+    fun a c b => integrable_finsetSum Finset.univ (fun d _ => hInt_term a b c d)
+  have hInt_b : ∀ (a : Fin (dims γ)) (c : Fin (dims γ')),
+      Integrable (fun g => ∑ b : Fin (dims γ), ∑ d : Fin (dims γ'),
+        (ρ γ g) a b * (ρ γ h) b a * (conj ((ρ γ' g) d c) * (ρ γ' k) d c)) μ :=
+    fun a c => integrable_finsetSum Finset.univ (fun b _ => hInt_d a c b)
+  have hInt_c : ∀ (a : Fin (dims γ)),
+      Integrable (fun g => ∑ c : Fin (dims γ'), ∑ b : Fin (dims γ), ∑ d : Fin (dims γ'),
+        (ρ γ g) a b * (ρ γ h) b a * (conj ((ρ γ' g) d c) * (ρ γ' k) d c)) μ :=
+    fun a => integrable_finsetSum Finset.univ (fun c _ => hInt_b a c)
+  -- Exchange 4 sums with integral
+  rw [integral_finsetSum Finset.univ (fun a _ => hInt_c a)]
+  rw [show (∑ a : Fin (dims γ), ∫ g, ∑ c : Fin (dims γ'), ∑ b : Fin (dims γ), ∑ d : Fin (dims γ'),
+        (ρ γ g) a b * (ρ γ h) b a * (conj ((ρ γ' g) d c) * (ρ γ' k) d c) ∂μ) =
+      ∑ a : Fin (dims γ), ∑ c : Fin (dims γ'), ∫ g, ∑ b : Fin (dims γ), ∑ d : Fin (dims γ'),
+        (ρ γ g) a b * (ρ γ h) b a * (conj ((ρ γ' g) d c) * (ρ γ' k) d c) ∂μ from by
+    apply Finset.sum_congr rfl
+    intro a _
+    rw [integral_finsetSum Finset.univ (fun c _ => hInt_b a c)]]
+  rw [show (∑ a : Fin (dims γ), ∑ c : Fin (dims γ'), ∫ g, ∑ b : Fin (dims γ), ∑ d : Fin (dims γ'),
+        (ρ γ g) a b * (ρ γ h) b a * (conj ((ρ γ' g) d c) * (ρ γ' k) d c) ∂μ) =
+      ∑ a : Fin (dims γ), ∑ c : Fin (dims γ'), ∑ b : Fin (dims γ), ∫ g, ∑ d : Fin (dims γ'),
+        (ρ γ g) a b * (ρ γ h) b a * (conj ((ρ γ' g) d c) * (ρ γ' k) d c) ∂μ from by
+    apply Finset.sum_congr rfl
+    intro a _
+    apply Finset.sum_congr rfl
+    intro c _
+    rw [integral_finsetSum Finset.univ (fun b _ => hInt_d a c b)]]
+  rw [show (∑ a : Fin (dims γ), ∑ c : Fin (dims γ'), ∑ b : Fin (dims γ), ∫ g, ∑ d : Fin (dims γ'),
+        (ρ γ g) a b * (ρ γ h) b a * (conj ((ρ γ' g) d c) * (ρ γ' k) d c) ∂μ) =
+      ∑ a : Fin (dims γ), ∑ c : Fin (dims γ'), ∑ b : Fin (dims γ), ∑ d : Fin (dims γ'),
+        ∫ g, (ρ γ g) a b * (ρ γ h) b a * (conj ((ρ γ' g) d c) * (ρ γ' k) d c) ∂μ from by
+    apply Finset.sum_congr rfl
+    intro a _
+    apply Finset.sum_congr rfl
+    intro c _
+    apply Finset.sum_congr rfl
+    intro b _
+    rw [integral_finsetSum Finset.univ (fun d _ => hInt_term a b c d)]]
+  -- Factor constants out of each integral
+  have hfactor : ∀ (a b : Fin (dims γ)) (c d : Fin (dims γ')),
+      ∫ g, (ρ γ g) a b * (ρ γ h) b a * (conj ((ρ γ' g) d c) * (ρ γ' k) d c) ∂μ
+        = (ρ γ h) b a * (ρ γ' k) d c * ∫ g, (ρ γ g) a b * conj ((ρ γ' g) d c) ∂μ := by
+    intro a b c d
+    rw [show (∫ g, (ρ γ g) a b * (ρ γ h) b a * (conj ((ρ γ' g) d c) * (ρ γ' k) d c) ∂μ)
+          = ∫ g, ((ρ γ h) b a * (ρ γ' k) d c) • ((ρ γ g) a b * conj ((ρ γ' g) d c)) ∂μ from by
+        apply integral_congr_ae
+        exact Filter.Eventually.of_forall (fun g => by simp only [smul_eq_mul]; ring)]
+    rw [integral_smul]
+    simp only [smul_eq_mul]
+  -- Apply hfactor to all terms
+  rw [show (∑ a : Fin (dims γ), ∑ c : Fin (dims γ'), ∑ b : Fin (dims γ), ∑ d : Fin (dims γ'),
+        ∫ g, (ρ γ g) a b * (ρ γ h) b a * (conj ((ρ γ' g) d c) * (ρ γ' k) d c) ∂μ) =
+      ∑ a : Fin (dims γ), ∑ c : Fin (dims γ'), ∑ b : Fin (dims γ), ∑ d : Fin (dims γ'),
+        (ρ γ h) b a * (ρ γ' k) d c * ∫ g, (ρ γ g) a b * conj ((ρ γ' g) d c) ∂μ from by
+    apply Finset.sum_congr rfl
+    intro a _
+    apply Finset.sum_congr rfl
+    intro c _
+    apply Finset.sum_congr rfl
+    intro b _
+    apply Finset.sum_congr rfl
+    intro d _
+    exact hfactor a b c d]
+  -- Split into diagonal/off-diagonal cases
+  by_cases hγγ' : γ = γ'
+  · -- Diagonal case: γ = γ'
+    subst hγγ'
+    -- Apply Schur orthogonality (diagonal)
+    simp only [hSchur_diag]
+    -- Simplify d-sum: picks d = a (since a = d ↔ d = a, and for d ≠ a the if is 0)
+    have hd : ∀ (a b c : Fin (dims γ)),
+        ∑ d : Fin (dims γ), (ρ γ h) b a * (ρ γ k) d c *
+          (if a = d ∧ b = c then (1 / dims γ : ℂ) else 0)
+        = (ρ γ h) b a * (ρ γ k) a c * (if b = c then (1 / dims γ : ℂ) else 0) := by
+      intro a b c
+      have heq : ∑ d : Fin (dims γ), (ρ γ h) b a * (ρ γ k) d c *
+          (if a = d ∧ b = c then (1 / dims γ : ℂ) else 0)
+        = (ρ γ h) b a * (ρ γ k) a c * (if a = a ∧ b = c then (1 / dims γ : ℂ) else 0) := by
+        refine Finset.sum_eq_single a ?_ ?_
+        · intro d _ hd
+          have had : ¬ (a = d) := fun h => hd h.symm
+          have hneg : ¬ (a = d ∧ b = c) := fun h => had h.1
+          rw [if_neg hneg]
+          ring
+        · intro h
+          exact absurd (Finset.mem_univ a) h
+      rw [heq]
+      simp only [eq_self_iff_true, true_and]
+    -- Apply hd to simplify the d-sum
+    rw [show (∑ a : Fin (dims γ), ∑ c : Fin (dims γ), ∑ b : Fin (dims γ),
+          ∑ d : Fin (dims γ), (ρ γ h) b a * (ρ γ k) d c *
+            (if a = d ∧ b = c then (1 / dims γ : ℂ) else 0)) =
+        ∑ a : Fin (dims γ), ∑ c : Fin (dims γ), ∑ b : Fin (dims γ),
+          (ρ γ h) b a * (ρ γ k) a c * (if b = c then (1 / dims γ : ℂ) else 0) from by
+      apply Finset.sum_congr rfl
+      intro a _
+      apply Finset.sum_congr rfl
+      intro c _
+      apply Finset.sum_congr rfl
+      intro b _
+      exact hd a b c]
+    -- Simplify b-sum: picks b = c
+    have hb : ∀ (a c : Fin (dims γ)),
+        ∑ b : Fin (dims γ), (ρ γ h) b a * (ρ γ k) a c *
+          (if b = c then (1 / dims γ : ℂ) else 0)
+        = (ρ γ h) c a * (ρ γ k) a c * (1 / dims γ : ℂ) := by
+      intro a c
+      have heq : ∑ b : Fin (dims γ), (ρ γ h) b a * (ρ γ k) a c *
+          (if b = c then (1 / dims γ : ℂ) else 0)
+        = (ρ γ h) c a * (ρ γ k) a c * (if c = c then (1 / dims γ : ℂ) else 0) := by
+        refine Finset.sum_eq_single c ?_ ?_
+        · intro b _ hb
+          have hbc : ¬ (b = c) := hb
+          rw [if_neg hbc]
+          ring
+        · intro h
+          exact absurd (Finset.mem_univ c) h
+      rw [heq]
+      simp only [eq_self_iff_true, if_true]
+    -- Apply hb to simplify the b-sum
+    rw [show (∑ a : Fin (dims γ), ∑ c : Fin (dims γ), ∑ b : Fin (dims γ),
+          (ρ γ h) b a * (ρ γ k) a c * (if b = c then (1 / dims γ : ℂ) else 0)) =
+        ∑ a : Fin (dims γ), ∑ c : Fin (dims γ),
+          (ρ γ h) c a * (ρ γ k) a c * (1 / dims γ : ℂ) from by
+      apply Finset.sum_congr rfl
+      intro a _
+      apply Finset.sum_congr rfl
+      intro c _
+      exact hb a c]
+    -- Factor out (1 / dims γ) and recognize the trace
+    rw [show (∑ a : Fin (dims γ), ∑ c : Fin (dims γ),
+          (ρ γ h) c a * (ρ γ k) a c * (1 / dims γ : ℂ)) =
+        (1 / dims γ : ℂ) * ∑ a : Fin (dims γ), ∑ c : Fin (dims γ),
+          (ρ γ h) c a * (ρ γ k) a c from by
+      simp only [Finset.sum_mul, Finset.mul_sum]
+      apply Finset.sum_congr rfl
+      intro a _
+      apply Finset.sum_congr rfl
+      intro c _
+      ring]
+    -- Recognize the trace: ∑ a c, (ρ γ h) c a * (ρ γ k) a c = trace (ρ γ k * ρ γ h)
+    rw [show (∑ a : Fin (dims γ), ∑ c : Fin (dims γ), (ρ γ h) c a * (ρ γ k) a c) =
+        ∑ a : Fin (dims γ), ∑ c : Fin (dims γ), (ρ γ k) a c * (ρ γ h) c a from by
+      apply Finset.sum_congr rfl
+      intro a _
+      apply Finset.sum_congr rfl
+      intro c _
+      ring]
+    rw [← htrace_mul]
+    -- trace (ρ γ k * ρ γ h) = trace (ρ γ h * ρ γ k) by trace_mul_comm
+    rw [Matrix.trace_mul_comm]
+    -- trace (ρ γ h * ρ γ k) = repCharacter (ρ γ) (h * k) by MonoidHom.map_mul
+    rw [repCharacter, ← MonoidHom.map_mul]
+    simp only [eq_self_iff_true, if_true]
+  · -- Off-diagonal case: γ ≠ γ'
+    have hzero : (∑ a : Fin (dims γ), ∑ c : Fin (dims γ'), ∑ b : Fin (dims γ), ∑ d : Fin (dims γ'),
+        (ρ γ h) b a * (ρ γ' k) d c * ∫ g, (ρ γ g) a b * conj ((ρ γ' g) d c) ∂μ) = 0 := by
+      refine Finset.sum_eq_zero (fun a _ => ?_)
+      refine Finset.sum_eq_zero (fun c _ => ?_)
+      refine Finset.sum_eq_zero (fun b _ => ?_)
+      refine Finset.sum_eq_zero (fun d _ => ?_)
+      rw [hSchur_offdiag γ γ' a b d c hγγ']
+      ring
+    rw [hzero, if_neg hγγ']
+
+/-- **2-site 1D Lüscher cascade (Step 3 of the Lüscher roadmap, §8.11.41).**
+
+For irreducible unitary representations of a compact group with normalized Haar
+measure, the 2-site periodic temporal plaquette integral (the minimal cascade
+demonstrating the Lüscher mechanism) evaluates to:
+
+    ∫∫ χ_{γ₀}(g₀·W₀·g₁⁻¹) · χ_{γ₁}(g₁·W₁·g₀⁻¹) dg₁ dg₀
+      = δ_{γ₀γ₁} · (1/d_γ) · χ_γ(W₀·W₁)
+
+Proof: rewrite the first character factor using the cyclic (class-function)
+property `repCharacter_cyclic` to move `g₁⁻¹` to the left, commute the product,
+then apply `luscher_key_identity` to the inner `g₁` integral.  The Schur
+orthogonality forces `γ₁ = γ₀`, and the surviving term is
+`(1/d_γ) · χ_γ((W₁·g₀⁻¹)·(g₀·W₀)) = (1/d_γ) · χ_γ(W₁·W₀)` (using
+`g₀⁻¹·g₀ = 1`), which equals `(1/d_γ) · χ_γ(W₀·W₁)` by `trace_mul_comm`.
+The outer `g₀` integral is then the integral of a constant over a probability
+measure, which equals the constant.
+
+The coefficient `1/d_γ > 0` is strictly positive, and `χ_γ` is positive-definite.
+This is the Lüscher mechanism: the cascade of Schur orthogonality matches
+representations across sites, giving non-negative coefficients.  0 sorries,
+0 new axioms. -/
+lemma luscher_2site_cascade
+    {G : Type*} [Group G] [TopologicalSpace G]
+    [CompactSpace G] [MeasurableSpace G] [BorelSpace G]
+    (μ : Measure G) [IsProbabilityMeasure μ]
+    (ι : Type) [Fintype ι] [DecidableEq ι] (dims : ι → ℕ)
+    (hDims : ∀ i, 0 < dims i)
+    (ρ : ∀ i, G →* Matrix (Fin (dims i)) (Fin (dims i)) ℂ)
+    (hU : ∀ i, IsUnitaryRepresentation (ρ i))
+    (hIrr : ∀ i, IsIrreducible (ρ i))
+    (γ₀ γ₁ : ι) (W₀ W₁ : G) :
+    ∫ g₀, ∫ g₁,
+      repCharacter (ρ γ₀) (g₀ * W₀ * g₁⁻¹) * repCharacter (ρ γ₁) (g₁ * W₁ * g₀⁻¹) ∂μ ∂μ =
+      if γ₀ = γ₁ then (1 / dims γ₀ : ℂ) * repCharacter (ρ γ₀) (W₀ * W₁) else 0 := by
+  -- Helper: cyclic rewrite of the first character factor
+  -- χ_γ₀(g₀·W₀·g₁⁻¹) = χ_γ₀(g₁⁻¹·(g₀·W₀)) by trace cyclic invariance
+  have hcyc : ∀ (g₀ g₁ : G),
+      repCharacter (ρ γ₀) (g₀ * W₀ * g₁⁻¹) = repCharacter (ρ γ₀) (g₁⁻¹ * (g₀ * W₀)) := by
+    intro g₀ g₁
+    rw [repCharacter_cyclic, repCharacter_cyclic, mul_assoc]
+  -- Helper: the inner integral (for fixed g₀), after cyclic rewrite + luscher_key_identity
+  have hInner : ∀ (g₀ : G),
+      ∫ g₁, repCharacter (ρ γ₀) (g₀ * W₀ * g₁⁻¹) * repCharacter (ρ γ₁) (g₁ * W₁ * g₀⁻¹) ∂μ =
+      if γ₁ = γ₀ then (1 / dims γ₁ : ℂ) * repCharacter (ρ γ₁) (W₁ * W₀) else 0 := by
+    intro g₀
+    -- Rewrite the integrand: cyclic + commutativity + associativity
+    rw [show (∫ g₁, repCharacter (ρ γ₀) (g₀ * W₀ * g₁⁻¹) *
+          repCharacter (ρ γ₁) (g₁ * W₁ * g₀⁻¹) ∂μ) =
+        ∫ g₁, repCharacter (ρ γ₁) (g₁ * (W₁ * g₀⁻¹)) *
+          repCharacter (ρ γ₀) (g₁⁻¹ * (g₀ * W₀)) ∂μ from by
+      congr 1 with g₁
+      rw [hcyc, mul_assoc]
+      ring]
+    -- Apply luscher_key_identity to the inner g₁ integral
+    rw [luscher_key_identity μ ι dims hDims ρ hU hIrr γ₁ γ₀ (W₁ * g₀⁻¹) (g₀ * W₀)]
+    -- Simplify (W₁ * g₀⁻¹) * (g₀ * W₀) = W₁ * W₀ inside the if
+    by_cases h : γ₁ = γ₀
+    · rw [if_pos h, if_pos h]
+      rw [show (W₁ * g₀⁻¹) * (g₀ * W₀) = W₁ * W₀ from by
+        have hinv : g₀⁻¹ * g₀ = 1 := inv_mul_cancel _
+        calc (W₁ * g₀⁻¹) * (g₀ * W₀) = W₁ * (g₀⁻¹ * (g₀ * W₀)) := by rw [mul_assoc]
+          _ = W₁ * ((g₀⁻¹ * g₀) * W₀) := by rw [← mul_assoc g₀⁻¹ g₀ W₀]
+          _ = W₁ * (1 * W₀) := by rw [hinv]
+          _ = W₁ * W₀ := by rw [one_mul]]
+    · rw [if_neg h, if_neg h]
+  -- Rewrite the outer integral using hInner
+  rw [show (∫ g₀, ∫ g₁,
+        repCharacter (ρ γ₀) (g₀ * W₀ * g₁⁻¹) * repCharacter (ρ γ₁) (g₁ * W₁ * g₀⁻¹) ∂μ ∂μ) =
+      ∫ g₀, if γ₁ = γ₀ then (1 / dims γ₁ : ℂ) * repCharacter (ρ γ₁) (W₁ * W₀) else 0 ∂μ from by
+    congr 1 with g₀; exact hInner g₀]
+  -- Split cases on γ₁ = γ₀
+  by_cases h : γ₁ = γ₀
+  · -- γ₁ = γ₀: the integrand is a constant (1/d_γ₁) * χ_γ₁(W₁ * W₀)
+    rw [if_pos h, if_pos h.symm, h]
+    -- ∫ g₀, constant ∂μ = constant (probability measure)
+    have hC : ∫ g₀, (1 / dims γ₀ : ℂ) * repCharacter (ρ γ₀) (W₁ * W₀) ∂μ =
+        (1 / dims γ₀ : ℂ) * repCharacter (ρ γ₀) (W₁ * W₀) := by
+      haveI : IsFiniteMeasure μ := inferInstance
+      simp [integral_const, IsProbabilityMeasure.measure_univ]
+    rw [hC]
+    -- χ_γ₀(W₁ * W₀) = χ_γ₀(W₀ * W₁) by trace_mul_comm
+    rw [show repCharacter (ρ γ₀) (W₁ * W₀) = repCharacter (ρ γ₀) (W₀ * W₁) from by
+      show Matrix.trace (ρ γ₀ (W₁ * W₀)) = Matrix.trace (ρ γ₀ (W₀ * W₁))
+      rw [show ρ γ₀ (W₁ * W₀) = ρ γ₀ W₁ * ρ γ₀ W₀ from MonoidHom.map_mul _ _ _,
+          show ρ γ₀ (W₀ * W₁) = ρ γ₀ W₀ * ρ γ₀ W₁ from MonoidHom.map_mul _ _ _,
+          Matrix.trace_mul_comm]]
+  · -- γ₁ ≠ γ₀: the integrand is 0
+    rw [if_neg h, integral_zero, if_neg (Ne.symm h)]
+
+#print axioms luscher_2site_cascade
+
+/-- **3-site 1D Lüscher cascade (Step 3 of the Lüscher roadmap, §8.11.41).**
+
+For irreducible unitary representations of a compact group with normalized Haar
+measure, the 3-site periodic temporal plaquette integral (generalizing the 2-site
+cascade) evaluates to:
+
+    ∫∫∫ χ_{γ₀}(g₀·W₀·g₁⁻¹) · χ_{γ₁}(g₁·W₁·g₂⁻¹) · χ_{γ₂}(g₂·W₂·g₀⁻¹) dg₁ dg₂ dg₀
+      = δ_{γ₀γ₁}·δ_{γ₁γ₂} · (1/d_γ)² · χ_γ(W₀·W₁·W₂)
+
+Proof: integrate out g₁ first (using `luscher_key_identity` with the constant
+χ_{γ₂} pulled out via `integral_const_mul`), then apply `luscher_2site_cascade`
+to the remaining g₀-g₂ integral. The Schur orthogonality forces γ₁=γ₀ and γ₂=γ₀,
+and the surviving coefficient is (1/d_γ)² > 0. 0 sorries, 0 new axioms. -/
+lemma luscher_3site_cascade
+    {G : Type*} [Group G] [TopologicalSpace G]
+    [CompactSpace G] [MeasurableSpace G] [BorelSpace G]
+    (μ : Measure G) [IsProbabilityMeasure μ]
+    (ι : Type) [Fintype ι] [DecidableEq ι] (dims : ι → ℕ)
+    (hDims : ∀ i, 0 < dims i)
+    (ρ : ∀ i, G →* Matrix (Fin (dims i)) (Fin (dims i)) ℂ)
+    (hU : ∀ i, IsUnitaryRepresentation (ρ i))
+    (hIrr : ∀ i, IsIrreducible (ρ i))
+    (γ₀ γ₁ γ₂ : ι) (W₀ W₁ W₂ : G) :
+    ∫ g₀, ∫ g₂, ∫ g₁,
+      repCharacter (ρ γ₀) (g₀ * W₀ * g₁⁻¹) *
+      repCharacter (ρ γ₁) (g₁ * W₁ * g₂⁻¹) *
+      repCharacter (ρ γ₂) (g₂ * W₂ * g₀⁻¹) ∂μ ∂μ ∂μ =
+      if γ₀ = γ₁ ∧ γ₁ = γ₂ then (1 / dims γ₀ : ℂ)^2 * repCharacter (ρ γ₀) (W₀ * W₁ * W₂) else 0 := by
+  -- Helper: cyclic rewrite of the first character factor
+  have hcyc : ∀ (g₀ g₁ : G),
+      repCharacter (ρ γ₀) (g₀ * W₀ * g₁⁻¹) = repCharacter (ρ γ₀) (g₁⁻¹ * (g₀ * W₀)) := by
+    intro g₀ g₁
+    rw [repCharacter_cyclic, repCharacter_cyclic, mul_assoc]
+  -- Helper: the inner integral (for fixed g₀, g₂), after pulling out constant χ_γ₂
+  -- and applying luscher_key_identity to the g₁ integral
+  have hInner : ∀ (g₀ g₂ : G),
+      ∫ g₁, repCharacter (ρ γ₀) (g₀ * W₀ * g₁⁻¹) *
+             repCharacter (ρ γ₁) (g₁ * W₁ * g₂⁻¹) *
+             repCharacter (ρ γ₂) (g₂ * W₂ * g₀⁻¹) ∂μ =
+        (if γ₁ = γ₀ then (1 / dims γ₁ : ℂ) * repCharacter (ρ γ₁) (g₀ * W₀ * W₁ * g₂⁻¹) else 0) *
+        repCharacter (ρ γ₂) (g₂ * W₂ * g₀⁻¹) := by
+    intro g₀ g₂
+    -- Rewrite to put the constant (χ_γ₂) on the left
+    rw [show (∫ g₁, repCharacter (ρ γ₀) (g₀ * W₀ * g₁⁻¹) *
+          repCharacter (ρ γ₁) (g₁ * W₁ * g₂⁻¹) *
+          repCharacter (ρ γ₂) (g₂ * W₂ * g₀⁻¹) ∂μ) =
+        ∫ g₁, repCharacter (ρ γ₂) (g₂ * W₂ * g₀⁻¹) *
+          (repCharacter (ρ γ₀) (g₀ * W₀ * g₁⁻¹) * repCharacter (ρ γ₁) (g₁ * W₁ * g₂⁻¹)) ∂μ from by
+      congr 1 with g₁; ring]
+    -- Pull out the constant χ_γ₂
+    rw [integral_const_mul]
+    -- Rewrite the remaining integrand using hcyc + commutativity to match luscher_key_identity
+    rw [show (∫ g₁, repCharacter (ρ γ₀) (g₀ * W₀ * g₁⁻¹) *
+          repCharacter (ρ γ₁) (g₁ * W₁ * g₂⁻¹) ∂μ) =
+        ∫ g₁, repCharacter (ρ γ₁) (g₁ * (W₁ * g₂⁻¹)) *
+          repCharacter (ρ γ₀) (g₁⁻¹ * (g₀ * W₀)) ∂μ from by
+      congr 1 with g₁; rw [hcyc, mul_assoc]; ring]
+    -- Apply luscher_key_identity to the g₁ integral
+    rw [luscher_key_identity μ ι dims hDims ρ hU hIrr γ₁ γ₀ (W₁ * g₂⁻¹) (g₀ * W₀)]
+    -- Handle the if
+    by_cases h : γ₁ = γ₀
+    · rw [if_pos h, if_pos h]
+      -- Rewrite χ_γ₁((W₁ * g₂⁻¹) * (g₀ * W₀)) = χ_γ₁(g₀ * W₀ * W₁ * g₂⁻¹) via repCharacter_cyclic
+      rw [show repCharacter (ρ γ₁) ((W₁ * g₂⁻¹) * (g₀ * W₀)) =
+           repCharacter (ρ γ₁) (g₀ * W₀ * W₁ * g₂⁻¹) from by
+        rw [← mul_assoc (W₁ * g₂⁻¹) g₀ W₀, repCharacter_cyclic, ← mul_assoc (g₀ * W₀) W₁ g₂⁻¹]]
+      ring
+    · rw [if_neg h, if_neg h]
+      ring
+  -- Rewrite the full integral using hInner
+  rw [show (∫ g₀, ∫ g₂, ∫ g₁,
+        repCharacter (ρ γ₀) (g₀ * W₀ * g₁⁻¹) *
+        repCharacter (ρ γ₁) (g₁ * W₁ * g₂⁻¹) *
+        repCharacter (ρ γ₂) (g₂ * W₂ * g₀⁻¹) ∂μ ∂μ ∂μ) =
+      ∫ g₀, ∫ g₂, (if γ₁ = γ₀ then (1 / dims γ₁ : ℂ) * repCharacter (ρ γ₁) (g₀ * W₀ * W₁ * g₂⁻¹) else 0) *
+        repCharacter (ρ γ₂) (g₂ * W₂ * g₀⁻¹) ∂μ ∂μ from by
+    congr 1 with g₀; congr 1 with g₂; exact hInner g₀ g₂]
+  -- Split cases on γ₁ = γ₀
+  by_cases h : γ₁ = γ₀
+  · -- γ₁ = γ₀ case
+    simp only [if_pos h]
+    -- Step 1: Rewrite integrand to put (1/d_γ₁) on the outside of the product
+    rw [show (∫ g₀, ∫ g₂, ((1 / dims γ₁ : ℂ) * repCharacter (ρ γ₁) (g₀ * W₀ * W₁ * g₂⁻¹)) *
+          repCharacter (ρ γ₂) (g₂ * W₂ * g₀⁻¹) ∂μ ∂μ) =
+        ∫ g₀, ∫ g₂, (1 / dims γ₁ : ℂ) * (repCharacter (ρ γ₁) (g₀ * W₀ * W₁ * g₂⁻¹) *
+          repCharacter (ρ γ₂) (g₂ * W₂ * g₀⁻¹)) ∂μ ∂μ from by
+      congr 1 with g₀; congr 1 with g₂; ring]
+    -- Step 2: Pull (1/d_γ₁) out of the inner integral (over g₂)
+    rw [show (∫ g₀, ∫ g₂, (1 / dims γ₁ : ℂ) * (repCharacter (ρ γ₁) (g₀ * W₀ * W₁ * g₂⁻¹) *
+          repCharacter (ρ γ₂) (g₂ * W₂ * g₀⁻¹)) ∂μ ∂μ) =
+        ∫ g₀, (1 / dims γ₁ : ℂ) * ∫ g₂, repCharacter (ρ γ₁) (g₀ * W₀ * W₁ * g₂⁻¹) *
+          repCharacter (ρ γ₂) (g₂ * W₂ * g₀⁻¹) ∂μ ∂μ from by
+      congr 1 with g₀; rw [integral_const_mul]]
+    -- Step 3: Pull (1/d_γ₁) out of the outer integral (over g₀)
+    rw [integral_const_mul]
+    -- Step 4: Rewrite g₀*W₀*W₁*g₂⁻¹ to g₀*(W₀*W₁)*g₂⁻¹ to match luscher_2site_cascade
+    rw [show (∫ g₀, ∫ g₂, repCharacter (ρ γ₁) (g₀ * W₀ * W₁ * g₂⁻¹) *
+          repCharacter (ρ γ₂) (g₂ * W₂ * g₀⁻¹) ∂μ ∂μ) =
+        ∫ g₀, ∫ g₂, repCharacter (ρ γ₁) (g₀ * (W₀ * W₁) * g₂⁻¹) *
+          repCharacter (ρ γ₂) (g₂ * W₂ * g₀⁻¹) ∂μ ∂μ from by
+      congr 1 with g₀; congr 1 with g₂; rw [mul_assoc g₀ W₀ W₁]]
+    -- Step 5: Apply luscher_2site_cascade with γ₀→γ₁, γ₁→γ₂, W₀→W₀*W₁, W₁→W₂
+    rw [luscher_2site_cascade μ ι dims hDims ρ hU hIrr γ₁ γ₂ (W₀ * W₁) W₂]
+    -- Step 6: Substitute γ₁ = γ₀ (rewrites all γ₁ to γ₀)
+    rw [h]
+    -- Step 7: Simplify γ₀ = γ₀ ∧ γ₀ = γ₂ to γ₀ = γ₂
+    simp only [true_and, eq_self_iff_true]
+    -- Step 8: Split on γ₀ = γ₂
+    by_cases h₂ : γ₀ = γ₂
+    · rw [if_pos h₂, if_pos h₂]
+      ring
+    · rw [if_neg h₂, if_neg h₂]
+      ring
+  · -- γ₁ ≠ γ₀ case: integrand is 0, result is 0
+    simp only [if_neg h]
+    simp only [zero_mul, integral_zero]
+    rw [if_neg (fun hcond => h hcond.1.symm)]
+
+#print axioms luscher_3site_cascade
+
+/-! ## The full 1D L-site Lüscher cascade (Step 3b of the Lüscher roadmap)
+
+The 2-site and 3-site cascades above demonstrate the Lüscher mechanism for fixed small site
+counts. Here we generalize to an arbitrary number of sites via an open-chain integral defined
+recursively, and prove the cascade by induction on the chain length. -/
+
+/-- The open-chain Lüscher cascade integral. For endpoints `a, b` and a non-empty list of
+(representation, Wilson-line) pairs `links = [(γ₀,W₀), (γ₁,W₁), ...]`, this is the iterated
+integral `∫∫... χ_{γ₀}(a·W₀·g₁⁻¹)·χ_{γ₁}(g₁·W₁·g₂⁻¹)·...·χ_{γₙ}(gₙ·Wₙ·b⁻¹)` where the
+interior variables `g₁, ..., gₙ` are integrated out one at a time (each application of
+`luscher_key_identity`). The base case (single link) has no integration. -/
+noncomputable def chainIntegral
+    {G : Type*} [Group G] [TopologicalSpace G] [CompactSpace G] [MeasurableSpace G] [BorelSpace G]
+    (μ : Measure G) [IsProbabilityMeasure μ]
+    (ι : Type) [Fintype ι] [DecidableEq ι] (dims : ι → ℕ)
+    (ρ : ∀ i, G →* Matrix (Fin (dims i)) (Fin (dims i)) ℂ)
+    (a b : G) : List (ι × G) → ℂ
+  | [] => 0
+  | [x] => repCharacter (ρ x.1) (a * x.2 * b⁻¹)
+  | x :: y :: rest => ∫ g, repCharacter (ρ x.1) (a * x.2 * g⁻¹) * chainIntegral μ ι dims ρ g b (y :: rest) ∂μ
+
+/-- Helper: all representations in a list of (rep, Wilson-line) pairs equal a given `γ₀`. -/
+def allSameRep (γ₀ : ι) : List (ι × G) → Prop
+  | [] => True
+  | (γ, _) :: rest => γ = γ₀ ∧ allSameRep γ₀ rest
+
+instance instDecidableAllSameRep [DecidableEq ι] (γ₀ : ι) :
+    ∀ (l : List (ι × G)), Decidable (allSameRep γ₀ l)
+  | [] => isTrue True.intro
+  | (γ, _) :: rest => @instDecidableAnd (γ = γ₀) (allSameRep γ₀ rest)
+      (inferInstance) (instDecidableAllSameRep γ₀ rest)
+
+/-- **Full 1D L-site Lüscher cascade (Step 3b of the Lüscher roadmap, §8.11.41).**
+
+For irreducible unitary representations of a compact group with normalized Haar measure, the
+open-chain L-site Lüscher cascade evaluates to:
+
+    chainIntegral a b [(γ₀,W₀),...,(γₙ,Wₙ)] = δ_{all γ=γ₀} · (1/d_γ)^n · χ_γ(a · (∏ W) · b⁻¹)
+
+where `n = links.length - 1` is the number of interior integrations. The Schur orthogonality
+forces all representations to match (δ conditions), and the surviving coefficient is
+`(1/d_γ)^n > 0`. This generalizes `luscher_2site_cascade` and `luscher_3site_cascade` to
+arbitrary chain length via Fubini iteration of `luscher_key_identity`. 0 sorries, 0 new axioms. -/
+lemma chainIntegral_eq
+    {G : Type*} [Group G] [TopologicalSpace G] [CompactSpace G] [MeasurableSpace G] [BorelSpace G]
+    (μ : Measure G) [IsProbabilityMeasure μ]
+    (ι : Type) [Fintype ι] [DecidableEq ι] (dims : ι → ℕ)
+    (hDims : ∀ i, 0 < dims i)
+    (ρ : ∀ i, G →* Matrix (Fin (dims i)) (Fin (dims i)) ℂ)
+    (hU : ∀ i, IsUnitaryRepresentation (ρ i))
+    (hIrr : ∀ i, IsIrreducible (ρ i))
+    (a b : G) (γ₀ : ι) (W₀ : G) (rest : List (ι × G)) :
+    chainIntegral μ ι dims ρ a b ((γ₀, W₀) :: rest) =
+      if allSameRep γ₀ rest then
+        (1 / dims γ₀ : ℂ)^rest.length * repCharacter (ρ γ₀) (a * (W₀ :: rest.map Prod.snd).prod * b⁻¹)
+      else 0 := by
+  classical
+  revert a γ₀ W₀
+  induction rest with
+  | nil =>
+    intro a γ₀ W₀
+    have hUnfold : chainIntegral μ ι dims ρ a b [(γ₀, W₀)] = repCharacter (ρ γ₀) (a * W₀ * b⁻¹) := rfl
+    rw [hUnfold]
+    simp only [allSameRep, List.length_nil, List.map_nil, List.prod_cons, List.prod_nil,
+      pow_zero, one_mul, mul_one, if_true]
+  | cons x rest' ih =>
+    obtain ⟨γ₁, W₁⟩ := x
+    intro a γ₀ W₀
+    have hUnfold : chainIntegral μ ι dims ρ a b ((γ₀, W₀) :: (γ₁, W₁) :: rest') =
+        ∫ g, repCharacter (ρ γ₀) (a * W₀ * g⁻¹) * chainIntegral μ ι dims ρ g b ((γ₁, W₁) :: rest') ∂μ := rfl
+    rw [hUnfold]
+    by_cases h : allSameRep γ₁ rest'
+    · -- True case: inner chainIntegral = (1/d_γ₁)^rest'.length * χ_γ₁(...)
+      have hIH : ∀ (g : G), chainIntegral μ ι dims ρ g b ((γ₁, W₁) :: rest') =
+          (1 / dims γ₁ : ℂ)^rest'.length *
+          repCharacter (ρ γ₁) (g * (W₁ :: rest'.map Prod.snd).prod * b⁻¹) := by
+        intro g; rw [ih g γ₁ W₁]; simp only [if_pos h]
+      simp only [hIH]
+      -- Pull constant out of integral
+      have hcong : ∫ g, repCharacter (ρ γ₀) (a * W₀ * g⁻¹) *
+            ((1 / dims γ₁ : ℂ)^rest'.length * repCharacter (ρ γ₁)
+              (g * (W₁ :: rest'.map Prod.snd).prod * b⁻¹)) ∂μ =
+          ∫ g, (1 / dims γ₁ : ℂ)^rest'.length *
+            (repCharacter (ρ γ₀) (a * W₀ * g⁻¹) *
+             repCharacter (ρ γ₁) (g * (W₁ :: rest'.map Prod.snd).prod * b⁻¹)) ∂μ := by
+        apply integral_congr_ae
+        exact Filter.Eventually.of_forall (fun g => by ring)
+      rw [hcong, integral_const_mul]
+      -- Cyclic rewrite + rearrange to match luscher_key_identity
+      have hcyc : ∀ (g : G),
+          repCharacter (ρ γ₀) (a * W₀ * g⁻¹) = repCharacter (ρ γ₀) (g⁻¹ * (a * W₀)) := by
+        intro g; rw [repCharacter_cyclic, repCharacter_cyclic, mul_assoc]
+      have h2 : ∫ g, repCharacter (ρ γ₀) (a * W₀ * g⁻¹) *
+            repCharacter (ρ γ₁) (g * (W₁ :: rest'.map Prod.snd).prod * b⁻¹) ∂μ =
+          ∫ g, repCharacter (ρ γ₁) (g * ((W₁ :: rest'.map Prod.snd).prod * b⁻¹)) *
+            repCharacter (ρ γ₀) (g⁻¹ * (a * W₀)) ∂μ := by
+        apply integral_congr_ae
+        apply Filter.Eventually.of_forall
+        intro g
+        change repCharacter (ρ γ₀) (a * W₀ * g⁻¹) * repCharacter (ρ γ₁) (g * (W₁ :: rest'.map Prod.snd).prod * b⁻¹) =
+          repCharacter (ρ γ₁) (g * ((W₁ :: rest'.map Prod.snd).prod * b⁻¹)) * repCharacter (ρ γ₀) (g⁻¹ * (a * W₀))
+        rw [hcyc g]
+        have hg : g * (W₁ :: rest'.map Prod.snd).prod * b⁻¹ =
+            g * ((W₁ :: rest'.map Prod.snd).prod * b⁻¹) := mul_assoc _ _ _
+        rw [hg]
+        ring
+      rw [h2]
+      rw [luscher_key_identity μ ι dims hDims ρ hU hIrr γ₁ γ₀
+          ((W₁ :: rest'.map Prod.snd).prod * b⁻¹) (a * W₀)]
+      by_cases hγ : γ₁ = γ₀
+      · -- γ₁ = γ₀
+        simp only [if_pos hγ]
+        rw [show repCharacter (ρ γ₁) (((W₁ :: rest'.map Prod.snd).prod * b⁻¹) * (a * W₀)) =
+            repCharacter (ρ γ₁) (a * W₀ * (W₁ :: rest'.map Prod.snd).prod * b⁻¹) from by
+          rw [← mul_assoc, repCharacter_cyclic, ← mul_assoc]]
+        have hRHS : allSameRep γ₀ ((γ₁, W₁) :: rest') := by
+          rw [allSameRep]; refine ⟨hγ, ?_⟩; rw [← hγ]; exact h
+        simp only [hRHS, if_true]
+        rw [hγ]
+        rw [show ((γ₀, W₁) :: rest').length = rest'.length + 1 from rfl]
+        rw [show (W₀ :: ((γ₀, W₁) :: rest').map Prod.snd).prod =
+            W₀ * (W₁ :: rest'.map Prod.snd).prod from by
+          rw [List.map_cons, List.prod_cons]]
+        rw [pow_add, pow_one]
+        rw [show a * (W₀ * (W₁ :: rest'.map Prod.snd).prod) * b⁻¹ =
+            a * W₀ * (W₁ :: rest'.map Prod.snd).prod * b⁻¹ from by ac_rfl]
+        ring
+      · -- γ₁ ≠ γ₀
+        simp only [if_neg hγ, mul_zero]
+        have hRHS : ¬allSameRep γ₀ ((γ₁, W₁) :: rest') := by
+          rw [allSameRep]; exact fun hcond => hγ hcond.1
+        simp only [if_neg hRHS]
+    · -- False case: inner chainIntegral = 0
+      have hIH : ∀ (g : G), chainIntegral μ ι dims ρ g b ((γ₁, W₁) :: rest') = 0 := by
+        intro g; rw [ih g γ₁ W₁]; simp only [if_neg h]
+      simp only [hIH, mul_zero, integral_zero]
+      have hRHS : ¬allSameRep γ₀ ((γ₁, W₁) :: rest') := by
+        rw [allSameRep]
+        intro hcond
+        exact h (hcond.1 ▸ hcond.2)
+      simp only [if_neg hRHS]
+
+#print axioms chainIntegral_eq
+
+/-- **2-site 2D Lüscher cascade at the character level (Step 3c of the Lüscher roadmap,
+§8.11.42).**
+
+For irreducible unitary representations of a compact group with normalized Haar
+measure, the 2-site 2D cascade integral — where the two plaquettes at each site
+share the same `W` factor (simplification) — evaluates to:
+
+    ∫∫ [χ_{s₁}(g₀·W·g₁⁻¹) · χ_{s₂}(g₀·W·g₁⁻¹)] ·
+        [χ_{t₁}(g₁·V·g₀⁻¹) · χ_{t₂}(g₁·V·g₀⁻¹)] dμ(g₁) dμ(g₀)
+      = ∑_ν cg s₁ s₂ ν · cg t₁ t₂ ν · (1/d_ν) · χ_ν(W·V)
+
+The proof uses the Clebsch-Gordan character decomposition `hcg_decomp` to rewrite
+each product of two characters as a sum over irreps, then exchanges the finite sums
+with the inner `g₁` integral (justified by integrability from Schur orthogonality
+of matrix elements), and applies `luscher_key_identity` to each inner integral.
+The Schur orthogonality forces `ν' = ν`, and the surviving coefficient is
+`cg s₁ s₂ ν · cg t₁ t₂ ν · (1/d_ν)`. The `χ_ν(V·W)` from `luscher_key_identity`
+is converted to `χ_ν(W·V)` by `trace_mul_comm`.
+
+This is the character-level 2-site 2D cascade: it uses the CG decomposition
+`hcg_decomp` (which gives non-negative CG coefficients `cg s t ν ≥ 0` in the
+Peter-Weyl axiom) combined with `luscher_key_identity`. The result is a sum of
+terms `cg s₁ s₂ ν · cg t₁ t₂ ν · (1/d_ν) · χ_ν(W·V)`, each with a non-negative
+coefficient `cg s₁ s₂ ν · cg t₁ t₂ ν ≥ 0` (product of non-negative CG coefficients)
+times the positive-definite character `χ_ν`. 0 sorries, 0 new axioms. -/
+lemma luscher_2site_2D_cascade_charlevel
+    {G : Type*} [Group G] [TopologicalSpace G]
+    [CompactSpace G] [MeasurableSpace G] [BorelSpace G]
+    (μ : Measure G) [IsProbabilityMeasure μ]
+    (ι : Type) [Fintype ι] [DecidableEq ι] (dims : ι → ℕ)
+    (hDims : ∀ i, 0 < dims i)
+    (ρ : ∀ i, G →* Matrix (Fin (dims i)) (Fin (dims i)) ℂ)
+    (hU : ∀ i, IsUnitaryRepresentation (ρ i))
+    (hIrr : ∀ i, IsIrreducible (ρ i))
+    (cg : ι → ι → ι → ℝ)
+    (hcg_decomp : ∀ s t (g : G),
+      repCharacter (ρ s) g * repCharacter (ρ t) g =
+      ∑ ν : ι, (cg s t ν : ℂ) * repCharacter (ρ ν) g)
+    (s₁ s₂ t₁ t₂ : ι) (W V : G) :
+    ∫ g₀, ∫ g₁,
+      (repCharacter (ρ s₁) (g₀ * W * g₁⁻¹) * repCharacter (ρ s₂) (g₀ * W * g₁⁻¹)) *
+      (repCharacter (ρ t₁) (g₁ * V * g₀⁻¹) * repCharacter (ρ t₂) (g₁ * V * g₀⁻¹)) ∂μ ∂μ =
+    ∑ ν : ι, (cg s₁ s₂ ν : ℂ) * (cg t₁ t₂ ν : ℂ) *
+      ((1 / dims ν : ℂ) * repCharacter (ρ ν) (W * V)) := by
+  obtain ⟨hInt, hSchur_diag, hSchur_offdiag⟩ :=
+    characterOrthogonality μ ι dims hDims ρ hU hIrr
+  have htrace_mul : ∀ (n : ℕ) (A B : Matrix (Fin n) (Fin n) ℂ),
+      Matrix.trace (A * B) = ∑ i : Fin n, ∑ j : Fin n, A i j * B j i := by
+    intro n A B; simp [Matrix.trace, Matrix.mul_apply]
+  -- Integrability of character product w.r.t. g₁ (for fixed g₀, ν, ν')
+  have hInt_char : ∀ (g₀ : G) (ν ν' : ι),
+      Integrable (fun g₁ =>
+        repCharacter (ρ ν) (g₀ * W * g₁⁻¹) * repCharacter (ρ ν') (g₁ * V * g₀⁻¹)) μ := by
+    intro g₀ ν ν'
+    have hchar_ν : ∀ (g₁ : G),
+        repCharacter (ρ ν) (g₀ * W * g₁⁻¹) =
+        ∑ a : Fin (dims ν), ∑ b : Fin (dims ν),
+          (ρ ν (g₀ * W)) a b * conj ((ρ ν g₁) a b) := by
+      intro g₁
+      rw [repCharacter, MonoidHom.map_mul, htrace_mul]
+      apply Finset.sum_congr rfl
+      intro a _
+      apply Finset.sum_congr rfl
+      intro b _
+      rw [repMatrixElement_inv (ρ ν) (hU ν) g₁ b a]
+    have hchar_ν' : ∀ (g₁ : G),
+        repCharacter (ρ ν') (g₁ * V * g₀⁻¹) =
+        ∑ c : Fin (dims ν'), ∑ d : Fin (dims ν'),
+          (ρ ν' g₁) c d * (ρ ν' (V * g₀⁻¹)) d c := by
+      intro g₁
+      rw [show g₁ * V * g₀⁻¹ = g₁ * (V * g₀⁻¹) from mul_assoc _ _ _,
+          repCharacter, MonoidHom.map_mul, htrace_mul]
+    have hprod_expand : ∀ (g₁ : G),
+        repCharacter (ρ ν) (g₀ * W * g₁⁻¹) * repCharacter (ρ ν') (g₁ * V * g₀⁻¹) =
+        ∑ a : Fin (dims ν), ∑ c : Fin (dims ν'),
+          ∑ b : Fin (dims ν), ∑ d : Fin (dims ν'),
+            (ρ ν (g₀ * W)) a b * (ρ ν' (V * g₀⁻¹)) d c *
+            ((ρ ν' g₁) c d * conj ((ρ ν g₁) a b)) := by
+      intro g₁
+      rw [hchar_ν, hchar_ν']
+      simp only [Fintype.sum_mul_sum]
+      apply Finset.sum_congr rfl
+      intro a _
+      apply Finset.sum_congr rfl
+      intro c _
+      apply Finset.sum_congr rfl
+      intro b _
+      apply Finset.sum_congr rfl
+      intro d _
+      ring
+    have hInt_term : ∀ (a : Fin (dims ν)) (b : Fin (dims ν))
+        (c : Fin (dims ν')) (d : Fin (dims ν')),
+        Integrable (fun g₁ =>
+          (ρ ν (g₀ * W)) a b * (ρ ν' (V * g₀⁻¹)) d c *
+          ((ρ ν' g₁) c d * conj ((ρ ν g₁) a b))) μ := by
+      intro a b c d
+      have h_gdep : Integrable (fun g₁ => (ρ ν' g₁) c d * conj ((ρ ν g₁) a b)) μ :=
+        hInt ν' ν c d a b
+      exact (h_gdep.smul ((ρ ν (g₀ * W)) a b * (ρ ν' (V * g₀⁻¹)) d c)).congr
+        (Filter.Eventually.of_forall (fun g₁ => by
+          simp only [Pi.smul_def, smul_eq_mul]))
+    have hInt_d : ∀ (a : Fin (dims ν)) (c : Fin (dims ν')) (b : Fin (dims ν)),
+        Integrable (fun g₁ => ∑ d : Fin (dims ν'),
+          (ρ ν (g₀ * W)) a b * (ρ ν' (V * g₀⁻¹)) d c *
+          ((ρ ν' g₁) c d * conj ((ρ ν g₁) a b))) μ :=
+      fun a c b => integrable_finsetSum Finset.univ (fun d _ => hInt_term a b c d)
+    have hInt_b : ∀ (a : Fin (dims ν)) (c : Fin (dims ν')),
+        Integrable (fun g₁ => ∑ b : Fin (dims ν), ∑ d : Fin (dims ν'),
+          (ρ ν (g₀ * W)) a b * (ρ ν' (V * g₀⁻¹)) d c *
+          ((ρ ν' g₁) c d * conj ((ρ ν g₁) a b))) μ :=
+      fun a c => integrable_finsetSum Finset.univ (fun b _ => hInt_d a c b)
+    have hInt_c : ∀ (a : Fin (dims ν)),
+        Integrable (fun g₁ => ∑ c : Fin (dims ν'), ∑ b : Fin (dims ν), ∑ d : Fin (dims ν'),
+          (ρ ν (g₀ * W)) a b * (ρ ν' (V * g₀⁻¹)) d c *
+          ((ρ ν' g₁) c d * conj ((ρ ν g₁) a b))) μ :=
+      fun a => integrable_finsetSum Finset.univ (fun c _ => hInt_b a c)
+    have hInt_sum : Integrable (fun g₁ =>
+        ∑ a : Fin (dims ν), ∑ c : Fin (dims ν'),
+          ∑ b : Fin (dims ν), ∑ d : Fin (dims ν'),
+            (ρ ν (g₀ * W)) a b * (ρ ν' (V * g₀⁻¹)) d c *
+            ((ρ ν' g₁) c d * conj ((ρ ν g₁) a b))) μ :=
+      integrable_finsetSum Finset.univ (fun a _ => hInt_c a)
+    exact hInt_sum.congr (Filter.Eventually.of_forall (fun g₁ => (hprod_expand g₁).symm))
+  -- Integrability of each (ν, ν') term w.r.t. g₁
+  have hInt_term_νν' : ∀ (g₀ : G) (ν ν' : ι),
+      Integrable (fun g₁ =>
+        (cg s₁ s₂ ν : ℂ) * (cg t₁ t₂ ν' : ℂ) *
+        (repCharacter (ρ ν) (g₀ * W * g₁⁻¹) * repCharacter (ρ ν') (g₁ * V * g₀⁻¹))) μ := by
+    intro g₀ ν ν'
+    exact ((hInt_char g₀ ν ν').smul ((cg s₁ s₂ ν : ℂ) * (cg t₁ t₂ ν' : ℂ))).congr
+      (Filter.Eventually.of_forall (fun g₁ => by
+        simp only [Pi.smul_def, smul_eq_mul]))
+  have hInt_ν' : ∀ (g₀ : G) (ν : ι),
+      Integrable (fun g₁ =>
+        ∑ ν' : ι, (cg s₁ s₂ ν : ℂ) * (cg t₁ t₂ ν' : ℂ) *
+        (repCharacter (ρ ν) (g₀ * W * g₁⁻¹) * repCharacter (ρ ν') (g₁ * V * g₀⁻¹))) μ :=
+    fun g₀ ν => integrable_finsetSum Finset.univ (fun ν' _ => hInt_term_νν' g₀ ν ν')
+  -- Pointwise identity: integrand = ∑ ν ∑ ν', cg·cg'·χ_ν·χ_{ν'}
+  have hprod : ∀ (g₀ g₁ : G),
+      (repCharacter (ρ s₁) (g₀ * W * g₁⁻¹) * repCharacter (ρ s₂) (g₀ * W * g₁⁻¹)) *
+      (repCharacter (ρ t₁) (g₁ * V * g₀⁻¹) * repCharacter (ρ t₂) (g₁ * V * g₀⁻¹)) =
+      ∑ ν : ι, ∑ ν' : ι,
+        (cg s₁ s₂ ν : ℂ) * (cg t₁ t₂ ν' : ℂ) *
+        (repCharacter (ρ ν) (g₀ * W * g₁⁻¹) * repCharacter (ρ ν') (g₁ * V * g₀⁻¹)) := by
+    intro g₀ g₁
+    rw [hcg_decomp s₁ s₂ (g₀ * W * g₁⁻¹), hcg_decomp t₁ t₂ (g₁ * V * g₀⁻¹)]
+    simp only [Fintype.sum_mul_sum]
+    apply Finset.sum_congr rfl
+    intro ν _
+    apply Finset.sum_congr rfl
+    intro ν' _
+    ring
+  -- Inner integral via luscher_key_identity
+  have hInner : ∀ (g₀ : G) (ν ν' : ι),
+      ∫ g₁, repCharacter (ρ ν) (g₀ * W * g₁⁻¹) * repCharacter (ρ ν') (g₁ * V * g₀⁻¹) ∂μ =
+      if ν' = ν then (1 / dims ν' : ℂ) * repCharacter (ρ ν') (V * W) else 0 := by
+    intro g₀ ν ν'
+    rw [show (∫ g₁, repCharacter (ρ ν) (g₀ * W * g₁⁻¹) *
+          repCharacter (ρ ν') (g₁ * V * g₀⁻¹) ∂μ) =
+        ∫ g₁, repCharacter (ρ ν') (g₁ * (V * g₀⁻¹)) *
+          repCharacter (ρ ν) (g₁⁻¹ * (g₀ * W)) ∂μ from by
+      congr 1 with g₁
+      rw [show repCharacter (ρ ν) (g₀ * W * g₁⁻¹) = repCharacter (ρ ν) (g₁⁻¹ * (g₀ * W)) from by
+        rw [repCharacter_cyclic, repCharacter_cyclic, mul_assoc]]
+      rw [show repCharacter (ρ ν') (g₁ * V * g₀⁻¹) = repCharacter (ρ ν') (g₁ * (V * g₀⁻¹)) from by
+        rw [mul_assoc]]
+      ring]
+    rw [luscher_key_identity μ ι dims hDims ρ hU hIrr ν' ν (V * g₀⁻¹) (g₀ * W)]
+    by_cases h : ν' = ν
+    · rw [if_pos h, if_pos h]
+      rw [show (V * g₀⁻¹) * (g₀ * W) = V * W from by
+        have hinv : g₀⁻¹ * g₀ = 1 := inv_mul_cancel _
+        calc (V * g₀⁻¹) * (g₀ * W) = V * (g₀⁻¹ * (g₀ * W)) := by rw [mul_assoc]
+          _ = V * ((g₀⁻¹ * g₀) * W) := by rw [← mul_assoc g₀⁻¹ g₀ W]
+          _ = V * (1 * W) := by rw [hinv]
+          _ = V * W := by rw [one_mul]]
+    · rw [if_neg h, if_neg h]
+  -- Inner integral with constants pulled out
+  have hInner_full : ∀ (g₀ : G) (ν ν' : ι),
+      ∫ g₁, (cg s₁ s₂ ν : ℂ) * (cg t₁ t₂ ν' : ℂ) *
+        (repCharacter (ρ ν) (g₀ * W * g₁⁻¹) * repCharacter (ρ ν') (g₁ * V * g₀⁻¹)) ∂μ =
+      (cg s₁ s₂ ν : ℂ) * (cg t₁ t₂ ν' : ℂ) *
+      (if ν' = ν then (1 / dims ν' : ℂ) * repCharacter (ρ ν') (V * W) else 0) := by
+    intro g₀ ν ν'
+    rw [integral_const_mul, hInner g₀ ν ν']
+  -- Rewrite integrand using hprod
+  rw [show (∫ g₀, ∫ g₁,
+        (repCharacter (ρ s₁) (g₀ * W * g₁⁻¹) * repCharacter (ρ s₂) (g₀ * W * g₁⁻¹)) *
+        (repCharacter (ρ t₁) (g₁ * V * g₀⁻¹) * repCharacter (ρ t₂) (g₁ * V * g₀⁻¹)) ∂μ ∂μ) =
+      ∫ g₀, ∫ g₁,
+        (∑ ν : ι, ∑ ν' : ι,
+          (cg s₁ s₂ ν : ℂ) * (cg t₁ t₂ ν' : ℂ) *
+          (repCharacter (ρ ν) (g₀ * W * g₁⁻¹) * repCharacter (ρ ν') (g₁ * V * g₀⁻¹))) ∂μ ∂μ from by
+    congr 1 with g₀; congr 1 with g₁; exact hprod g₀ g₁]
+  -- Exchange ν sum with g₁ integral
+  rw [show (∫ g₀, ∫ g₁,
+        (∑ ν : ι, ∑ ν' : ι,
+          (cg s₁ s₂ ν : ℂ) * (cg t₁ t₂ ν' : ℂ) *
+          (repCharacter (ρ ν) (g₀ * W * g₁⁻¹) * repCharacter (ρ ν') (g₁ * V * g₀⁻¹))) ∂μ ∂μ) =
+      ∫ g₀, ∑ ν : ι, ∫ g₁,
+        (∑ ν' : ι,
+          (cg s₁ s₂ ν : ℂ) * (cg t₁ t₂ ν' : ℂ) *
+          (repCharacter (ρ ν) (g₀ * W * g₁⁻¹) * repCharacter (ρ ν') (g₁ * V * g₀⁻¹))) ∂μ ∂μ from by
+    congr 1 with g₀
+    rw [integral_finsetSum Finset.univ (fun ν _ => hInt_ν' g₀ ν)]]
+  -- Exchange ν' sum with g₁ integral
+  rw [show (∫ g₀, ∑ ν : ι, ∫ g₁,
+        (∑ ν' : ι,
+          (cg s₁ s₂ ν : ℂ) * (cg t₁ t₂ ν' : ℂ) *
+          (repCharacter (ρ ν) (g₀ * W * g₁⁻¹) * repCharacter (ρ ν') (g₁ * V * g₀⁻¹))) ∂μ ∂μ) =
+      ∫ g₀, ∑ ν : ι, ∑ ν' : ι, ∫ g₁,
+        ((cg s₁ s₂ ν : ℂ) * (cg t₁ t₂ ν' : ℂ) *
+          (repCharacter (ρ ν) (g₀ * W * g₁⁻¹) * repCharacter (ρ ν') (g₁ * V * g₀⁻¹))) ∂μ ∂μ from by
+    congr 1 with g₀
+    apply Finset.sum_congr rfl
+    intro ν _
+    rw [integral_finsetSum Finset.univ (fun ν' _ => hInt_term_νν' g₀ ν ν')]]
+  -- Apply hInner_full to each inner integral
+  rw [show (∫ g₀, ∑ ν : ι, ∑ ν' : ι, ∫ g₁,
+        ((cg s₁ s₂ ν : ℂ) * (cg t₁ t₂ ν' : ℂ) *
+          (repCharacter (ρ ν) (g₀ * W * g₁⁻¹) * repCharacter (ρ ν') (g₁ * V * g₀⁻¹))) ∂μ ∂μ) =
+      ∫ g₀, ∑ ν : ι, ∑ ν' : ι,
+        (cg s₁ s₂ ν : ℂ) * (cg t₁ t₂ ν' : ℂ) *
+        (if ν' = ν then (1 / dims ν' : ℂ) * repCharacter (ρ ν') (V * W) else 0) ∂μ from by
+    congr 1 with g₀
+    apply Finset.sum_congr rfl
+    intro ν _
+    apply Finset.sum_congr rfl
+    intro ν' _
+    exact hInner_full g₀ ν ν']
+  -- Pull constant out of g₀ integral (integrand is independent of g₀)
+  rw [show (∫ g₀, ∑ ν : ι, ∑ ν' : ι,
+        (cg s₁ s₂ ν : ℂ) * (cg t₁ t₂ ν' : ℂ) *
+        (if ν' = ν then (1 / dims ν' : ℂ) * repCharacter (ρ ν') (V * W) else 0) ∂μ) =
+      ∑ ν : ι, ∑ ν' : ι,
+        (cg s₁ s₂ ν : ℂ) * (cg t₁ t₂ ν' : ℂ) *
+        (if ν' = ν then (1 / dims ν' : ℂ) * repCharacter (ρ ν') (V * W) else 0) from by
+    haveI : IsFiniteMeasure μ := inferInstance
+    simp [integral_const, IsProbabilityMeasure.measure_univ]]
+  -- Collapse the if and simplify
+  rw [show (∑ ν : ι, ∑ ν' : ι,
+        (cg s₁ s₂ ν : ℂ) * (cg t₁ t₂ ν' : ℂ) *
+        (if ν' = ν then (1 / dims ν' : ℂ) * repCharacter (ρ ν') (V * W) else 0)) =
+      ∑ ν : ι, (cg s₁ s₂ ν : ℂ) * (cg t₁ t₂ ν : ℂ) *
+        ((1 / dims ν : ℂ) * repCharacter (ρ ν) (V * W)) from by
+    apply Finset.sum_congr rfl
+    intro ν _
+    have key : ∑ ν' : ι, (cg s₁ s₂ ν : ℂ) * (cg t₁ t₂ ν' : ℂ) *
+        (if ν' = ν then (1 / dims ν' : ℂ) * repCharacter (ρ ν') (V * W) else 0) =
+      (cg s₁ s₂ ν : ℂ) * (cg t₁ t₂ ν : ℂ) *
+        (if ν = ν then (1 / dims ν : ℂ) * repCharacter (ρ ν) (V * W) else 0) := by
+      refine Finset.sum_eq_single ν ?_ ?_
+      · intro ν' _ hne
+        rw [if_neg (fun h => hne h)]
+        ring
+      · intro h; exact absurd (Finset.mem_univ ν) h
+    rw [key, if_pos rfl]]
+  -- χ_ν(V*W) = χ_ν(W*V) by trace_mul_comm
+  apply Finset.sum_congr rfl
+  intro ν _
+  rw [show repCharacter (ρ ν) (V * W) = repCharacter (ρ ν) (W * V) from by
+    show Matrix.trace (ρ ν (V * W)) = Matrix.trace (ρ ν (W * V))
+    rw [show ρ ν (V * W) = ρ ν V * ρ ν W from MonoidHom.map_mul _ _ _,
+        show ρ ν (W * V) = ρ ν W * ρ ν V from MonoidHom.map_mul _ _ _,
+        Matrix.trace_mul_comm]]
+
+#print axioms luscher_2site_2D_cascade_charlevel
+
+/-- **Integrability of a character product** `χ_s(A · g⁻¹) · χ_t(g · B)` w.r.t. `g`.
+
+For irreducible unitary representations of a compact group with normalized Haar
+measure, the product of two characters `χ_s(A · g⁻¹) · χ_t(g · B)` is integrable
+w.r.t. `g` for any fixed `A, B ∈ G` and representations `s, t`. This follows by
+expanding both characters into matrix elements (using unitarity `ρ(g⁻¹) = ρ(g)†`
+via `repMatrixElement_inv`), distributing the product via `Fintype.sum_mul_sum`,
+and applying the matrix-element integrability from `characterOrthogonality`.
+
+This is the standalone generalization of the local `hInt_char` hypothesis in
+`luscher_2site_cascade_coeff`, extracted for reuse in the 3-site cascade. -/
+lemma char_product_integrable
+    {G : Type*} [Group G] [TopologicalSpace G]
+    [CompactSpace G] [MeasurableSpace G] [BorelSpace G]
+    (μ : Measure G) [IsProbabilityMeasure μ]
+    (ι : Type) [Fintype ι] [DecidableEq ι] (dims : ι → ℕ)
+    (hDims : ∀ i, 0 < dims i)
+    (ρ : ∀ i, G →* Matrix (Fin (dims i)) (Fin (dims i)) ℂ)
+    (hU : ∀ i, IsUnitaryRepresentation (ρ i))
+    (hIrr : ∀ i, IsIrreducible (ρ i))
+    (s t : ι) (A B : G) :
+    Integrable (fun g =>
+      repCharacter (ρ s) (A * g⁻¹) * repCharacter (ρ t) (g * B)) μ := by
+  obtain ⟨hInt, hSchur_diag, hSchur_offdiag⟩ :=
+    characterOrthogonality μ ι dims hDims ρ hU hIrr
+  have htrace_mul : ∀ (n : ℕ) (A B : Matrix (Fin n) (Fin n) ℂ),
+      Matrix.trace (A * B) = ∑ i : Fin n, ∑ j : Fin n, A i j * B j i := by
+    intro n A B; simp [Matrix.trace, Matrix.mul_apply]
+  have hchar_s : ∀ (g : G),
+      repCharacter (ρ s) (A * g⁻¹) =
+      ∑ a : Fin (dims s), ∑ b : Fin (dims s),
+        (ρ s A) a b * conj ((ρ s g) a b) := by
+    intro g
+    rw [repCharacter, MonoidHom.map_mul, htrace_mul]
+    apply Finset.sum_congr rfl
+    intro a _
+    apply Finset.sum_congr rfl
+    intro b _
+    rw [repMatrixElement_inv (ρ s) (hU s) g b a]
+  have hchar_t : ∀ (g : G),
+      repCharacter (ρ t) (g * B) =
+      ∑ c : Fin (dims t), ∑ d : Fin (dims t),
+        (ρ t g) c d * (ρ t B) d c := by
+    intro g
+    rw [repCharacter, MonoidHom.map_mul, htrace_mul]
+  have hprod_expand : ∀ (g : G),
+      repCharacter (ρ s) (A * g⁻¹) * repCharacter (ρ t) (g * B) =
+      ∑ a : Fin (dims s), ∑ c : Fin (dims t),
+        ∑ b : Fin (dims s), ∑ d : Fin (dims t),
+          (ρ s A) a b * (ρ t B) d c *
+          ((ρ t g) c d * conj ((ρ s g) a b)) := by
+    intro g
+    rw [hchar_s, hchar_t]
+    simp only [Fintype.sum_mul_sum]
+    apply Finset.sum_congr rfl
+    intro a _
+    apply Finset.sum_congr rfl
+    intro c _
+    apply Finset.sum_congr rfl
+    intro b _
+    apply Finset.sum_congr rfl
+    intro d _
+    ring
+  have hInt_term : ∀ (a : Fin (dims s)) (b : Fin (dims s))
+      (c : Fin (dims t)) (d : Fin (dims t)),
+      Integrable (fun g =>
+        (ρ s A) a b * (ρ t B) d c *
+        ((ρ t g) c d * conj ((ρ s g) a b))) μ := by
+    intro a b c d
+    have h_gdep : Integrable (fun g => (ρ t g) c d * conj ((ρ s g) a b)) μ :=
+      hInt t s c d a b
+    exact (h_gdep.smul ((ρ s A) a b * (ρ t B) d c)).congr
+      (Filter.Eventually.of_forall (fun g => by
+        simp only [Pi.smul_def, smul_eq_mul]))
+  have hInt_d : ∀ (a : Fin (dims s)) (c : Fin (dims t)) (b : Fin (dims s)),
+      Integrable (fun g => ∑ d : Fin (dims t),
+        (ρ s A) a b * (ρ t B) d c *
+        ((ρ t g) c d * conj ((ρ s g) a b))) μ :=
+    fun a c b => integrable_finsetSum Finset.univ (fun d _ => hInt_term a b c d)
+  have hInt_b : ∀ (a : Fin (dims s)) (c : Fin (dims t)),
+      Integrable (fun g => ∑ b : Fin (dims s), ∑ d : Fin (dims t),
+        (ρ s A) a b * (ρ t B) d c *
+        ((ρ t g) c d * conj ((ρ s g) a b))) μ :=
+    fun a c => integrable_finsetSum Finset.univ (fun b _ => hInt_d a c b)
+  have hInt_c : ∀ (a : Fin (dims s)),
+      Integrable (fun g => ∑ c : Fin (dims t), ∑ b : Fin (dims s), ∑ d : Fin (dims t),
+        (ρ s A) a b * (ρ t B) d c *
+        ((ρ t g) c d * conj ((ρ s g) a b))) μ :=
+    fun a => integrable_finsetSum Finset.univ (fun c _ => hInt_b a c)
+  have hInt_sum : Integrable (fun g =>
+      ∑ a : Fin (dims s), ∑ c : Fin (dims t),
+        ∑ b : Fin (dims s), ∑ d : Fin (dims t),
+          (ρ s A) a b * (ρ t B) d c *
+          ((ρ t g) c d * conj ((ρ s g) a b))) μ :=
+    integrable_finsetSum Finset.univ (fun a _ => hInt_c a)
+  exact hInt_sum.congr (Filter.Eventually.of_forall (fun g => (hprod_expand g).symm))
+
+#print axioms char_product_integrable
+/-! ## Step 3 bridge lemma: plaquette product expansion → Lüscher cascade
+
+The following lemma is the key bridge connecting the plaquette product expansion
+(step 2: `∑_{s,t} F(s,t) · χ_s(·) · χ_t(·)` with `F(s,t) ≥ 0`) to the Lüscher
+cascade (step 3: integrating out temporal links `g₀, g₁`).  It takes arbitrary
+non-negative coefficients `F : ι → ι → ℝ` and evaluates the 2-site cascade:
+
+    ∫∫ ∑_{s,t} F(s,t) · χ_s(g₀·W·g₁⁻¹) · χ_t(g₁·V·g₀⁻¹) dg₁ dg₀
+      = ∑_s F(s,s) · (1/d_s) · χ_s(W·V)
+
+The resulting kernel `K(W,V) = ∑_s (F(s,s) · (1/d_s)) · χ_s(W·V)` has non-negative
+coefficients `F(s,s) · (1/d_s) ≥ 0` (since `F(s,s) ≥ 0` and `1/d_s > 0`), matching
+`character_kernel_integral_nonneg` (step 4).
+
+The proof follows the same pattern as `luscher_2site_2D_cascade_charlevel` but is
+simpler: no Clebsch–Gordan decomposition is needed since the integrand is already
+a sum of single-character products.  The key steps are:
+(1) establish integrability of each character product w.r.t. `g₁` using
+    `characterOrthogonality` (matrix-element integrability) and the unitary
+    expansion `ρ(g₁⁻¹) = ρ(g₁)†`;
+(2) exchange the finite sums with the inner `g₁` integral via `integral_finsetSum`;
+(3) apply `luscher_key_identity` to each `(s,t)` term (Schur orthogonality forces
+    `s = t`);
+(4) integrate out `g₀` (the result is constant, so the integral equals the
+    constant over a probability measure);
+(5) collapse the `if t = s` to keep only the diagonal `t = s` terms.
+See `docs/transfer_matrix_positivity_design.md` §8.11.47. -/
+
+/-- **2-site Lüscher cascade with arbitrary non-negative coefficients (Step 3 bridge).**
+
+For irreducible unitary representations of a compact group with normalized Haar
+measure, and arbitrary non-negative coefficients `F : ι → ι → ℝ` with `F s t ≥ 0`,
+the 2-site cascade with summed character products evaluates to:
+
+    ∫∫ ∑_{s,t} F(s,t) · χ_s(g₀·W·g₁⁻¹) · χ_t(g₁·V·g₀⁻¹) dg₁ dg₀
+      = ∑_s F(s,s) · (1/d_s) · χ_s(W·V)
+
+The coefficient `F(s,s) · (1/d_s) ≥ 0` (since `F(s,s) ≥ 0` and `1/d_s > 0`),
+so the resulting kernel matches `character_kernel_integral_nonneg`.  0 sorries,
+0 new axioms. -/
+lemma luscher_2site_cascade_coeff
+    {G : Type*} [Group G] [TopologicalSpace G]
+    [CompactSpace G] [MeasurableSpace G] [BorelSpace G]
+    (μ : Measure G) [IsProbabilityMeasure μ]
+    (ι : Type) [Fintype ι] [DecidableEq ι] (dims : ι → ℕ)
+    (hDims : ∀ i, 0 < dims i)
+    (ρ : ∀ i, G →* Matrix (Fin (dims i)) (Fin (dims i)) ℂ)
+    (hU : ∀ i, IsUnitaryRepresentation (ρ i))
+    (hIrr : ∀ i, IsIrreducible (ρ i))
+    (F : ι → ι → ℝ) (hF : ∀ s t, 0 ≤ F s t)
+    (W V : G) :
+    ∫ g₀, ∫ g₁,
+      ∑ s, ∑ t, (F s t : ℂ) *
+        (repCharacter (ρ s) (g₀ * W * g₁⁻¹) * repCharacter (ρ t) (g₁ * V * g₀⁻¹)) ∂μ ∂μ =
+    ∑ s, (F s s : ℂ) * ((1 / dims s : ℂ) * repCharacter (ρ s) (W * V)) := by
+  obtain ⟨hInt, hSchur_diag, hSchur_offdiag⟩ :=
+    characterOrthogonality μ ι dims hDims ρ hU hIrr
+  have htrace_mul : ∀ (n : ℕ) (A B : Matrix (Fin n) (Fin n) ℂ),
+      Matrix.trace (A * B) = ∑ i : Fin n, ∑ j : Fin n, A i j * B j i := by
+    intro n A B; simp [Matrix.trace, Matrix.mul_apply]
+  -- Integrability of character product w.r.t. g₁ (for fixed g₀, s, t)
+  have hInt_char : ∀ (g₀ : G) (s t : ι),
+      Integrable (fun g₁ =>
+        repCharacter (ρ s) (g₀ * W * g₁⁻¹) * repCharacter (ρ t) (g₁ * V * g₀⁻¹)) μ := by
+    intro g₀ s t
+    have hchar_s : ∀ (g₁ : G),
+        repCharacter (ρ s) (g₀ * W * g₁⁻¹) =
+        ∑ a : Fin (dims s), ∑ b : Fin (dims s),
+          (ρ s (g₀ * W)) a b * conj ((ρ s g₁) a b) := by
+      intro g₁
+      rw [repCharacter, MonoidHom.map_mul, htrace_mul]
+      apply Finset.sum_congr rfl
+      intro a _
+      apply Finset.sum_congr rfl
+      intro b _
+      rw [repMatrixElement_inv (ρ s) (hU s) g₁ b a]
+    have hchar_t : ∀ (g₁ : G),
+        repCharacter (ρ t) (g₁ * V * g₀⁻¹) =
+        ∑ c : Fin (dims t), ∑ d : Fin (dims t),
+          (ρ t g₁) c d * (ρ t (V * g₀⁻¹)) d c := by
+      intro g₁
+      rw [show g₁ * V * g₀⁻¹ = g₁ * (V * g₀⁻¹) from mul_assoc _ _ _,
+          repCharacter, MonoidHom.map_mul, htrace_mul]
+    have hprod_expand : ∀ (g₁ : G),
+        repCharacter (ρ s) (g₀ * W * g₁⁻¹) * repCharacter (ρ t) (g₁ * V * g₀⁻¹) =
+        ∑ a : Fin (dims s), ∑ c : Fin (dims t),
+          ∑ b : Fin (dims s), ∑ d : Fin (dims t),
+            (ρ s (g₀ * W)) a b * (ρ t (V * g₀⁻¹)) d c *
+            ((ρ t g₁) c d * conj ((ρ s g₁) a b)) := by
+      intro g₁
+      rw [hchar_s, hchar_t]
+      simp only [Fintype.sum_mul_sum]
+      apply Finset.sum_congr rfl
+      intro a _
+      apply Finset.sum_congr rfl
+      intro c _
+      apply Finset.sum_congr rfl
+      intro b _
+      apply Finset.sum_congr rfl
+      intro d _
+      ring
+    have hInt_term : ∀ (a : Fin (dims s)) (b : Fin (dims s))
+        (c : Fin (dims t)) (d : Fin (dims t)),
+        Integrable (fun g₁ =>
+          (ρ s (g₀ * W)) a b * (ρ t (V * g₀⁻¹)) d c *
+          ((ρ t g₁) c d * conj ((ρ s g₁) a b))) μ := by
+      intro a b c d
+      have h_gdep : Integrable (fun g₁ => (ρ t g₁) c d * conj ((ρ s g₁) a b)) μ :=
+        hInt t s c d a b
+      exact (h_gdep.smul ((ρ s (g₀ * W)) a b * (ρ t (V * g₀⁻¹)) d c)).congr
+        (Filter.Eventually.of_forall (fun g₁ => by
+          simp only [Pi.smul_def, smul_eq_mul]))
+    have hInt_d : ∀ (a : Fin (dims s)) (c : Fin (dims t)) (b : Fin (dims s)),
+        Integrable (fun g₁ => ∑ d : Fin (dims t),
+          (ρ s (g₀ * W)) a b * (ρ t (V * g₀⁻¹)) d c *
+          ((ρ t g₁) c d * conj ((ρ s g₁) a b))) μ :=
+      fun a c b => integrable_finsetSum Finset.univ (fun d _ => hInt_term a b c d)
+    have hInt_b : ∀ (a : Fin (dims s)) (c : Fin (dims t)),
+        Integrable (fun g₁ => ∑ b : Fin (dims s), ∑ d : Fin (dims t),
+          (ρ s (g₀ * W)) a b * (ρ t (V * g₀⁻¹)) d c *
+          ((ρ t g₁) c d * conj ((ρ s g₁) a b))) μ :=
+      fun a c => integrable_finsetSum Finset.univ (fun b _ => hInt_d a c b)
+    have hInt_c : ∀ (a : Fin (dims s)),
+        Integrable (fun g₁ => ∑ c : Fin (dims t), ∑ b : Fin (dims s), ∑ d : Fin (dims t),
+          (ρ s (g₀ * W)) a b * (ρ t (V * g₀⁻¹)) d c *
+          ((ρ t g₁) c d * conj ((ρ s g₁) a b))) μ :=
+      fun a => integrable_finsetSum Finset.univ (fun c _ => hInt_b a c)
+    have hInt_sum : Integrable (fun g₁ =>
+        ∑ a : Fin (dims s), ∑ c : Fin (dims t),
+          ∑ b : Fin (dims s), ∑ d : Fin (dims t),
+            (ρ s (g₀ * W)) a b * (ρ t (V * g₀⁻¹)) d c *
+            ((ρ t g₁) c d * conj ((ρ s g₁) a b))) μ :=
+      integrable_finsetSum Finset.univ (fun a _ => hInt_c a)
+    exact hInt_sum.congr (Filter.Eventually.of_forall (fun g₁ => (hprod_expand g₁).symm))
+  -- Integrability of each (s, t) term w.r.t. g₁
+  have hInt_term_st : ∀ (g₀ : G) (s t : ι),
+      Integrable (fun g₁ =>
+        (F s t : ℂ) *
+        (repCharacter (ρ s) (g₀ * W * g₁⁻¹) * repCharacter (ρ t) (g₁ * V * g₀⁻¹))) μ := by
+    intro g₀ s t
+    exact ((hInt_char g₀ s t).smul (F s t : ℂ)).congr
+      (Filter.Eventually.of_forall (fun g₁ => by
+        simp only [Pi.smul_def, smul_eq_mul]))
+  have hInt_t : ∀ (g₀ : G) (s : ι),
+      Integrable (fun g₁ =>
+        ∑ t : ι, (F s t : ℂ) *
+        (repCharacter (ρ s) (g₀ * W * g₁⁻¹) * repCharacter (ρ t) (g₁ * V * g₀⁻¹))) μ :=
+    fun g₀ s => integrable_finsetSum Finset.univ (fun t _ => hInt_term_st g₀ s t)
+  -- Inner integral via luscher_key_identity
+  have hInner : ∀ (g₀ : G) (s t : ι),
+      ∫ g₁, repCharacter (ρ s) (g₀ * W * g₁⁻¹) * repCharacter (ρ t) (g₁ * V * g₀⁻¹) ∂μ =
+      if t = s then (1 / dims t : ℂ) * repCharacter (ρ t) (V * W) else 0 := by
+    intro g₀ s t
+    rw [show (∫ g₁, repCharacter (ρ s) (g₀ * W * g₁⁻¹) *
+          repCharacter (ρ t) (g₁ * V * g₀⁻¹) ∂μ) =
+        ∫ g₁, repCharacter (ρ t) (g₁ * (V * g₀⁻¹)) *
+          repCharacter (ρ s) (g₁⁻¹ * (g₀ * W)) ∂μ from by
+      congr 1 with g₁
+      rw [show repCharacter (ρ s) (g₀ * W * g₁⁻¹) = repCharacter (ρ s) (g₁⁻¹ * (g₀ * W)) from by
+        rw [repCharacter_cyclic, repCharacter_cyclic, mul_assoc]]
+      rw [show repCharacter (ρ t) (g₁ * V * g₀⁻¹) = repCharacter (ρ t) (g₁ * (V * g₀⁻¹)) from by
+        rw [mul_assoc]]
+      ring]
+    rw [luscher_key_identity μ ι dims hDims ρ hU hIrr t s (V * g₀⁻¹) (g₀ * W)]
+    by_cases h : t = s
+    · rw [if_pos h, if_pos h]
+      rw [show (V * g₀⁻¹) * (g₀ * W) = V * W from by
+        have hinv : g₀⁻¹ * g₀ = 1 := inv_mul_cancel _
+        calc (V * g₀⁻¹) * (g₀ * W) = V * (g₀⁻¹ * (g₀ * W)) := by rw [mul_assoc]
+          _ = V * ((g₀⁻¹ * g₀) * W) := by rw [← mul_assoc g₀⁻¹ g₀ W]
+          _ = V * (1 * W) := by rw [hinv]
+          _ = V * W := by rw [one_mul]]
+    · rw [if_neg h, if_neg h]
+  -- Inner integral with constants pulled out
+  have hInner_full : ∀ (g₀ : G) (s t : ι),
+      ∫ g₁, (F s t : ℂ) *
+        (repCharacter (ρ s) (g₀ * W * g₁⁻¹) * repCharacter (ρ t) (g₁ * V * g₀⁻¹)) ∂μ =
+      (F s t : ℂ) *
+        (if t = s then (1 / dims t : ℂ) * repCharacter (ρ t) (V * W) else 0) := by
+    intro g₀ s t
+    rw [integral_const_mul, hInner g₀ s t]
+  -- Exchange s sum with g₁ integral
+  rw [show (∫ g₀, ∫ g₁,
+        (∑ s : ι, ∑ t : ι, (F s t : ℂ) *
+          (repCharacter (ρ s) (g₀ * W * g₁⁻¹) * repCharacter (ρ t) (g₁ * V * g₀⁻¹))) ∂μ ∂μ) =
+      ∫ g₀, ∑ s : ι, ∫ g₁,
+        (∑ t : ι, (F s t : ℂ) *
+          (repCharacter (ρ s) (g₀ * W * g₁⁻¹) * repCharacter (ρ t) (g₁ * V * g₀⁻¹))) ∂μ ∂μ from by
+    congr 1 with g₀
+    rw [integral_finsetSum Finset.univ (fun s _ => hInt_t g₀ s)]]
+  -- Exchange t sum with g₁ integral
+  rw [show (∫ g₀, ∑ s : ι, ∫ g₁,
+        (∑ t : ι, (F s t : ℂ) *
+          (repCharacter (ρ s) (g₀ * W * g₁⁻¹) * repCharacter (ρ t) (g₁ * V * g₀⁻¹))) ∂μ ∂μ) =
+      ∫ g₀, ∑ s : ι, ∑ t : ι, ∫ g₁,
+        ((F s t : ℂ) *
+          (repCharacter (ρ s) (g₀ * W * g₁⁻¹) * repCharacter (ρ t) (g₁ * V * g₀⁻¹))) ∂μ ∂μ from by
+    congr 1 with g₀
+    apply Finset.sum_congr rfl
+    intro s _
+    rw [integral_finsetSum Finset.univ (fun t _ => hInt_term_st g₀ s t)]]
+  -- Apply hInner_full to each inner integral
+  rw [show (∫ g₀, ∑ s : ι, ∑ t : ι, ∫ g₁,
+        ((F s t : ℂ) *
+          (repCharacter (ρ s) (g₀ * W * g₁⁻¹) * repCharacter (ρ t) (g₁ * V * g₀⁻¹))) ∂μ ∂μ) =
+      ∫ g₀, ∑ s : ι, ∑ t : ι,
+        (F s t : ℂ) *
+        (if t = s then (1 / dims t : ℂ) * repCharacter (ρ t) (V * W) else 0) ∂μ from by
+    congr 1 with g₀
+    apply Finset.sum_congr rfl
+    intro s _
+    apply Finset.sum_congr rfl
+    intro t _
+    exact hInner_full g₀ s t]
+  -- Pull constant out of g₀ integral (integrand is independent of g₀)
+  rw [show (∫ g₀, ∑ s : ι, ∑ t : ι,
+        (F s t : ℂ) *
+        (if t = s then (1 / dims t : ℂ) * repCharacter (ρ t) (V * W) else 0) ∂μ) =
+      ∑ s : ι, ∑ t : ι,
+        (F s t : ℂ) *
+        (if t = s then (1 / dims t : ℂ) * repCharacter (ρ t) (V * W) else 0) from by
+    haveI : IsFiniteMeasure μ := inferInstance
+    simp [integral_const, IsProbabilityMeasure.measure_univ]]
+  -- Collapse the if and simplify
+  rw [show (∑ s : ι, ∑ t : ι,
+        (F s t : ℂ) *
+        (if t = s then (1 / dims t : ℂ) * repCharacter (ρ t) (V * W) else 0)) =
+      ∑ s : ι, (F s s : ℂ) *
+        ((1 / dims s : ℂ) * repCharacter (ρ s) (V * W)) from by
+    apply Finset.sum_congr rfl
+    intro s _
+    have key : ∑ t : ι, (F s t : ℂ) *
+        (if t = s then (1 / dims t : ℂ) * repCharacter (ρ t) (V * W) else 0) =
+      (F s s : ℂ) *
+        (if s = s then (1 / dims s : ℂ) * repCharacter (ρ s) (V * W) else 0) := by
+      refine Finset.sum_eq_single s ?_ ?_
+      · intro t _ hne
+        rw [if_neg (fun h => hne h)]
+        ring
+      · intro h; exact absurd (Finset.mem_univ s) h
+    rw [key, if_pos rfl]]
+  -- χ_s(V*W) = χ_s(W*V) by trace_mul_comm
+  apply Finset.sum_congr rfl
+  intro s _
+  rw [show repCharacter (ρ s) (V * W) = repCharacter (ρ s) (W * V) from by
+    show Matrix.trace (ρ s (V * W)) = Matrix.trace (ρ s (W * V))
+    rw [show ρ s (V * W) = ρ s V * ρ s W from MonoidHom.map_mul _ _ _,
+        show ρ s (W * V) = ρ s W * ρ s V from MonoidHom.map_mul _ _ _,
+        Matrix.trace_mul_comm]]
+
+#print axioms luscher_2site_cascade_coeff
+
+/-- **3-site Lüscher cascade with arbitrary non-negative coefficients (Step 3, multi-plaquette).**
+
+For irreducible unitary representations of a compact group with normalized Haar
+measure, and arbitrary non-negative coefficients `F : ι → ι → ι → ℝ` with
+`F s t u ≥ 0`, the 3-site cascade with summed character products evaluates to:
+
+    ∫∫∫ ∑_{s,t,u} F(s,t,u) · χ_s(g₀·W₀·g₁⁻¹) · χ_t(g₁·W₁·g₂⁻¹) · χ_u(g₂·W₂·g₀⁻¹) dg₁ dg₂ dg₀
+      = ∑_s F(s,s,s) · (1/d_s)² · χ_s(W₀·W₁·W₂)
+
+The coefficient `F(s,s,s) · (1/d_s)² ≥ 0` (since `F(s,s,s) ≥ 0` and `(1/d_s)² > 0`),
+so the resulting kernel matches `character_kernel_integral_nonneg`. This generalizes
+`luscher_2site_cascade_coeff` to the 3-plaquette case (three plaquettes sharing three
+temporal links `g₀, g₁, g₂`). 0 sorries, 0 new axioms.
+
+The proof uses an inductive approach: (1) integrate out `g₁` via `luscher_key_identity`
+(Schur orthogonality forces `t = s`), producing a 2-site cascade with coefficients
+`G(s,u) = F(s,s,u) · (1/d_s) ≥ 0`; (2) apply `luscher_2site_cascade_coeff` to integrate
+out `g₂` (Schur orthogonality forces `u = s`), producing the final kernel with
+coefficients `F(s,s,s) · (1/d_s)² ≥ 0`. -/
+lemma luscher_3site_cascade_coeff
+    {G : Type*} [Group G] [TopologicalSpace G]
+    [CompactSpace G] [MeasurableSpace G] [BorelSpace G]
+    (μ : Measure G) [IsProbabilityMeasure μ]
+    (ι : Type) [Fintype ι] [DecidableEq ι] (dims : ι → ℕ)
+    (hDims : ∀ i, 0 < dims i)
+    (ρ : ∀ i, G →* Matrix (Fin (dims i)) (Fin (dims i)) ℂ)
+    (hU : ∀ i, IsUnitaryRepresentation (ρ i))
+    (hIrr : ∀ i, IsIrreducible (ρ i))
+    (F : ι → ι → ι → ℝ) (hF : ∀ s t u, 0 ≤ F s t u)
+    (W₀ W₁ W₂ : G) :
+    ∫ g₀, ∫ g₂, ∫ g₁,
+      ∑ s, ∑ t, ∑ u, (F s t u : ℂ) *
+        (repCharacter (ρ s) (g₀ * W₀ * g₁⁻¹) *
+         repCharacter (ρ t) (g₁ * W₁ * g₂⁻¹) *
+         repCharacter (ρ u) (g₂ * W₂ * g₀⁻¹)) ∂μ ∂μ ∂μ =
+    ∑ s, (F s s s : ℂ) * ((1 / dims s : ℂ)^2 * repCharacter (ρ s) (W₀ * W₁ * W₂)) := by
+  obtain ⟨hInt, hSchur_diag, hSchur_offdiag⟩ :=
+    characterOrthogonality μ ι dims hDims ρ hU hIrr
+  -- Step 1: Integrability of each (s,t,u) term w.r.t. g₁
+  have hInt_stu : ∀ (g₀ g₂ : G) (s t u : ι),
+      Integrable (fun g₁ =>
+        (F s t u : ℂ) *
+        (repCharacter (ρ s) (g₀ * W₀ * g₁⁻¹) *
+         repCharacter (ρ t) (g₁ * W₁ * g₂⁻¹) *
+         repCharacter (ρ u) (g₂ * W₂ * g₀⁻¹))) μ := by
+    intro g₀ g₂ s t u
+    have hst : Integrable (fun g₁ =>
+      repCharacter (ρ s) ((g₀ * W₀) * g₁⁻¹) *
+      repCharacter (ρ t) (g₁ * (W₁ * g₂⁻¹))) μ :=
+      char_product_integrable μ ι dims hDims ρ hU hIrr s t (g₀ * W₀) (W₁ * g₂⁻¹)
+    exact (hst.smul ((F s t u : ℂ) * repCharacter (ρ u) (g₂ * W₂ * g₀⁻¹))).congr
+      (Filter.Eventually.of_forall (fun g₁ => by
+        simp only [Pi.smul_def, smul_eq_mul]
+        rw [show g₁ * W₁ * g₂⁻¹ = g₁ * (W₁ * g₂⁻¹) from mul_assoc g₁ W₁ g₂⁻¹]
+        ring))
+  have hInt_tu : ∀ (g₀ g₂ : G) (s t : ι),
+      Integrable (fun g₁ =>
+        ∑ u : ι, (F s t u : ℂ) *
+        (repCharacter (ρ s) (g₀ * W₀ * g₁⁻¹) *
+         repCharacter (ρ t) (g₁ * W₁ * g₂⁻¹) *
+         repCharacter (ρ u) (g₂ * W₂ * g₀⁻¹))) μ :=
+    fun g₀ g₂ s t => integrable_finsetSum Finset.univ (fun u _ => hInt_stu g₀ g₂ s t u)
+  have hInt_u : ∀ (g₀ g₂ : G) (s : ι),
+      Integrable (fun g₁ =>
+        ∑ t : ι, ∑ u : ι, (F s t u : ℂ) *
+        (repCharacter (ρ s) (g₀ * W₀ * g₁⁻¹) *
+         repCharacter (ρ t) (g₁ * W₁ * g₂⁻¹) *
+         repCharacter (ρ u) (g₂ * W₂ * g₀⁻¹))) μ :=
+    fun g₀ g₂ s => integrable_finsetSum Finset.univ (fun t _ => hInt_tu g₀ g₂ s t)
+  -- Step 2: Inner integral via luscher_key_identity (following luscher_3site_cascade pattern)
+  have hInner : ∀ (g₀ g₂ : G) (s t u : ι),
+      ∫ g₁, repCharacter (ρ s) (g₀ * W₀ * g₁⁻¹) *
+             repCharacter (ρ t) (g₁ * W₁ * g₂⁻¹) *
+             repCharacter (ρ u) (g₂ * W₂ * g₀⁻¹) ∂μ =
+        (if t = s then (1 / dims t : ℂ) * repCharacter (ρ t) (g₀ * W₀ * W₁ * g₂⁻¹) else 0) *
+        repCharacter (ρ u) (g₂ * W₂ * g₀⁻¹) := by
+    intro g₀ g₂ s t u
+    rw [show (∫ g₁, repCharacter (ρ s) (g₀ * W₀ * g₁⁻¹) *
+          repCharacter (ρ t) (g₁ * W₁ * g₂⁻¹) *
+          repCharacter (ρ u) (g₂ * W₂ * g₀⁻¹) ∂μ) =
+        ∫ g₁, repCharacter (ρ u) (g₂ * W₂ * g₀⁻¹) *
+          (repCharacter (ρ s) (g₀ * W₀ * g₁⁻¹) * repCharacter (ρ t) (g₁ * W₁ * g₂⁻¹)) ∂μ from by
+      congr 1 with g₁; ring]
+    rw [integral_const_mul]
+    rw [show (∫ g₁, repCharacter (ρ s) (g₀ * W₀ * g₁⁻¹) *
+          repCharacter (ρ t) (g₁ * W₁ * g₂⁻¹) ∂μ) =
+        ∫ g₁, repCharacter (ρ t) (g₁ * (W₁ * g₂⁻¹)) *
+          repCharacter (ρ s) (g₁⁻¹ * (g₀ * W₀)) ∂μ from by
+      congr 1 with g₁
+      rw [show repCharacter (ρ s) (g₀ * W₀ * g₁⁻¹) = repCharacter (ρ s) (g₁⁻¹ * (g₀ * W₀)) from by
+        rw [repCharacter_cyclic, repCharacter_cyclic, mul_assoc]]
+      rw [show repCharacter (ρ t) (g₁ * W₁ * g₂⁻¹) = repCharacter (ρ t) (g₁ * (W₁ * g₂⁻¹)) from by
+        rw [mul_assoc]]
+      ring]
+    rw [luscher_key_identity μ ι dims hDims ρ hU hIrr t s (W₁ * g₂⁻¹) (g₀ * W₀)]
+    by_cases h : t = s
+    · rw [if_pos h, if_pos h]
+      rw [show repCharacter (ρ t) ((W₁ * g₂⁻¹) * (g₀ * W₀)) =
+            repCharacter (ρ t) (g₀ * W₀ * W₁ * g₂⁻¹) from by
+        rw [← mul_assoc (W₁ * g₂⁻¹) g₀ W₀, repCharacter_cyclic, ← mul_assoc (g₀ * W₀) W₁ g₂⁻¹]]
+      ring
+    · rw [if_neg h, if_neg h]
+      ring
+  have hInner_full : ∀ (g₀ g₂ : G) (s t u : ι),
+      ∫ g₁, (F s t u : ℂ) *
+        (repCharacter (ρ s) (g₀ * W₀ * g₁⁻¹) *
+         repCharacter (ρ t) (g₁ * W₁ * g₂⁻¹) *
+         repCharacter (ρ u) (g₂ * W₂ * g₀⁻¹)) ∂μ =
+      (F s t u : ℂ) *
+        ((if t = s then (1 / dims t : ℂ) * repCharacter (ρ t) (g₀ * W₀ * W₁ * g₂⁻¹) else 0) *
+         repCharacter (ρ u) (g₂ * W₂ * g₀⁻¹)) := by
+    intro g₀ g₂ s t u
+    rw [integral_const_mul, hInner g₀ g₂ s t u]
+  -- Step 3: Exchange ∑_s with ∫ g₁
+  rw [show (∫ g₀, ∫ g₂, ∫ g₁,
+        (∑ s : ι, ∑ t : ι, ∑ u : ι, (F s t u : ℂ) *
+          (repCharacter (ρ s) (g₀ * W₀ * g₁⁻¹) *
+           repCharacter (ρ t) (g₁ * W₁ * g₂⁻¹) *
+           repCharacter (ρ u) (g₂ * W₂ * g₀⁻¹))) ∂μ ∂μ ∂μ) =
+      ∫ g₀, ∫ g₂, ∑ s : ι, ∫ g₁,
+        (∑ t : ι, ∑ u : ι, (F s t u : ℂ) *
+          (repCharacter (ρ s) (g₀ * W₀ * g₁⁻¹) *
+           repCharacter (ρ t) (g₁ * W₁ * g₂⁻¹) *
+           repCharacter (ρ u) (g₂ * W₂ * g₀⁻¹))) ∂μ ∂μ ∂μ from by
+    congr 1 with g₀
+    congr 1 with g₂
+    rw [integral_finsetSum Finset.univ (fun s _ => hInt_u g₀ g₂ s)]]
+  -- Step 4: Exchange ∑_t with ∫ g₁
+  rw [show (∫ g₀, ∫ g₂, ∑ s : ι, ∫ g₁,
+        (∑ t : ι, ∑ u : ι, (F s t u : ℂ) *
+          (repCharacter (ρ s) (g₀ * W₀ * g₁⁻¹) *
+           repCharacter (ρ t) (g₁ * W₁ * g₂⁻¹) *
+           repCharacter (ρ u) (g₂ * W₂ * g₀⁻¹))) ∂μ ∂μ ∂μ) =
+      ∫ g₀, ∫ g₂, ∑ s : ι, ∑ t : ι, ∫ g₁,
+        (∑ u : ι, (F s t u : ℂ) *
+          (repCharacter (ρ s) (g₀ * W₀ * g₁⁻¹) *
+           repCharacter (ρ t) (g₁ * W₁ * g₂⁻¹) *
+           repCharacter (ρ u) (g₂ * W₂ * g₀⁻¹))) ∂μ ∂μ ∂μ from by
+    congr 1 with g₀
+    congr 1 with g₂
+    apply Finset.sum_congr rfl
+    intro s _
+    rw [integral_finsetSum Finset.univ (fun t _ => hInt_tu g₀ g₂ s t)]]
+  -- Step 5: Exchange ∑_u with ∫ g₁
+  rw [show (∫ g₀, ∫ g₂, ∑ s : ι, ∑ t : ι, ∫ g₁,
+        (∑ u : ι, (F s t u : ℂ) *
+          (repCharacter (ρ s) (g₀ * W₀ * g₁⁻¹) *
+           repCharacter (ρ t) (g₁ * W₁ * g₂⁻¹) *
+           repCharacter (ρ u) (g₂ * W₂ * g₀⁻¹))) ∂μ ∂μ ∂μ) =
+      ∫ g₀, ∫ g₂, ∑ s : ι, ∑ t : ι, ∑ u : ι, ∫ g₁,
+        ((F s t u : ℂ) *
+          (repCharacter (ρ s) (g₀ * W₀ * g₁⁻¹) *
+           repCharacter (ρ t) (g₁ * W₁ * g₂⁻¹) *
+           repCharacter (ρ u) (g₂ * W₂ * g₀⁻¹))) ∂μ ∂μ ∂μ from by
+    congr 1 with g₀
+    congr 1 with g₂
+    apply Finset.sum_congr rfl
+    intro s _
+    apply Finset.sum_congr rfl
+    intro t _
+    rw [integral_finsetSum Finset.univ (fun u _ => hInt_stu g₀ g₂ s t u)]]
+  -- Step 6: Apply hInner_full to each inner integral
+  rw [show (∫ g₀, ∫ g₂, ∑ s : ι, ∑ t : ι, ∑ u : ι, ∫ g₁,
+        ((F s t u : ℂ) *
+          (repCharacter (ρ s) (g₀ * W₀ * g₁⁻¹) *
+           repCharacter (ρ t) (g₁ * W₁ * g₂⁻¹) *
+           repCharacter (ρ u) (g₂ * W₂ * g₀⁻¹))) ∂μ ∂μ ∂μ) =
+      ∫ g₀, ∫ g₂, ∑ s : ι, ∑ t : ι, ∑ u : ι,
+        (F s t u : ℂ) *
+        ((if t = s then (1 / dims t : ℂ) * repCharacter (ρ t) (g₀ * W₀ * W₁ * g₂⁻¹) else 0) *
+         repCharacter (ρ u) (g₂ * W₂ * g₀⁻¹)) ∂μ ∂μ from by
+    congr 1 with g₀
+    congr 1 with g₂
+    apply Finset.sum_congr rfl
+    intro s _
+    apply Finset.sum_congr rfl
+    intro t _
+    apply Finset.sum_congr rfl
+    intro u _
+    exact hInner_full g₀ g₂ s t u]
+  -- Step 7: Collapse the if t = s (keep only t = s terms)
+  rw [show (∫ g₀, ∫ g₂, ∑ s : ι, ∑ t : ι, ∑ u : ι,
+        (F s t u : ℂ) *
+        ((if t = s then (1 / dims t : ℂ) * repCharacter (ρ t) (g₀ * W₀ * W₁ * g₂⁻¹) else 0) *
+         repCharacter (ρ u) (g₂ * W₂ * g₀⁻¹)) ∂μ ∂μ) =
+      ∫ g₀, ∫ g₂, ∑ s : ι, ∑ u : ι,
+        (F s s u : ℂ) *
+        ((1 / dims s : ℂ) * repCharacter (ρ s) (g₀ * W₀ * W₁ * g₂⁻¹) *
+         repCharacter (ρ u) (g₂ * W₂ * g₀⁻¹)) ∂μ ∂μ from by
+    congr 1 with g₀
+    congr 1 with g₂
+    apply Finset.sum_congr rfl
+    intro s _
+    rw [Finset.sum_comm]
+    apply Finset.sum_congr rfl
+    intro u _
+    have key : ∑ t : ι, (F s t u : ℂ) *
+        ((if t = s then (1 / dims t : ℂ) * repCharacter (ρ t) (g₀ * W₀ * W₁ * g₂⁻¹) else 0) *
+         repCharacter (ρ u) (g₂ * W₂ * g₀⁻¹)) =
+      (F s s u : ℂ) *
+        ((if s = s then (1 / dims s : ℂ) * repCharacter (ρ s) (g₀ * W₀ * W₁ * g₂⁻¹) else 0) *
+         repCharacter (ρ u) (g₂ * W₂ * g₀⁻¹)) := by
+      refine Finset.sum_eq_single s ?_ ?_
+      · intro t _ hne
+        rw [if_neg (fun h => hne h)]
+        ring
+      · intro h; exact absurd (Finset.mem_univ s) h
+    rw [key, if_pos rfl]]
+  -- Step 8: Apply luscher_2site_cascade_coeff
+  let G : ι → ι → ℝ := fun s u => F s s u / dims s
+  have hG : ∀ s u, 0 ≤ G s u := fun s u => div_nonneg (hF s s u) (Nat.cast_nonneg _)
+  have hG_eq : ∀ s u, (G s u : ℂ) = (F s s u : ℂ) * (1 / (dims s : ℂ)) := by
+    intro s u
+    rw [show G s u = F s s u / dims s from rfl]
+    push_cast
+    field_simp
+  rw [show (∫ g₀, ∫ g₂, ∑ s : ι, ∑ u : ι,
+        (F s s u : ℂ) *
+        ((1 / dims s : ℂ) * repCharacter (ρ s) (g₀ * W₀ * W₁ * g₂⁻¹) *
+         repCharacter (ρ u) (g₂ * W₂ * g₀⁻¹)) ∂μ ∂μ) =
+      ∫ g₀, ∫ g₂, ∑ s : ι, ∑ u : ι,
+        (G s u : ℂ) *
+        (repCharacter (ρ s) (g₀ * (W₀ * W₁) * g₂⁻¹) *
+         repCharacter (ρ u) (g₂ * W₂ * g₀⁻¹)) ∂μ ∂μ from by
+    congr 1 with g₀
+    congr 1 with g₂
+    apply Finset.sum_congr rfl
+    intro s _
+    apply Finset.sum_congr rfl
+    intro u _
+    rw [hG_eq s u]
+    rw [show g₀ * W₀ * W₁ * g₂⁻¹ = g₀ * (W₀ * W₁) * g₂⁻¹ from by rw [mul_assoc g₀ W₀ W₁]]
+    ring]
+  rw [luscher_2site_cascade_coeff μ ι dims hDims ρ hU hIrr G hG (W₀ * W₁) W₂]
+  -- Step 9: Simplify to final form
+  apply Finset.sum_congr rfl
+  intro s _
+  rw [show repCharacter (ρ s) ((W₀ * W₁) * W₂) = repCharacter (ρ s) (W₀ * W₁ * W₂) from rfl]
+  rw [hG_eq s s]
+  push_cast
+  ring
+
+#print axioms luscher_3site_cascade_coeff
 end UnitaryRepresentation

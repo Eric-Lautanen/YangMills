@@ -218,6 +218,89 @@ lemma reflection_involution (N : ℕ) {Λ : Type} [ReflectSite Λ] (U : LinkVari
   · simp [h, h_inv]
 
 /--
+Gauge transformation on link variables.  For a site-valued function
+`g : Λ → SU N` (the gauge parameter) and a link variable `U`, the
+gauge-transformed link variable is:
+
+    (g · U)(n, μ) = g(n) · U(n, μ) · g(n + e_μ)⁻¹
+
+This conjugates each link by the gauge transformation at its endpoints.
+The Wilson action (plaquette products) is invariant under this transformation
+because each plaquette product transforms by conjugation, and the trace is
+cyclic.  The product Haar measure is invariant because each link is
+independently left-right-multiplied, preserving the Haar factor.
+-/
+def gaugeTransformLinkVariable (N : ℕ) {Λ : Type} [AddVector Λ]
+    (g : Λ → SU N) (U : LinkVariable (SU N) Λ) :
+    LinkVariable (SU N) Λ :=
+  { value := λ n μ => g n * U.value n μ * (g (AddVector.addVector n μ))⁻¹ }
+
+/--
+The gauge transformation with the identity gauge parameter is the identity:
+`e · U = U` where `e(n) = 1` for all `n`.
+-/
+lemma gaugeTransformLinkVariable_one (N : ℕ) {Λ : Type} [AddVector Λ]
+    (U : LinkVariable (SU N) Λ) :
+    gaugeTransformLinkVariable N (fun _ => 1) U = U := by
+  ext n μ
+  dsimp [gaugeTransformLinkVariable]
+  simp [one_mul, inv_one, mul_one]
+
+/--
+The gauge transformation is involutive in the gauge parameter: applying
+`g` then `g⁻¹` (pointwise inverse) recovers the original link variable.
+-/
+lemma gaugeTransformLinkVariable_inv (N : ℕ) {Λ : Type} [AddVector Λ]
+    (g : Λ → SU N) (U : LinkVariable (SU N) Λ) :
+    gaugeTransformLinkVariable N (fun n => (g n)⁻¹)
+      (gaugeTransformLinkVariable N g U) = U := by
+  ext n μ
+  dsimp only [gaugeTransformLinkVariable]
+  rw [inv_inv, mul_assoc, mul_assoc, inv_mul_cancel, mul_one, ← mul_assoc, inv_mul_cancel, one_mul]
+
+/-- A function `φ` on link variables is **gauge-invariant** if it is invariant
+under all gauge transformations: `φ(g · U) = φ(U)` for every gauge parameter
+`g : Λ → SU N` and every link variable `U`.
+
+Gauge invariance is a physically natural condition (Wilson loops are
+gauge-invariant).  It was previously thought to be a necessary hypothesis for
+transfer-matrix positivity (§8.11.51), but §8.11.53 showed that analysis was
+flawed — the positivity holds for ALL `f` with `dependsOnlyOnPosSpatialInterface`,
+not just gauge-invariant `f`.  The gauge-invariance infrastructure is retained
+because the key lemma `gaugeInvariant_matrixElement_integral_zero` (which uses
+it) is proven and may be useful for the L=1 case or gauge-invariant subspace
+arguments.  See `docs/transfer_matrix_positivity_design.md` §8.11.53. -/
+def IsGaugeInvariant (N : ℕ) {Λ : Type} [AddVector Λ]
+    (φ : LinkVariable (SU N) Λ → ℝ) : Prop :=
+  ∀ (g : Λ → SU N) (U : LinkVariable (SU N) Λ),
+    φ (gaugeTransformLinkVariable N g U) = φ U
+
+/-- A ℂ-valued function on link variables is **gauge-invariant** if it is
+invariant under all gauge transformations.  This is the complex-valued analogue
+of `IsGaugeInvariant`, needed for the key lemma that matrix elements of
+non-trivial representations vanish when integrated against a gauge-invariant
+function (the matrix elements are ℂ-valued). -/
+def IsGaugeInvariantC (N : ℕ) {Λ : Type} [AddVector Λ]
+    (φ : LinkVariable (SU N) Λ → ℂ) : Prop :=
+  ∀ (g : Λ → SU N) (U : LinkVariable (SU N) Λ),
+    φ (gaugeTransformLinkVariable N g U) = φ U
+
+/-- For a gauge parameter `g` that is `h` at site `x` and `1` everywhere else,
+the gauge-transformed link at `(x, μ)` is `h · U(x, μ)` provided `x + e_μ ≠ x`
+(so that `g(x + e_μ) = 1`).  This is the key identity underlying the
+gauge-invariance lemma: it shows that the single-link gauge transformation
+acts by left multiplication. -/
+lemma gaugeTransformLinkVariable_single_site (N : ℕ) {Λ : Type} [AddVector Λ] [DecidableEq Λ]
+    (x : Λ) (μ : Fin 4) (h : SU N) (U : LinkVariable (SU N) Λ)
+    (h_xμ : AddVector.addVector x μ ≠ x) :
+    (gaugeTransformLinkVariable N (fun y => if y = x then h else 1) U).value x μ =
+      h * U.value x μ := by
+  dsimp [gaugeTransformLinkVariable]
+  rw [if_pos rfl]
+  have h_ne : AddVector.addVector x μ ≠ x := h_xμ
+  rw [if_neg h_ne, inv_one, mul_one]
+
+/--
 Convenience alias for `reflectLinkVariable` on `Z4Site` for backward compatibility.
 -/
 def reflectLinkVariableZ4 (N : ℕ) (U : LinkVariable (SU N) Z4Site) : LinkVariable (SU N) Z4Site :=

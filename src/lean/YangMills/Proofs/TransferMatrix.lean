@@ -1836,6 +1836,278 @@ noncomputable def sigmaInterface
   restrictLinkVariable N (PeriodicSite T L) (interfaceSites T L)
     (reflectLinkVariable N (extendLinkVariable N (PeriodicSite T L) (interfaceSites T L) U_zero))
 
+/-- **σ-action on individual interface links.** For a link `(n, μ)` at an interface
+site `n` (signedTime=0), `sigmaInterface` gives:
+- **Temporal** (μ=0): the link value at the reflected site, **inverted**.
+- **Spatial** (μ≠0): the link value at the reflected site, **unchanged**.
+
+This is the key property underlying §8.11.32: the σ reflection inverts temporal
+interface links (w → w⁻¹, giving ρ(w⁻¹) = ρ(w)† for the Peter-Weyl conjugation)
+while keeping spatial interface links fixed. -/
+lemma sigmaInterface_apply (hT : Odd T)
+    (U_zero : FiniteLinkConfig N (PeriodicSite T L) (interfaceSites T L))
+    (n : PeriodicSite T L) (hn : n ∈ interfaceSites T L) (μ : Fin 4) :
+    sigmaInterface N T L U_zero ⟨(n, μ), hn⟩ =
+      if hμ : μ = 0 then
+        (U_zero ⟨(ReflectSite.reflectSite n, μ),
+          reflectSite_mem_interface_of_interface hT hn⟩)⁻¹
+      else
+        U_zero ⟨(ReflectSite.reflectSite n, μ),
+          reflectSite_mem_interface_of_interface hT hn⟩ := by
+  have h_reflect_int : ReflectSite.reflectSite n ∈ interfaceSites T L :=
+    reflectSite_mem_interface_of_interface hT hn
+  unfold sigmaInterface restrictLinkVariable reflectLinkVariable extendLinkVariable
+  by_cases hμ : μ = 0
+  · subst hμ; simp [h_reflect_int]
+  · simp [h_reflect_int, hμ]
+
+#print axioms sigmaInterface_apply
+
+/-- For spatial interface links (μ ≠ 0), σ leaves the link value unchanged.
+This follows from `sigmaInterface_apply` (which reads the link at the reflected site)
+and `reflectSite_interface_self` (which fixes interface sites: θ n = n).
+Temporal interface links (μ = 0) are inverted by σ; spatial ones are not.
+This is the first sub-lemma for the σ-disappears-from-g argument (§8.11.37). -/
+lemma sigmaInterface_spatial_fixed (hT : Odd T)
+    (U_zero : FiniteLinkConfig N (PeriodicSite T L) (interfaceSites T L))
+    (n : PeriodicSite T L) (hn : n ∈ interfaceSites T L) (μ : Fin 4) (hμ : μ ≠ 0) :
+    sigmaInterface N T L U_zero ⟨(n, μ), hn⟩ = U_zero ⟨(n, μ), hn⟩ := by
+  rw [sigmaInterface_apply N T L hT U_zero n hn μ, dif_neg hμ]
+  simp only [reflectSite_interface_self hT hn]
+
+#print axioms sigmaInterface_spatial_fixed
+
+/-- The extended merged configurations `extendLinkVariable(mergePosInterface(V⁺, σ(u⁰)))`
+and `extendLinkVariable(mergePosInterface(V⁺, u⁰))` agree on positive-site links and
+spatial interface links (μ ≠ 0). They differ only on temporal interface links (μ = 0),
+where σ inverts. This is the link-by-link agreement underlying `f_sigma_invisible` (§8.11.37):
+since `dependsOnlyOnPosSpatialInterface` only constrains positive-site and spatial-interface
+links, `f` gives the same value on both configurations. -/
+lemma extendLinkVariable_merge_sigma_agree (hT : Odd T)
+    (V_plus : FiniteLinkConfig N (PeriodicSite T L) (positiveSites T L))
+    (U_zero : FiniteLinkConfig N (PeriodicSite T L) (interfaceSites T L))
+    (n : PeriodicSite T L) (μ : Fin 4)
+    (h : n ∈ positiveSites T L ∨ (n ∈ interfaceSites T L ∧ μ ≠ (0 : Fin 4))) :
+    (extendLinkVariable N (PeriodicSite T L) (positiveSites T L ∪ interfaceSites T L)
+       (mergePosInterface N T L V_plus (sigmaInterface N T L U_zero))).value n μ =
+    (extendLinkVariable N (PeriodicSite T L) (positiveSites T L ∪ interfaceSites T L)
+       (mergePosInterface N T L V_plus U_zero)).value n μ := by
+  rcases h with hpos | ⟨hint, hμ⟩
+  · -- n ∈ positiveSites: both give V_plus(n,μ)
+    dsimp [extendLinkVariable, mergePosInterface]
+    simp [hpos, Finset.mem_union_left _ hpos]
+  · -- n ∈ interfaceSites, μ ≠ 0: σ fixes spatial links
+    have hdisj : Disjoint (positiveSites T L) (interfaceSites T L) := by
+      unfold positiveSites interfaceSites
+      rw [Finset.disjoint_filter]; intro m hm hpos hzero; linarith
+    have hnpos : n ∉ positiveSites T L := Finset.disjoint_right.mp hdisj hint
+    dsimp [extendLinkVariable, mergePosInterface]
+    simp [hint, hnpos, Finset.mem_union_right _ hint]
+    rw [sigmaInterface_spatial_fixed N T L hT U_zero n hint μ hμ]
+
+#print axioms extendLinkVariable_merge_sigma_agree
+
+/-- If `f` depends only on positive-site and spatial-interface links
+(`dependsOnlyOnPosSpatialInterface`), then `f` is invisible to the σ twist on temporal
+interface links: `f(extendLinkVariable(mergePosInterface(V⁺, σ(u⁰)))) = f(extendLinkVariable(mergePosInterface(V⁺, u⁰)))`.
+This follows directly from `extendLinkVariable_merge_sigma_agree` applied to the
+hypothesis `hf`. See §8.11.37. -/
+lemma f_sigma_invisible (hT : Odd T)
+    (f : LinkVariable (SU N) (PeriodicSite T L) → ℝ)
+    (hf : dependsOnlyOnPosSpatialInterface N T L f)
+    (V_plus : FiniteLinkConfig N (PeriodicSite T L) (positiveSites T L))
+    (U_zero : FiniteLinkConfig N (PeriodicSite T L) (interfaceSites T L)) :
+    f (extendLinkVariable N (PeriodicSite T L) (positiveSites T L ∪ interfaceSites T L)
+       (mergePosInterface N T L V_plus (sigmaInterface N T L U_zero))) =
+    f (extendLinkVariable N (PeriodicSite T L) (positiveSites T L ∪ interfaceSites T L)
+       (mergePosInterface N T L V_plus U_zero)) := by
+  apply hf
+  intro n μ h
+  exact extendLinkVariable_merge_sigma_agree N T L hT V_plus U_zero n μ h
+
+#print axioms f_sigma_invisible
+
+/-- If two link variables agree on all positive-site links, then `wilsonActionOSPositive`
+gives the same value: the positive-time action only sums plaquettes whose four corners
+all have positive signed time, and `plaquetteProduct` only reads links at those four
+positive corners. -/
+lemma wilsonActionOSPositive_congr (N T L : ℕ) [NeZero T] [NeZero L] (β : ℝ)
+    (U V : LinkVariable (SU N) (PeriodicSite T L))
+    (h : ∀ n μ, n ∈ positiveSites T L → U.value n μ = V.value n μ) :
+    wilsonActionOSPositive N T L β U = wilsonActionOSPositive N T L β V := by
+  unfold wilsonActionOSPositive
+  refine Finset.sum_congr rfl (fun n _ => ?_)
+  refine Finset.sum_congr rfl (fun μ _ => ?_)
+  refine Finset.sum_congr rfl (fun ν _ => ?_)
+  by_cases hcond : signedTime T n.time > 0 ∧
+                   signedTime T (addVectorPeriodic T L n μ).time > 0 ∧
+                   signedTime T (addVectorPeriodic T L (addVectorPeriodic T L n μ) ν).time > 0 ∧
+                   signedTime T (addVectorPeriodic T L n ν).time > 0
+  · rw [if_pos hcond, if_pos hcond]
+    unfold plaquetteContribution plaquetteProduct
+    have hAV (m : PeriodicSite T L) (dir : Fin 4) :
+        AddVector.addVector m dir = addVectorPeriodic T L m dir := by rfl
+    simp only [hAV]
+    rw [
+      h n μ (by simpa [positiveSites, Finset.mem_filter] using hcond.1),
+      h (addVectorPeriodic T L n μ) ν
+        (by simpa [positiveSites, Finset.mem_filter] using hcond.2.1),
+      h (addVectorPeriodic T L (addVectorPeriodic T L n μ) ν) μ
+        (by simpa [positiveSites, Finset.mem_filter] using hcond.2.2.1),
+      h (addVectorPeriodic T L n ν) ν
+        (by simpa [positiveSites, Finset.mem_filter] using hcond.2.2.2)
+    ]
+  · rw [if_neg hcond, if_neg hcond]
+
+#print axioms wilsonActionOSPositive_congr
+
+/-- `osPositiveOfPosInterface` is invariant under the σ twist on temporal interface links:
+`S⁺(mergePosInterface(V⁺, σ(u⁰))) = S⁺(mergePosInterface(V⁺, u⁰))`.
+This follows from `wilsonActionOSPositive_congr` (S⁺ only reads positive-site links)
+and `extendLinkVariable_merge_sigma_agree` (the two extended configs agree on positive-site
+links). See §8.11.37. -/
+lemma osPositiveOfPosInterface_sigma_invariant (hT : Odd T)
+    (V_plus : FiniteLinkConfig N (PeriodicSite T L) (positiveSites T L))
+    (U_zero : FiniteLinkConfig N (PeriodicSite T L) (interfaceSites T L)) :
+    osPositiveOfPosInterface N T L β (mergePosInterface N T L V_plus (sigmaInterface N T L U_zero)) =
+    osPositiveOfPosInterface N T L β (mergePosInterface N T L V_plus U_zero) := by
+  unfold osPositiveOfPosInterface
+  apply wilsonActionOSPositive_congr N T L β
+  intro n μ hpos
+  exact extendLinkVariable_merge_sigma_agree N T L hT V_plus U_zero n μ (Or.inl hpos)
+
+#print axioms osPositiveOfPosInterface_sigma_invariant
+
+/-- **σ-disappears-from-g (main lemma).** The function `g(u) = f(u)·exp(-β·S⁺(u)/2)` is
+invisible to the σ twist on temporal interface links:
+`g(mergePosInterface(V⁺, σ(u⁰))) = g(mergePosInterface(V⁺, u⁰))`.
+This combines `f_sigma_invisible` (f ignores σ) and `osPositiveOfPosInterface_sigma_invariant`
+(S⁺ ignores σ). See §8.11.37. -/
+lemma g_posInterface_sigma_invisible (hT : Odd T)
+    (f : LinkVariable (SU N) (PeriodicSite T L) → ℝ)
+    (hf : dependsOnlyOnPosSpatialInterface N T L f)
+    (V_plus : FiniteLinkConfig N (PeriodicSite T L) (positiveSites T L))
+    (U_zero : FiniteLinkConfig N (PeriodicSite T L) (interfaceSites T L)) :
+    g_posInterface N T L hT β f (mergePosInterface N T L V_plus (sigmaInterface N T L U_zero)) =
+    g_posInterface N T L hT β f (mergePosInterface N T L V_plus U_zero) := by
+  unfold g_posInterface
+  rw [f_sigma_invisible N T L hT f hf V_plus U_zero,
+      osPositiveOfPosInterface_sigma_invariant N T L β hT V_plus U_zero]
+
+#print axioms g_posInterface_sigma_invisible
+
+/-! ### Step 5 sub-lemmas: temporal/spatial decomposition and u⁰_t independence
+
+The 6-step closure plan (§8.11.40) step 5 requires showing that the temporal
+interface links `u⁰_t` can be integrated out independently.  The key ingredients
+are: (1) `charFactorInt` decomposes into temporal and spatial parts (using
+`prod_interfaceLinkInt_eq_temporal_spatial`), (2) `fourierCoeffPos` does not
+depend on `u⁰_t` (because `S⁺` only reads positive-site links and `f` satisfies
+`dependsOnlyOnPosSpatialInterface`), and (3) the `u⁰_t` integral of the temporal
+part of `charFactorInt` gives `δ_{w(l), trivial}` via character orthogonality.
+The following lemmas formalize (1) and (2); (3) requires identifying the trivial
+representation in `ι` and is deferred. -/
+
+/-- The extended merged configurations `extendLinkVariable(mergePosInterface(V⁺, u⁰))`
+and `extendLinkVariable(mergePosInterface(V⁺, u⁰'))` agree on positive-site links and
+spatial interface links (μ ≠ 0) whenever `u⁰` and `u⁰'` agree on spatial interface links.
+This generalizes `extendLinkVariable_merge_sigma_agree` (which is the special case
+`u⁰' = σ(u⁰)`).  It is the link-by-link agreement underlying `f_temporal_invisible`:
+since `dependsOnlyOnPosSpatialInterface` only constrains positive-site and
+spatial-interface links, `f` gives the same value on both configurations. -/
+lemma extendLinkVariable_merge_spatial_agree (hT : Odd T)
+    (V_plus : FiniteLinkConfig N (PeriodicSite T L) (positiveSites T L))
+    (U_zero U_zero' : FiniteLinkConfig N (PeriodicSite T L) (interfaceSites T L))
+    (h_spatial : ∀ (n : PeriodicSite T L) (μ : Fin 4),
+      (hn : n ∈ interfaceSites T L) → μ ≠ (0 : Fin 4) →
+      U_zero ⟨(n, μ), hn⟩ = U_zero' ⟨(n, μ), hn⟩)
+    (n : PeriodicSite T L) (μ : Fin 4)
+    (h : n ∈ positiveSites T L ∨ (n ∈ interfaceSites T L ∧ μ ≠ (0 : Fin 4))) :
+    (extendLinkVariable N (PeriodicSite T L) (positiveSites T L ∪ interfaceSites T L)
+       (mergePosInterface N T L V_plus U_zero)).value n μ =
+    (extendLinkVariable N (PeriodicSite T L) (positiveSites T L ∪ interfaceSites T L)
+       (mergePosInterface N T L V_plus U_zero')).value n μ := by
+  rcases h with hpos | ⟨hint, hμ⟩
+  · -- n ∈ positiveSites: both give V_plus(n,μ)
+    dsimp [extendLinkVariable, mergePosInterface]
+    simp [hpos, Finset.mem_union_left _ hpos]
+  · -- n ∈ interfaceSites, μ ≠ 0: U_zero and U_zero' agree on spatial links
+    have hdisj : Disjoint (positiveSites T L) (interfaceSites T L) := by
+      unfold positiveSites interfaceSites
+      rw [Finset.disjoint_filter]; intro m hm hpos hzero; linarith
+    have hnpos : n ∉ positiveSites T L := Finset.disjoint_right.mp hdisj hint
+    dsimp [extendLinkVariable, mergePosInterface]
+    simp [hint, hnpos, Finset.mem_union_right _ hint]
+    exact h_spatial n μ hint hμ
+
+#print axioms extendLinkVariable_merge_spatial_agree
+
+/-- If `f` depends only on positive-site and spatial-interface links
+(`dependsOnlyOnPosSpatialInterface`), then `f` is invisible to changes in temporal
+interface links: `f(extendLinkVariable(mergePosInterface(V⁺, u⁰))) =
+f(extendLinkVariable(mergePosInterface(V⁺, u⁰')))` whenever `u⁰` and `u⁰'` agree on
+spatial interface links.  This generalizes `f_sigma_invisible`. -/
+lemma f_temporal_invisible (hT : Odd T)
+    (f : LinkVariable (SU N) (PeriodicSite T L) → ℝ)
+    (hf : dependsOnlyOnPosSpatialInterface N T L f)
+    (V_plus : FiniteLinkConfig N (PeriodicSite T L) (positiveSites T L))
+    (U_zero U_zero' : FiniteLinkConfig N (PeriodicSite T L) (interfaceSites T L))
+    (h_spatial : ∀ (n : PeriodicSite T L) (μ : Fin 4),
+      (hn : n ∈ interfaceSites T L) → μ ≠ (0 : Fin 4) →
+      U_zero ⟨(n, μ), hn⟩ = U_zero' ⟨(n, μ), hn⟩) :
+    f (extendLinkVariable N (PeriodicSite T L) (positiveSites T L ∪ interfaceSites T L)
+       (mergePosInterface N T L V_plus U_zero)) =
+    f (extendLinkVariable N (PeriodicSite T L) (positiveSites T L ∪ interfaceSites T L)
+       (mergePosInterface N T L V_plus U_zero')) := by
+  apply hf
+  intro n μ h
+  exact extendLinkVariable_merge_spatial_agree N T L hT V_plus U_zero U_zero' h_spatial n μ h
+
+#print axioms f_temporal_invisible
+
+/-- `osPositiveOfPosInterface` is invisible to changes in temporal interface links:
+`S⁺(mergePosInterface(V⁺, u⁰)) = S⁺(mergePosInterface(V⁺, u⁰'))` whenever `u⁰` and
+`u⁰'` agree on spatial interface links.  This follows from `wilsonActionOSPositive_congr`
+(S⁺ only reads positive-site links) and `extendLinkVariable_merge_spatial_agree` (the
+two extended configs agree on positive-site links).  This generalizes
+`osPositiveOfPosInterface_sigma_invariant`. -/
+lemma osPositiveOfPosInterface_temporal_invariant (hT : Odd T)
+    (V_plus : FiniteLinkConfig N (PeriodicSite T L) (positiveSites T L))
+    (U_zero U_zero' : FiniteLinkConfig N (PeriodicSite T L) (interfaceSites T L))
+    (h_spatial : ∀ (n : PeriodicSite T L) (μ : Fin 4),
+      (hn : n ∈ interfaceSites T L) → μ ≠ (0 : Fin 4) →
+      U_zero ⟨(n, μ), hn⟩ = U_zero' ⟨(n, μ), hn⟩) :
+    osPositiveOfPosInterface N T L β (mergePosInterface N T L V_plus U_zero) =
+    osPositiveOfPosInterface N T L β (mergePosInterface N T L V_plus U_zero') := by
+  unfold osPositiveOfPosInterface
+  apply wilsonActionOSPositive_congr N T L β
+  intro n μ hpos
+  exact extendLinkVariable_merge_spatial_agree N T L hT V_plus U_zero U_zero' h_spatial n μ (Or.inl hpos)
+
+#print axioms osPositiveOfPosInterface_temporal_invariant
+
+/-- **g is invisible to changes in temporal interface links.** The function
+`g(u) = f(u)·exp(-β·S⁺(u)/2)` is invisible to changes in temporal interface links:
+`g(mergePosInterface(V⁺, u⁰)) = g(mergePosInterface(V⁺, u⁰'))` whenever `u⁰` and
+`u⁰'` agree on spatial interface links.  This combines `f_temporal_invisible`
+(f ignores temporal links) and `osPositiveOfPosInterface_temporal_invariant`
+(S⁺ ignores temporal links).  This generalizes `g_posInterface_sigma_invisible`. -/
+lemma g_posInterface_temporal_invisible (hT : Odd T)
+    (f : LinkVariable (SU N) (PeriodicSite T L) → ℝ)
+    (hf : dependsOnlyOnPosSpatialInterface N T L f)
+    (V_plus : FiniteLinkConfig N (PeriodicSite T L) (positiveSites T L))
+    (U_zero U_zero' : FiniteLinkConfig N (PeriodicSite T L) (interfaceSites T L))
+    (h_spatial : ∀ (n : PeriodicSite T L) (μ : Fin 4),
+      (hn : n ∈ interfaceSites T L) → μ ≠ (0 : Fin 4) →
+      U_zero ⟨(n, μ), hn⟩ = U_zero' ⟨(n, μ), hn⟩) :
+    g_posInterface N T L hT β f (mergePosInterface N T L V_plus U_zero) =
+    g_posInterface N T L hT β f (mergePosInterface N T L V_plus U_zero') := by
+  unfold g_posInterface
+  rw [f_temporal_invisible N T L hT f hf V_plus U_zero U_zero' h_spatial,
+      osPositiveOfPosInterface_temporal_invariant N T L β hT V_plus U_zero U_zero' h_spatial]
+
+#print axioms g_posInterface_temporal_invisible
+
 set_option maxHeartbeats 1000000 in
 /-- Reflecting the negative config `reflectPosToNeg(V⁺)` back to the positive+interface
 region recovers `V⁺` on positive links and `σ(u⁰)` on interface links.
@@ -2130,6 +2402,35 @@ noncomputable def charFactorInt (N T L : ℕ) [NeZero T] [NeZero L]
     else 1
 
 #print axioms charFactorInt
+
+/-- **Step 5 sub-lemma 1: charFactorInt decomposes into temporal and spatial parts.**
+The interface-link character factor `Ψ_w(u⁰) = ∏_{l ∈ L_0} χ_{w(l)}(u⁰_l)` decomposes
+as `Ψ_w^{temporal}(u⁰_t) · Ψ_w^{spatial}(u⁰_s)` where the temporal product is over
+`interfaceLinkTemporal` (μ = 0 links) and the spatial product is over
+`interfaceLinkSpatial` (μ ≠ 0 links).  This follows from
+`prod_interfaceLinkInt_eq_temporal_spatial` (the temporal/spatial partition of
+`interfaceLinkInt`).  See §8.11.40 step 5. -/
+lemma charFactorInt_eq_temporal_spatial (N T L : ℕ) [NeZero T] [NeZero L]
+    (ι : Type) (dims : ι → ℕ)
+    (ρ : ∀ i, SU N →* Matrix (Fin (dims i)) (Fin (dims i)) ℂ)
+    (w : InterfaceLink T L → ι)
+    (U_zero : FiniteLinkConfig N (PeriodicSite T L) (interfaceSites T L)) :
+    charFactorInt N T L ι dims ρ w U_zero =
+      (∏ l ∈ interfaceLinkTemporal T L,
+        if hint : l.val.1 ∈ interfaceSites T L then
+          repCharacter (ρ (w l)) (U_zero ⟨(l.val.1, l.val.2), hint⟩)
+        else 1) *
+      (∏ l ∈ interfaceLinkSpatial T L,
+        if hint : l.val.1 ∈ interfaceSites T L then
+          repCharacter (ρ (w l)) (U_zero ⟨(l.val.1, l.val.2), hint⟩)
+        else 1) := by
+  unfold charFactorInt
+  exact prod_interfaceLinkInt_eq_temporal_spatial T L (fun l =>
+    if hint : l.val.1 ∈ interfaceSites T L then
+      repCharacter (ρ (w l)) (U_zero ⟨(l.val.1, l.val.2), hint⟩)
+    else 1)
+
+#print axioms charFactorInt_eq_temporal_spatial
 
 /-- The negative-link character factor `V_w(U⁻) = ∏_{l ∈ L_V} χ_{dual(w(l))}(U⁻_l)`.
 This is the `U⁻`-dependent factor in the character triple product separation (step 4d). -/
@@ -4478,6 +4779,78 @@ noncomputable def fourierCoeffPos (N T L : ℕ) [NeZero T] [NeZero L]
 
 #print axioms fourierCoeffPos
 
+/-- **σ-invisibility of the positive Fourier coefficient (step 4 of the closure).**
+When the test function `ψ = g_posInterface N T L hT β f` with `f` satisfying
+`dependsOnlyOnPosSpatialInterface`, the positive Fourier coefficient
+`A_w(u⁰) = fourierCoeffPos(w, u⁰)` is invisible to the σ twist on temporal
+interface links: `A_w(σ(u⁰)) = A_w(u⁰)`.  This follows because the integrand
+`g(merge(U⁺, u⁰))·exp(-β·S⁺(merge(U⁺, u⁰))/2)·charFactorPos(w, U⁺)` has its
+`u⁰`-dependence only through `g` and `S⁺`, both of which are σ-invisible
+(`g_posInterface_sigma_invisible` + `osPositiveOfPosInterface_sigma_invariant`),
+while `charFactorPos` depends only on `U⁺`.  See §8.11.40 step 4. -/
+lemma fourierCoeffPos_sigma_invisible (hT : Odd T)
+    (β : ℝ) (f : LinkVariable (SU N) (PeriodicSite T L) → ℝ)
+    (hf : dependsOnlyOnPosSpatialInterface N T L f)
+    (ι : Type) (dims : ι → ℕ)
+    (ρ : ∀ i, SU N →* Matrix (Fin (dims i)) (Fin (dims i)) ℂ)
+    (w : InterfaceLink T L → ι)
+    (u0 : FiniteLinkConfig N (PeriodicSite T L) (interfaceSites T L)) :
+    fourierCoeffPos N T L β (g_posInterface N T L hT β f) ι dims ρ w
+        (sigmaInterface N T L u0) =
+    fourierCoeffPos N T L β (g_posInterface N T L hT β f) ι dims ρ w u0 := by
+  have hpointwise : ∀ (Upos : FiniteLinkConfig N (PeriodicSite T L) (positiveSites T L)),
+      Complex.ofReal (g_posInterface N T L hT β f (mergePosInterface N T L Upos (sigmaInterface N T L u0)) *
+        Real.exp (-β * osPositiveOfPosInterface N T L β (mergePosInterface N T L Upos (sigmaInterface N T L u0)) / 2)) *
+      charFactorPos N T L ι dims ρ w Upos =
+      Complex.ofReal (g_posInterface N T L hT β f (mergePosInterface N T L Upos u0) *
+        Real.exp (-β * osPositiveOfPosInterface N T L β (mergePosInterface N T L Upos u0) / 2)) *
+      charFactorPos N T L ι dims ρ w Upos := by
+    intro Upos
+    rw [g_posInterface_sigma_invisible N T L β hT f hf Upos u0,
+        osPositiveOfPosInterface_sigma_invariant N T L β hT Upos u0]
+  unfold fourierCoeffPos
+  exact integral_congr_ae (ae_of_all _ hpointwise)
+
+#print axioms fourierCoeffPos_sigma_invisible
+
+/-- **Step 5 sub-lemma 2: fourierCoeffPos is independent of u⁰_t.** When the test
+function `ψ = g_posInterface N T L hT β f` with `f` satisfying
+`dependsOnlyOnPosSpatialInterface`, the positive Fourier coefficient
+`A_w(u⁰) = fourierCoeffPos(w, u⁰)` depends only on the spatial interface links
+`u⁰_s` (μ ≠ 0), not on the temporal interface links `u⁰_t` (μ = 0).  This follows
+because the integrand `g(merge(U⁺, u⁰))·exp(-β·S⁺(merge(U⁺, u⁰))/2)·charFactorPos(w, U⁺)`
+has its `u⁰`-dependence only through `g` and `S⁺`, both of which are invisible to
+changes in temporal interface links (`g_posInterface_temporal_invisible` +
+`osPositiveOfPosInterface_temporal_invariant`), while `charFactorPos` depends only
+on `U⁺`.  See §8.11.40 step 5.  This generalizes `fourierCoeffPos_sigma_invisible`
+(which is the special case `u⁰' = σ(u⁰)`). -/
+lemma fourierCoeffPos_independent_of_temporal (hT : Odd T)
+    (β : ℝ) (f : LinkVariable (SU N) (PeriodicSite T L) → ℝ)
+    (hf : dependsOnlyOnPosSpatialInterface N T L f)
+    (ι : Type) (dims : ι → ℕ)
+    (ρ : ∀ i, SU N →* Matrix (Fin (dims i)) (Fin (dims i)) ℂ)
+    (w : InterfaceLink T L → ι)
+    (U_zero U_zero' : FiniteLinkConfig N (PeriodicSite T L) (interfaceSites T L))
+    (h_spatial : ∀ (n : PeriodicSite T L) (μ : Fin 4),
+      (hn : n ∈ interfaceSites T L) → μ ≠ (0 : Fin 4) →
+      U_zero ⟨(n, μ), hn⟩ = U_zero' ⟨(n, μ), hn⟩) :
+    fourierCoeffPos N T L β (g_posInterface N T L hT β f) ι dims ρ w U_zero =
+    fourierCoeffPos N T L β (g_posInterface N T L hT β f) ι dims ρ w U_zero' := by
+  have hpointwise : ∀ (Upos : FiniteLinkConfig N (PeriodicSite T L) (positiveSites T L)),
+      Complex.ofReal (g_posInterface N T L hT β f (mergePosInterface N T L Upos U_zero) *
+        Real.exp (-β * osPositiveOfPosInterface N T L β (mergePosInterface N T L Upos U_zero) / 2)) *
+      charFactorPos N T L ι dims ρ w Upos =
+      Complex.ofReal (g_posInterface N T L hT β f (mergePosInterface N T L Upos U_zero') *
+        Real.exp (-β * osPositiveOfPosInterface N T L β (mergePosInterface N T L Upos U_zero') / 2)) *
+      charFactorPos N T L ι dims ρ w Upos := by
+    intro Upos
+    rw [g_posInterface_temporal_invisible N T L β hT f hf Upos U_zero U_zero' h_spatial,
+        osPositiveOfPosInterface_temporal_invariant N T L β hT Upos U_zero U_zero' h_spatial]
+  unfold fourierCoeffPos
+  exact integral_congr_ae (ae_of_all _ hpointwise)
+
+#print axioms fourierCoeffPos_independent_of_temporal
+
 /-- The negative Fourier coefficient `B_w(u⁰) = ∫_{V⁺} Complex.ofReal(ψ(merge(V⁺,σ(u⁰)))·
 exp(-β·S⁺(merge(V⁺,σ(u⁰)))/2)) · star(charFactorNeg(dual w, reflectPosToNeg V⁺)) ∂μ⁺`.
 This is the V⁺-dependent factor in the character triple product (step 4d). By the
@@ -5616,3 +5989,346 @@ lemma fourierCoeffNeg_eq_fourierCoeffPos_fullReflect
   rw [star_charFactorNeg_eq_charFactorPos_fullReflect N T L hT ι dims ρ h_unitary dual hdual w V]
 
 #print axioms fourierCoeffNeg_eq_fourierCoeffPos_fullReflect
+
+set_option maxHeartbeats 1000000 in
+/-- **Step 4e + Lemma 3 substitution: the fullReflect form.** Combines
+`transfer_matrix_fubini_integrated_pull` (Step 4e) with
+`fourierCoeffNeg_eq_fourierCoeffPos_fullReflect` (Lemma 3 plain form) to rewrite the
+negative Fourier coefficient `B_w(u⁰) = fourierCoeffNeg dual w u⁰` as the positive
+Fourier coefficient at the reflected weight and reflected interface:
+`A_{w*}(σ(u⁰)) = fourierCoeffPos (fullReflectReindex dual w) (σ(u⁰))`.
+
+This gives the "fullReflect form" of the transfer-matrix inner product:
+`Complex.ofReal(∫ ψ·Tψ dμ⁺⁰) = C · ∑_w F(w) · ∫_{u⁰} Ψ_w(u⁰) · A_w(u⁰) · A_{w*}(σ(u⁰)) dμ⁰`
+where `w* = fullReflectReindex dual w`. This is the starting point for the L² expansion
+approach (Lemma 5 Step 4a). 0 sorries, 0 custom axioms. -/
+lemma transfer_matrix_fubini_integrated_pull_fullReflect
+    (N T L : ℕ) (β : ℝ) [NeZero T] [NeZero L] (hT : Odd T)
+    (ψ : PosInterfaceConfig N T L → ℝ)
+    (C : ℝ) (ι : Type) [Fintype ι] (dims : ι → ℕ)
+    (ρ : ∀ i, SU N →* Matrix (Fin (dims i)) (Fin (dims i)) ℂ)
+    (h_unitary : ∀ i, IsUnitaryRepresentation (ρ i))
+    (h_meas : ∀ i, Measurable (repCharacter (ρ i)))
+    (dual : ι → ι) (hdual : ∀ i (g : SU N),
+      repCharacter (ρ (dual i)) g = conj (repCharacter (ρ i) g))
+    (F : (InterfaceLink T L → ι) → ℝ)
+    (h_char : ∀ U : LinkVariable (SU N) (PeriodicSite T L),
+      (Real.exp (-β * wilsonActionOSInterface N T L β U) : ℂ) =
+        (C : ℂ) * ∑ w : InterfaceLink T L → ι, (F w : ℂ) *
+          (∏ l ∈ interfaceLinkPos T L, repCharacter (ρ (w l)) (interfaceLinkVar N T L U l)) *
+          (∏ l ∈ interfaceLinkInt T L, repCharacter (ρ (w l)) (interfaceLinkVar N T L U l)) *
+          star (∏ l ∈ interfaceLinkNeg T L, repCharacter (ρ (dual (w l))) (interfaceLinkVar N T L U l)))
+    (hψ_int : ∀ (u : PosInterfaceConfig N T L), Integrable
+      (fun (V_plus : FiniteLinkConfig N (PeriodicSite T L) (positiveSites T L)) =>
+        ψ (mergePosInterface N T L V_plus (sigmaInterface N T L (restrictToInterface N T L u))) *
+        Real.exp (-β * (osPositiveOfPosInterface N T L β u / 2 +
+          osPositiveOfPosInterface N T L β
+            (mergePosInterface N T L V_plus (sigmaInterface N T L (restrictToInterface N T L u))) / 2 +
+          wilsonActionOSInterface N T L β
+            (extendToFullConfig N T L (reflectPosToNeg N T L V_plus) u))))
+      (haarMeasurePositive N T L))
+    (h_int : ∀ w : InterfaceLink T L → ι,
+      Integrable (fun (x : FiniteLinkConfig N (PeriodicSite T L) (positiveSites T L) ×
+          FiniteLinkConfig N (PeriodicSite T L) (interfaceSites T L)) =>
+        (F w : ℂ) *
+          (charFactorInt N T L ι dims ρ w x.2 *
+           fourierCoeffNeg N T L β ψ ι dims ρ dual w x.2) *
+          (Complex.ofReal (ψ (mergePosInterface N T L x.1 x.2) *
+            Real.exp (-β * osPositiveOfPosInterface N T L β (mergePosInterface N T L x.1 x.2) / 2)) *
+           charFactorPos N T L ι dims ρ w x.1))
+        ((haarMeasurePositive N T L).prod (haarMeasureInterface N T L))) :
+    Complex.ofReal (∫ (u : PosInterfaceConfig N T L),
+      ψ u * transferMatrixReflected N T L β ψ u ∂ haarMeasurePosInterface N T L) =
+    (C : ℂ) * ∑ w : InterfaceLink T L → ι, (F w : ℂ) *
+      ∫ (u0 : FiniteLinkConfig N (PeriodicSite T L) (interfaceSites T L)),
+        charFactorInt N T L ι dims ρ w u0 *
+        fourierCoeffPos N T L β ψ ι dims ρ (fullReflectReindex T L hT ι dual w)
+          (sigmaInterface N T L u0) *
+        fourierCoeffPos N T L β ψ ι dims ρ w u0
+      ∂ haarMeasureInterface N T L := by
+  have h := transfer_matrix_fubini_integrated_pull N T L β ψ C ι dims ρ h_unitary h_meas dual F
+    h_char hψ_int h_int
+  rw [h]
+  -- Rewrite fourierCoeffNeg dual w u0 → fourierCoeffPos (fullReflectReindex dual w) (σ u0) pointwise
+  simp only [fourierCoeffNeg_eq_fourierCoeffPos_fullReflect N T L β hT ψ ι dims ρ h_unitary dual hdual]
+
+#print axioms transfer_matrix_fubini_integrated_pull_fullReflect
+
+/-! ### Step 4: Full-lattice character factor lemmas (§8.11.65)
+
+These are the full-lattice analogues of the interface-only lemmas
+`fullReflectReindex`, `charFactorPos`/`charFactorNeg`, and the per-link/product
+identities `charFactorNeg_eq_star_charFactorPos_link_fullReflect` /
+`charFactorNeg_eq_star_charFactorPos_fullReflect` /
+`star_charFactorNeg_eq_charFactorPos_fullReflect`.
+
+The key difference: the interface-only versions work over `InterfaceLink T L`
+(a Subtype of `PeriodicSite T L × Fin 4` restricted to interface plaquette
+links), while these full-lattice versions work over `PeriodicSite T L × Fin 4`
+directly (ALL links), using `allLinkPos`/`allLinkNeg` (Finsets over ALL links)
+instead of `interfaceLinkPos`/`interfaceLinkNeg`.  The reflection on links is
+the simple `(n, μ) ↦ (reflectSite n, μ)` (no Subtype wrapping).
+
+These lemmas show that the positive/negative link integral gives `|Â_w|²`,
+which is Step 4 of the §8.11.61 plan.  0 sorries, 0 custom axioms. -/
+
+/-- The full-lattice reflection reindexing `w* : ((PeriodicSite T L × Fin 4) → ι) → ((PeriodicSite T L × Fin 4) → ι)`.
+For pos links, `w*` is determined by the neg link `(reflectSite l.1, l.2)` (the
+reflected link), with `dual` applied on time-like links.  For int and neg
+links, `w*` is the identity.
+This is the full-lattice analogue of `fullReflectReindex` (which works for
+`InterfaceLink T L`). -/
+noncomputable def fullReflectReindexLink (T L : ℕ) [NeZero T] [NeZero L] (hT : Odd T)
+    (ι : Type) (dual : ι → ι) (w : (PeriodicSite T L × Fin 4) → ι) :
+    (PeriodicSite T L × Fin 4) → ι :=
+  fun l =>
+    if hl_pos : l ∈ allLinkPos T L then
+      if hμ : l.2 = 0 then dual (w (ReflectSite.reflectSite l.1, l.2))
+      else w (ReflectSite.reflectSite l.1, l.2)
+    else w l
+
+#print axioms fullReflectReindexLink
+
+/-- For a positive-time link `l` with `μ(l) = 0` (time-like),
+`w*(l) = dual(w(reflectSite l.1, l.2))`. -/
+lemma fullReflectReindexLink_pos_time (T L : ℕ) [NeZero T] [NeZero L] (hT : Odd T)
+    (ι : Type) (dual : ι → ι) (w : (PeriodicSite T L × Fin 4) → ι)
+    {l : PeriodicSite T L × Fin 4} (hl : l ∈ allLinkPos T L) (hμ : l.2 = 0) :
+    fullReflectReindexLink T L hT ι dual w l = dual (w (ReflectSite.reflectSite l.1, l.2)) := by
+  show (if hl_pos : l ∈ allLinkPos T L then
+        if hμ : l.2 = 0 then dual (w (ReflectSite.reflectSite l.1, l.2))
+        else w (ReflectSite.reflectSite l.1, l.2)
+      else w l) = dual (w (ReflectSite.reflectSite l.1, l.2))
+  rw [dif_pos hl, dif_pos hμ]
+
+#print axioms fullReflectReindexLink_pos_time
+
+/-- For a positive-time link `l` with `μ(l) ≠ 0` (spatial),
+`w*(l) = w(reflectSite l.1, l.2)`. -/
+lemma fullReflectReindexLink_pos_spatial (T L : ℕ) [NeZero T] [NeZero L] (hT : Odd T)
+    (ι : Type) (dual : ι → ι) (w : (PeriodicSite T L × Fin 4) → ι)
+    {l : PeriodicSite T L × Fin 4} (hl : l ∈ allLinkPos T L) (hμ : l.2 ≠ 0) :
+    fullReflectReindexLink T L hT ι dual w l = w (ReflectSite.reflectSite l.1, l.2) := by
+  show (if hl_pos : l ∈ allLinkPos T L then
+        if hμ : l.2 = 0 then dual (w (ReflectSite.reflectSite l.1, l.2))
+        else w (ReflectSite.reflectSite l.1, l.2)
+      else w l) = w (ReflectSite.reflectSite l.1, l.2)
+  rw [dif_pos hl, dif_neg hμ]
+
+#print axioms fullReflectReindexLink_pos_spatial
+
+/-- The full-lattice positive-link character factor `Φ_w(U⁺) = ∏_{l ∈ L_U} χ_{w(l)}(U⁺_l)`.
+This is the full-lattice analogue of `charFactorPos` (which works for
+`InterfaceLink T L`).  The product is over `allLinkPos T L` (ALL positive-time
+links, not just interface links). -/
+noncomputable def charFactorPosAll (N T L : ℕ) [NeZero T] [NeZero L]
+    (ι : Type) (dims : ι → ℕ)
+    (ρ : ∀ i, SU N →* Matrix (Fin (dims i)) (Fin (dims i)) ℂ)
+    (w : (PeriodicSite T L × Fin 4) → ι)
+    (U_plus : FiniteLinkConfig N (PeriodicSite T L) (positiveSites T L)) : ℂ :=
+  ∏ l ∈ allLinkPos T L,
+    if hpos : l.1 ∈ positiveSites T L then
+      repCharacter (ρ (w l)) (U_plus ⟨(l.1, l.2), hpos⟩)
+    else 1
+
+#print axioms charFactorPosAll
+
+/-- The full-lattice negative-link character factor `V_w(U⁻) = ∏_{l ∈ L_V} χ_{dual(w(l))}(U⁻_l)`.
+This is the full-lattice analogue of `charFactorNeg` (which works for
+`InterfaceLink T L`).  The product is over `allLinkNeg T L` (ALL negative-time
+links, not just interface links). -/
+noncomputable def charFactorNegAll (N T L : ℕ) [NeZero T] [NeZero L]
+    (ι : Type) (dims : ι → ℕ)
+    (ρ : ∀ i, SU N →* Matrix (Fin (dims i)) (Fin (dims i)) ℂ)
+    (dual : ι → ι) (w : (PeriodicSite T L × Fin 4) → ι)
+    (U_minus : FiniteLinkConfig N (PeriodicSite T L) (negativeSites T L)) : ℂ :=
+  ∏ l ∈ allLinkNeg T L,
+    if hneg : l.1 ∈ negativeSites T L then
+      repCharacter (ρ (dual (w l))) (U_minus ⟨(l.1, l.2), hneg⟩)
+    else 1
+
+#print axioms charFactorNegAll
+
+set_option maxHeartbeats 1000000 in
+/-- **Per-link identity (full-lattice, Step 4 core).** For `b ∈ allLinkPos`,
+the negative-link character factor at the reflected link `(reflectSite b.1, b.2)`
+(with weight `w`) equals `star` of the positive-link character factor at `b`
+(with weight `w* = fullReflectReindexLink`).
+
+This is the full-lattice analogue of
+`charFactorNeg_eq_star_charFactorPos_link_fullReflect` (which works for
+`InterfaceLink T L`).  0 sorries, 0 custom axioms. -/
+lemma charFactorNegAll_eq_star_charFactorPosAll_link_fullReflect
+    (N T L : ℕ) [NeZero T] [NeZero L] (hT : Odd T)
+    (ι : Type) (dims : ι → ℕ)
+    (ρ : ∀ i, SU N →* Matrix (Fin (dims i)) (Fin (dims i)) ℂ)
+    (h_unitary : ∀ i, IsUnitaryRepresentation (ρ i))
+    (dual : ι → ι) (hdual : ∀ i (g : SU N),
+      repCharacter (ρ (dual i)) g = conj (repCharacter (ρ i) g))
+    (w : (PeriodicSite T L × Fin 4) → ι)
+    (V_plus : FiniteLinkConfig N (PeriodicSite T L) (positiveSites T L))
+    (b : PeriodicSite T L × Fin 4) (hb : b ∈ allLinkPos T L) :
+    (if hneg : (ReflectSite.reflectSite b.1, b.2).1 ∈ negativeSites T L then
+       repCharacter (ρ (dual (w (ReflectSite.reflectSite b.1, b.2))))
+         (reflectPosToNeg N T L V_plus ⟨((ReflectSite.reflectSite b.1, b.2).1,
+            (ReflectSite.reflectSite b.1, b.2).2), hneg⟩)
+     else 1) =
+    (if hpos : b.1 ∈ positiveSites T L then
+       star (repCharacter (ρ (fullReflectReindexLink T L hT ι dual w b)))
+         (V_plus ⟨(b.1, b.2), hpos⟩)
+     else 1) := by
+  set a := (ReflectSite.reflectSite b.1, b.2) with ha_def
+  have hpos' : b.1 ∈ positiveSites T L := (allLinkPos_mem_iff T L b).mp hb
+  have hb_neg : a ∈ allLinkNeg T L := by
+    rw [allLinkNeg_mem_iff]
+    exact reflectSite_mem_negative_of_positive hT hpos'
+  have hneg' : a.1 ∈ negativeSites T L := (allLinkNeg_mem_iff T L a).mp hb_neg
+  have ha_val2 : a.2 = b.2 := by simp [a]
+  have hinv : ReflectSite.reflectSite a.1 = b.1 := by
+    simp [a, ReflectSite.involution]
+  rw [dif_pos hneg', dif_pos hpos']
+  by_cases hμ : b.2 = 0
+  · -- time-like: w*(b) = dual(w(a)), link inverted
+    have hμ' : a.2 = 0 := by rw [ha_val2]; exact hμ
+    have hwstar : fullReflectReindexLink T L hT ι dual w b = dual (w a) := by
+      rw [fullReflectReindexLink_pos_time T L hT ι dual w hb hμ]
+    rw [hwstar]
+    have hrt : reflectPosToNeg N T L V_plus ⟨(a.1, a.2), hneg'⟩ =
+        (V_plus ⟨(b.1, b.2), hpos'⟩)⁻¹ := by
+      have hpos'' := reflectSite_mem_positive_of_negative hT hneg'
+      rw [reflectPosToNeg_apply N T L hT V_plus hneg' a.2]
+      have heq : (⟨(ReflectSite.reflectSite a.1, a.2), hpos''⟩ :
+          FiniteLinkIndex (PeriodicSite T L) (positiveSites T L)) =
+          ⟨(b.1, b.2), hpos'⟩ := by
+        congr 1
+        rw [hinv, ha_val2]
+      rw [heq, ha_val2, if_pos hμ]
+    rw [hrt]
+    rw [repCharacter_inv (ρ (dual (w a))) (h_unitary (dual (w a)))]
+    rfl
+  · -- spatial: w*(b) = w(a), link unchanged
+    have hμ' : a.2 ≠ 0 := by rw [ha_val2]; exact hμ
+    have hwstar : fullReflectReindexLink T L hT ι dual w b = w a := by
+      rw [fullReflectReindexLink_pos_spatial T L hT ι dual w hb hμ]
+    rw [hwstar]
+    have hrt : reflectPosToNeg N T L V_plus ⟨(a.1, a.2), hneg'⟩ =
+        V_plus ⟨(b.1, b.2), hpos'⟩ := by
+      have hpos'' := reflectSite_mem_positive_of_negative hT hneg'
+      rw [reflectPosToNeg_apply N T L hT V_plus hneg' a.2]
+      have heq : (⟨(ReflectSite.reflectSite a.1, a.2), hpos''⟩ :
+          FiniteLinkIndex (PeriodicSite T L) (positiveSites T L)) =
+          ⟨(b.1, b.2), hpos'⟩ := by
+        congr 1
+        rw [hinv, ha_val2]
+      rw [heq, ha_val2, if_neg hμ]
+    rw [hrt]
+    rw [hdual (w a)]
+    rfl
+
+#print axioms charFactorNegAll_eq_star_charFactorPosAll_link_fullReflect
+
+set_option maxHeartbeats 1000000 in
+/-- **Step 4 product identity (full-lattice).** The negative-link character
+factor at `reflectPosToNeg V⁺` (with weight `w`) equals `star` of the
+positive-link character factor at `V⁺` (with weight
+`w* = fullReflectReindexLink`):
+`charFactorNegAll dual w (reflectPosToNeg V⁺) = star (charFactorPosAll (fullReflectReindexLink dual w) V⁺)`.
+
+This reindexes the product over `allLinkNeg` to a product over `allLinkPos`
+via the reflection bijection `(n, μ) ↦ (reflectSite n, μ)` (an involution
+mapping neg ↔ pos), using `Finset.prod_bij` and the per-link identity
+`charFactorNegAll_eq_star_charFactorPosAll_link_fullReflect`.
+
+This is the full-lattice analogue of
+`charFactorNeg_eq_star_charFactorPos_fullReflect` (which works for
+`InterfaceLink T L`).  0 sorries, 0 custom axioms. -/
+lemma charFactorNegAll_eq_star_charFactorPosAll_fullReflect
+    (N T L : ℕ) [NeZero T] [NeZero L] (hT : Odd T)
+    (ι : Type) (dims : ι → ℕ)
+    (ρ : ∀ i, SU N →* Matrix (Fin (dims i)) (Fin (dims i)) ℂ)
+    (h_unitary : ∀ i, IsUnitaryRepresentation (ρ i))
+    (dual : ι → ι) (hdual : ∀ i (g : SU N),
+      repCharacter (ρ (dual i)) g = conj (repCharacter (ρ i) g))
+    (w : (PeriodicSite T L × Fin 4) → ι)
+    (V_plus : FiniteLinkConfig N (PeriodicSite T L) (positiveSites T L)) :
+    charFactorNegAll N T L ι dims ρ dual w (reflectPosToNeg N T L V_plus) =
+    star (charFactorPosAll N T L ι dims ρ (fullReflectReindexLink T L hT ι dual w) V_plus) := by
+  simp only [charFactorNegAll, charFactorPosAll]
+  -- Push star inside the charFactorPosAll product on the RHS
+  rw [show star (∏ b ∈ allLinkPos T L,
+      (if hpos : b.1 ∈ positiveSites T L then
+        repCharacter (ρ (fullReflectReindexLink T L hT ι dual w b)) (V_plus ⟨(b.1, b.2), hpos⟩)
+      else (1 : ℂ))) =
+      ∏ b ∈ allLinkPos T L,
+      (if hpos : b.1 ∈ positiveSites T L then
+        star (repCharacter (ρ (fullReflectReindexLink T L hT ι dual w b)) (V_plus ⟨(b.1, b.2), hpos⟩))
+      else (1 : ℂ)) from by
+      rw [← starRingEnd_apply, map_prod]
+      refine Finset.prod_congr rfl (fun b hb => ?_)
+      rw [starRingEnd_apply]
+      split_ifs with h
+      · rfl
+      · simp]
+  -- Now both sides are products; reindex neg → pos via (reflectSite a.1, a.2)
+  refine Finset.prod_bij (fun a ha => (ReflectSite.reflectSite a.1, a.2)) ?hi ?i_inj ?i_surj ?h
+  · -- hi : (reflectSite a.1, a.2) maps allLinkNeg into allLinkPos
+    intro a ha
+    rw [allLinkPos_mem_iff]
+    exact reflectSite_mem_positive_of_negative hT ((allLinkNeg_mem_iff T L a).mp ha)
+  · -- i_inj : (reflectSite a₁.1, a₁.2) = (reflectSite a₂.1, a₂.2) → a₁ = a₂
+    intro a₁ ha₁ a₂ ha₂ heq
+    obtain ⟨h1, h2⟩ := Prod.ext_iff.mp heq
+    have h1' : a₁.1 = a₂.1 := by
+      have hcc := congrArg ReflectSite.reflectSite h1
+      rw [ReflectSite.involution a₁.1, ReflectSite.involution a₂.1] at hcc
+      exact hcc
+    exact Prod.ext h1' h2
+  · -- i_surj : (reflectSite b.1, b.2) is surjective onto allLinkPos (involution)
+    intro b hb
+    refine ⟨(ReflectSite.reflectSite b.1, b.2), ?_, ?_⟩
+    · -- (reflectSite b.1, b.2) ∈ allLinkNeg
+      rw [allLinkNeg_mem_iff]
+      exact reflectSite_mem_negative_of_positive hT ((allLinkPos_mem_iff T L b).mp hb)
+    · -- (reflectSite (reflectSite b.1), b.2) = b
+      simp [ReflectSite.involution]
+  · -- h : per-link identity f a = g (reflectSite a.1, a.2)
+    intro a ha
+    have hb : (ReflectSite.reflectSite a.1, a.2) ∈ allLinkPos T L := by
+      rw [allLinkPos_mem_iff]
+      exact reflectSite_mem_positive_of_negative hT ((allLinkNeg_mem_iff T L a).mp ha)
+    have hlink := charFactorNegAll_eq_star_charFactorPosAll_link_fullReflect
+      N T L hT ι dims ρ h_unitary dual hdual w V_plus
+      (ReflectSite.reflectSite a.1, a.2) hb
+    have hinvol : ReflectSite.reflectSite (ReflectSite.reflectSite a.1) = a.1 :=
+      ReflectSite.involution a.1
+    rw [hinvol] at hlink
+    exact hlink
+
+#print axioms charFactorNegAll_eq_star_charFactorPosAll_fullReflect
+
+/-- The `star` (complex conjugate) version of
+`charFactorNegAll_eq_star_charFactorPosAll_fullReflect`:
+`star(charFactorNegAll dual w (reflectPosToNeg V⁺)) = charFactorPosAll (fullReflectReindexLink dual w) V⁺`.
+This follows by applying `star` to both sides and using `star(star x) = x`
+(`Complex.conj_conj`).
+
+This is the full-lattice analogue of
+`star_charFactorNeg_eq_charFactorPos_fullReflect` (which works for
+`InterfaceLink T L`).  0 sorries, 0 custom axioms. -/
+lemma star_charFactorNegAll_eq_charFactorPosAll_fullReflect
+    (N T L : ℕ) [NeZero T] [NeZero L] (hT : Odd T)
+    (ι : Type) (dims : ι → ℕ)
+    (ρ : ∀ i, SU N →* Matrix (Fin (dims i)) (Fin (dims i)) ℂ)
+    (h_unitary : ∀ i, IsUnitaryRepresentation (ρ i))
+    (dual : ι → ι) (hdual : ∀ i (g : SU N),
+      repCharacter (ρ (dual i)) g = conj (repCharacter (ρ i) g))
+    (w : (PeriodicSite T L × Fin 4) → ι)
+    (V_plus : FiniteLinkConfig N (PeriodicSite T L) (positiveSites T L)) :
+    star (charFactorNegAll N T L ι dims ρ dual w (reflectPosToNeg N T L V_plus)) =
+    charFactorPosAll N T L ι dims ρ (fullReflectReindexLink T L hT ι dual w) V_plus := by
+  have h := charFactorNegAll_eq_star_charFactorPosAll_fullReflect
+    N T L hT ι dims ρ h_unitary dual hdual w V_plus
+  rw [h]
+  exact Complex.conj_conj _
+
+#print axioms star_charFactorNegAll_eq_charFactorPosAll_fullReflect

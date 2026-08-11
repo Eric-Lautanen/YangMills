@@ -229,6 +229,35 @@ lemma reflectSite_mem_interface_of_interface {T L : ℕ} [NeZero T] [NeZero L] (
     rw [signedTime_reflectSite hT n, h_signed]; simp
   simpa [interfaceSites, Finset.mem_filter] using h_int_signed
 
+/-- For an interface site (signedTime = 0), the reflection FIXES the site: θ n = n.
+This is because `signedTime T t = 0` implies `t = 0` in `ZMod T` (for odd T), and
+`reflectSitePeriodic n = { n with time := -n.time }` fixes `n` when `n.time = 0`.
+This is the key fact underlying the σ-disappears-from-g lemma (§8.11.37): σ only
+inverts temporal interface links and keeps spatial interface links fixed because
+`reflectSite n = n` for interface sites. -/
+lemma reflectSite_interface_self {T L : ℕ} [NeZero T] [NeZero L] (hT : Odd T)
+    {n : PeriodicSite T L} (hn : n ∈ interfaceSites T L) :
+    ReflectSite.reflectSite n = n := by
+  have h_signed : signedTime T n.time = 0 := by
+    simpa [interfaceSites, Finset.mem_filter] using hn
+  -- signedTime T t = 0 implies t = 0 in ZMod T
+  have h_time_zero : n.time = 0 := by
+    unfold signedTime at h_signed
+    split_ifs at h_signed with h
+    · -- t.val ≤ (T-1)/2, signedTime = (t.val : ℤ) = 0, so t.val = 0, so t = 0
+      have hval : (n.time.val : ℤ) = 0 := by exact_mod_cast h_signed
+      have hval_nat : n.time.val = 0 := by exact_mod_cast hval
+      exact (ZMod.val_eq_zero n.time).mp hval_nat
+    · -- t.val > (T-1)/2, signedTime = (t.val : ℤ) - (T : ℤ) = 0, so t.val = T
+      -- but t.val < T, contradiction
+      have hval : (n.time.val : ℤ) = (T : ℤ) := by linarith
+      have hval_lt : n.time.val < T := ZMod.val_lt n.time
+      have : (n.time.val : ℤ) < (T : ℤ) := by exact_mod_cast hval_lt
+      linarith
+  -- reflectSitePeriodic n = { n with time := -n.time } = { n with time := 0 } = n
+  simp only [ReflectSite.reflectSite, reflectSitePeriodic]
+  ext <;> simp [h_time_zero]
+
 /-- Reflection does not map interface sites to positive sites. -/
 lemma reflectSite_not_mem_positive_of_interface {T L : ℕ} [NeZero T] [NeZero L] (hT : Odd T)
     {n : PeriodicSite T L} (hn : n ∈ interfaceSites T L) :
@@ -389,6 +418,83 @@ def dependsOnlyOnPosInterface (N T L : ℕ) [NeZero T] [NeZero L]
   ∀ (U V : LinkVariable (SU N) (PeriodicSite T L)),
     (∀ (n : PeriodicSite T L) (μ : Fin 4),
       n ∈ (positiveSites T L ∪ interfaceSites T L) → U.value n μ = V.value n μ) → f U = f V
+
+/-- Stronger version of `dependsOnlyOnPosInterface` that also excludes temporal
+interface links (direction `μ = 0` at interface sites).
+
+This is the correct hypothesis for the Osterwalder-Seiler reflection positivity
+theorem.  The weaker `dependsOnlyOnPosInterface` (which allows `f` to depend on
+temporal interface links) is **insufficient**: for `β = 0` (free theory), taking
+`f(g) = Im Tr(g)` for a single temporal interface link `g` gives
+`∫ f(g)·f(g⁻¹) dg = -∫ (Im Tr(g))² dg < 0`, a strictly negative integral.
+The temporal-link inversion `σ` (which inverts `μ = 0` links at the interface)
+is the sole obstacle; restricting `f` to spatial interface links removes it.
+
+See `docs/transfer_matrix_positivity_design.md` §8.11.36 for the full analysis. -/
+def dependsOnlyOnPosSpatialInterface (N T L : ℕ) [NeZero T] [NeZero L]
+    (f : LinkVariable (SU N) (PeriodicSite T L) → ℝ) : Prop :=
+  ∀ (U V : LinkVariable (SU N) (PeriodicSite T L)),
+    (∀ (n : PeriodicSite T L) (μ : Fin 4),
+      n ∈ positiveSites T L ∨ (n ∈ interfaceSites T L ∧ μ ≠ (0 : Fin 4)) →
+      U.value n μ = V.value n μ) → f U = f V
+
+/-- `dependsOnlyOnPosSpatialInterface` is stronger than `dependsOnlyOnPosInterface`:
+if `f` ignores temporal interface links, it certainly ignores all links outside
+the positive+interface region. -/
+lemma dependsOnlyOnPosSpatialInterface.dependsOnlyOnPosInterface
+    (N T L : ℕ) [NeZero T] [NeZero L]
+    (f : LinkVariable (SU N) (PeriodicSite T L) → ℝ)
+    (hf : dependsOnlyOnPosSpatialInterface N T L f) :
+    dependsOnlyOnPosInterface N T L f := by
+  intro U V hUV
+  apply hf
+  intro n μ hn
+  rcases hn with hpos | ⟨hint, hμ⟩
+  · exact hUV n μ (Finset.mem_union_left _ hpos)
+  · exact hUV n μ (Finset.mem_union_right _ hint)
+
+/-- **Strongest support condition**: `f` depends only on strictly positive-time links
+(sites with `signedTime > 0`), NOT on any interface links (sites with `signedTime = 0`).
+
+This is the standard Osterwalder-Schrader OS3 hypothesis: test functions `f` are
+supported in positive time `t > 0`.  It is stronger than `dependsOnlyOnPosSpatialInterface`
+(which allows `f` to depend on spatial interface links at `t = 0`).
+
+The §8.11.60 analysis showed that the §8.11.58 obstruction (the interface kernel
+`K_{u⁰}` is NOT PD for each `u⁰` because character expansion coefficients `Ψ_w(u⁰)`
+are complex) SURVIVES the change of variables for `dependsOnlyOnPosSpatialInterface`.
+The §8.11.61 analysis identified that the correct proof mechanism requires:
+
+1. **`dependsOnlyOnPositive`** (not the weaker `dependsOnlyOnPosSpatialInterface`):
+   so that the interface-link integral gives `δ_{w, trivial}` (unweighted character
+   orthogonality) rather than a weighted integral `∫ f(u⁰_s)²·Ψ_w(u⁰_s) dμ⁰_s` that
+   can be negative.
+
+2. **The FULL character expansion** (all plaquettes, not just interface ones):
+   the interface-only expansion gives a "twisted" quadratic form `Σ F(w)·A_w²` that
+   is NOT obviously non-negative (since `A_w` is complex and `Re(A_w²)` can be
+   negative).  The full expansion (bulk + interface) gives `Σ F_full(w)·|Â_w|² ≥ 0`,
+   a standard sum of squared Fourier coefficients with non-negative weights.
+
+See `docs/transfer_matrix_positivity_design.md` §8.11.61 for the full analysis. -/
+def dependsOnlyOnPositive (N T L : ℕ) [NeZero T] [NeZero L]
+    (f : LinkVariable (SU N) (PeriodicSite T L) → ℝ) : Prop :=
+  ∀ (U V : LinkVariable (SU N) (PeriodicSite T L)),
+    (∀ (n : PeriodicSite T L) (μ : Fin 4),
+      n ∈ positiveSites T L → U.value n μ = V.value n μ) → f U = f V
+
+/-- `dependsOnlyOnPositive` is stronger than `dependsOnlyOnPosSpatialInterface`:
+if `f` depends only on positive-time links (ignoring ALL interface links), then
+in particular it ignores temporal interface links. -/
+lemma dependsOnlyOnPositive.dependsOnlyOnPosSpatialInterface
+    (N T L : ℕ) [NeZero T] [NeZero L]
+    (f : LinkVariable (SU N) (PeriodicSite T L) → ℝ)
+    (hf : dependsOnlyOnPositive N T L f) :
+    dependsOnlyOnPosSpatialInterface N T L f := by
+  intro U V hUV
+  apply hf
+  intro n μ hn
+  exact hUV n μ (Or.inl hn)
 
 /-! ### Osterwalder-Seiler decomposition (plaquette-based) -/
 open scoped BigOperators
@@ -1162,6 +1268,268 @@ lemma interfaceLinkPartition_hcover (T L : ℕ) [NeZero T] [NeZero L] :
     interfaceLinkPos T L ∪ interfaceLinkInt T L ∪ interfaceLinkNeg T L = Finset.univ :=
   interfaceLinkPartition_disjoint_cover T L |>.2.2
 
+/-! ### Full link partition (ALL links, not just interface links)
+
+For the FULL character expansion (§8.11.61), we need to partition ALL links
+(`PeriodicSite T L × Fin 4`) into positive (L_U), interface (L_0), and negative
+(L_V) sets, and prove that `plaquetteLinkIdx` is surjective (every link appears
+in at least one plaquette).  This is the key infrastructure for applying
+`plaquette_product_separable_decomp` (PeterWeyl.lean:1358) to ALL plaquettes. -/
+
+/-- All links at positive-time sites (`L_U` for the full expansion). -/
+noncomputable def allLinkPos (T L : ℕ) [NeZero T] [NeZero L] :
+    Finset (PeriodicSite T L × Fin 4) :=
+  (Finset.univ : Finset (PeriodicSite T L × Fin 4)).filter
+    (fun l => signedTime T l.1.time > 0)
+
+/-- All links at interface (time-0) sites (`L_0` for the full expansion). -/
+noncomputable def allLinkInt (T L : ℕ) [NeZero T] [NeZero L] :
+    Finset (PeriodicSite T L × Fin 4) :=
+  (Finset.univ : Finset (PeriodicSite T L × Fin 4)).filter
+    (fun l => signedTime T l.1.time = 0)
+
+/-- All links at negative-time sites (`L_V` for the full expansion). -/
+noncomputable def allLinkNeg (T L : ℕ) [NeZero T] [NeZero L] :
+    Finset (PeriodicSite T L × Fin 4) :=
+  (Finset.univ : Finset (PeriodicSite T L × Fin 4)).filter
+    (fun l => signedTime T l.1.time < 0)
+
+/-- The three full link sets are pairwise disjoint and cover all links. -/
+lemma allLinkPartition_disjoint_cover (T L : ℕ) [NeZero T] [NeZero L] :
+    Disjoint (allLinkPos T L) (allLinkInt T L) ∧
+    Disjoint (allLinkPos T L ∪ allLinkInt T L) (allLinkNeg T L) ∧
+    allLinkPos T L ∪ allLinkInt T L ∪ allLinkNeg T L = Finset.univ := by
+  refine ⟨?_, ?_, ?_⟩
+  · refine Finset.disjoint_left.mpr (fun l hl hl' => ?_)
+    rw [allLinkPos, Finset.mem_filter] at hl
+    rw [allLinkInt, Finset.mem_filter] at hl'
+    obtain ⟨_, hpos⟩ := hl
+    obtain ⟨_, hint⟩ := hl'
+    rw [hint] at hpos
+    exact lt_irrefl _ hpos
+  · refine Finset.disjoint_left.mpr (fun l hl hl' => ?_)
+    rw [allLinkNeg, Finset.mem_filter] at hl'
+    obtain ⟨_, hneg⟩ := hl'
+    rcases Finset.mem_union.mp hl with h | h
+    · rw [allLinkPos, Finset.mem_filter] at h
+      obtain ⟨_, hpos⟩ := h
+      exact lt_irrefl _ (lt_of_lt_of_le hpos (le_of_lt hneg))
+    · rw [allLinkInt, Finset.mem_filter] at h
+      obtain ⟨_, hint⟩ := h
+      rw [hint] at hneg
+      exact lt_irrefl _ hneg
+  · ext l
+    simp only [allLinkPos, allLinkInt, allLinkNeg, Finset.mem_union,
+      Finset.mem_filter, Finset.mem_univ, true_and]
+    refine ⟨fun _ => trivial, fun _ => ?_⟩
+    rcases signedTime_trichotomy T l.1.time with h | h | h
+    · exact Or.inl (Or.inl h)
+    · exact Or.inl (Or.inr h)
+    · exact Or.inr h
+
+/-- The full partition in the form required by `interface_kernel_character_expansion`:
+`hdisj : Disjoint L_U L_0 ∧ Disjoint (L_U ∪ L_0) L_V`. -/
+lemma allLinkPartition_hdisj (T L : ℕ) [NeZero T] [NeZero L] :
+    Disjoint (allLinkPos T L) (allLinkInt T L) ∧
+    Disjoint (allLinkPos T L ∪ allLinkInt T L) (allLinkNeg T L) :=
+  ⟨allLinkPartition_disjoint_cover T L |>.1,
+   allLinkPartition_disjoint_cover T L |>.2.1⟩
+
+/-- The full partition in the form required by `interface_kernel_character_expansion`:
+`hcover : L_U ∪ L_0 ∪ L_V = Finset.univ`. -/
+lemma allLinkPartition_hcover (T L : ℕ) [NeZero T] [NeZero L] :
+    allLinkPos T L ∪ allLinkInt T L ∪ allLinkNeg T L = Finset.univ :=
+  allLinkPartition_disjoint_cover T L |>.2.2
+
+/-! ### Bridge lemmas: full link partition ↔ site partition
+
+These lemmas connect the FULL link-based partition (`allLinkPos`/`allLinkInt`/`allLinkNeg`,
+used by the full character expansion) with the SITE-based partition
+(`positiveSites`/`interfaceSites`/`negativeSites`, used by the measure factorization
+in `TransferMatrix.lean` via `measure_factorization'`).  A link `(n, μ)` is in
+`allLinkPos` iff its base site `n` is in `positiveSites`, etc.  This compatibility
+is needed for step 3 (interface link integral) and step 4 (positive/negative link
+integral) of the §8.11.61 plan.  All 0 sorries, 0 custom axioms. -/
+
+lemma allLinkPos_mem_iff (T L : ℕ) [NeZero T] [NeZero L]
+    (l : PeriodicSite T L × Fin 4) :
+    l ∈ allLinkPos T L ↔ l.1 ∈ positiveSites T L := by
+  simp only [allLinkPos, Finset.mem_filter, Finset.mem_univ, true_and, positiveSites]
+
+lemma allLinkInt_mem_iff (T L : ℕ) [NeZero T] [NeZero L]
+    (l : PeriodicSite T L × Fin 4) :
+    l ∈ allLinkInt T L ↔ l.1 ∈ interfaceSites T L := by
+  simp only [allLinkInt, Finset.mem_filter, Finset.mem_univ, true_and, interfaceSites]
+
+lemma allLinkNeg_mem_iff (T L : ℕ) [NeZero T] [NeZero L]
+    (l : PeriodicSite T L × Fin 4) :
+    l ∈ allLinkNeg T L ↔ l.1 ∈ negativeSites T L := by
+  simp only [allLinkNeg, Finset.mem_filter, Finset.mem_univ, true_and, negativeSites]
+
+#print axioms allLinkPos_mem_iff
+#print axioms allLinkPos_mem_iff
+#print axioms allLinkInt_mem_iff
+#print axioms allLinkNeg_mem_iff
+
+/-! ### Product conversion: Finset over link partition ↔ Fintype over FiniteLinkIndex
+
+These lemmas convert a product over the Finset `allLinkPos`/`allLinkInt`/`allLinkNeg`
+(used by the character expansion) to a product over the Fintype
+`FiniteLinkIndex (PeriodicSite T L) (positiveSites/interfaceSites/negativeSites)`
+(used by the measure factorization).  This is the key bridge for step 3 (interface link
+integral) and step 4 (positive/negative link integral): it allows applying
+`integral_prod_repCharacter_trivial` (PeterWeyl.lean:2435), which works for product
+measures on Fintype-indexed function types, to the character factors in the expansion.
+All 0 sorries, 0 custom axioms. -/
+
+lemma prod_allLinkPos_eq_prod_finiteLinkIndex (T L : ℕ) [NeZero T] [NeZero L]
+    {α : Type*} [CommMonoid α] (f : (PeriodicSite T L × Fin 4) → α) :
+    ∏ l ∈ allLinkPos T L, f l =
+    ∏ (l : FiniteLinkIndex (PeriodicSite T L) (positiveSites T L)), f l.val :=
+  Finset.prod_subtype (allLinkPos T L) (allLinkPos_mem_iff T L) f
+
+lemma prod_allLinkInt_eq_prod_finiteLinkIndex (T L : ℕ) [NeZero T] [NeZero L]
+    {α : Type*} [CommMonoid α] (f : (PeriodicSite T L × Fin 4) → α) :
+    ∏ l ∈ allLinkInt T L, f l =
+    ∏ (l : FiniteLinkIndex (PeriodicSite T L) (interfaceSites T L)), f l.val :=
+  Finset.prod_subtype (allLinkInt T L) (allLinkInt_mem_iff T L) f
+
+lemma prod_allLinkNeg_eq_prod_finiteLinkIndex (T L : ℕ) [NeZero T] [NeZero L]
+    {α : Type*} [CommMonoid α] (f : (PeriodicSite T L × Fin 4) → α) :
+    ∏ l ∈ allLinkNeg T L, f l =
+    ∏ (l : FiniteLinkIndex (PeriodicSite T L) (negativeSites T L)), f l.val :=
+  Finset.prod_subtype (allLinkNeg T L) (allLinkNeg_mem_iff T L) f
+
+#print axioms prod_allLinkPos_eq_prod_finiteLinkIndex
+#print axioms prod_allLinkInt_eq_prod_finiteLinkIndex
+#print axioms prod_allLinkNeg_eq_prod_finiteLinkIndex
+
+/-! ### Step 3: Interface link integral gives δ_{w, trivial}
+
+This is Step 3 of the §8.11.61 plan.  Integrating the interface character factor
+`∏_{l ∈ allLinkInt} χ_{w(l)}(U.value l)` over the interface links (with the product
+Haar measure) gives `∏_l (if w(l) = σ_0 then 1 else 0)`, i.e. `δ_{w|_int, trivial}`.
+This is character orthogonality for the product Haar measure: each interface link
+integral `∫ χ_{w(l)}(g) dμ(g) = δ_{w(l), σ_0}` by `integral_repCharacter_trivial`,
+and the product measure factors by Fubini (`integral_fintype_prod_eq_prod`).
+
+The key point: with `dependsOnlyOnPositive`, `f` does NOT depend on interface links,
+so the interface integral is UNWEIGHTED character orthogonality (no `f` factor).
+This is why `dependsOnlyOnPositive` (not the weaker `dependsOnlyOnPosSpatialInterface`)
+is needed — see §8.11.61.
+
+Uses `integral_prod_repCharacter_trivial` (PeterWeyl.lean:2435).  Standard axioms
+only (propext, Classical.choice, Quot.sound); 0 sorries, 0 custom axioms. -/
+
+lemma interface_char_integral_trivial
+    (N T L : ℕ) [NeZero T] [NeZero L]
+    (ι : Type) [Fintype ι] [DecidableEq ι] (dims : ι → ℕ) (hDims : ∀ i, 0 < dims i)
+    (ρ : ∀ i, SU N →* Matrix (Fin (dims i)) (Fin (dims i)) ℂ)
+    (hU : ∀ i, IsUnitaryRepresentation (ρ i))
+    (hIrr : ∀ i, IsIrreducible (ρ i))
+    (σ_0 : ι) (hσ_0_dims : dims σ_0 = 1) (hσ_0_trivial : ∀ g, (ρ σ_0 g) = 1)
+    (w : (PeriodicSite T L × Fin 4) → ι) :
+    ∫ (cfg : FiniteLinkConfig N (PeriodicSite T L) (interfaceSites T L)),
+      ∏ (l : FiniteLinkIndex (PeriodicSite T L) (interfaceSites T L)),
+        repCharacter (ρ (w l.val)) (cfg l)
+      ∂ (productHaarMeasure N (PeriodicSite T L) (interfaceSites T L)) =
+      ∏ (l : FiniteLinkIndex (PeriodicSite T L) (interfaceSites T L)),
+        (if w l.val = σ_0 then (1 : ℂ) else 0) := by
+  classical
+  -- The Haar measure on SU N (same K as in productHaarMeasure).
+  let K : TopologicalSpace.PositiveCompacts (SU N) :=
+    ⟨⟨Set.univ, isCompact_univ⟩, by simpa using Set.univ_nonempty (α := SU N)⟩
+  set μ : MeasureTheory.Measure (SU N) := MeasureTheory.Measure.haarMeasure K with hμ_def
+  -- μ is a probability measure (normalized Haar measure on compact SU N).
+  haveI : MeasureTheory.IsProbabilityMeasure μ := by
+    constructor
+    rw [hμ_def]
+    simpa [K] using MeasureTheory.Measure.haarMeasure_self (K₀ := K)
+  -- productHaarMeasure = Measure.pi (fun _ => μ) by definition.
+  rw [show productHaarMeasure N (PeriodicSite T L) (interfaceSites T L) =
+      MeasureTheory.Measure.pi (fun _ : FiniteLinkIndex (PeriodicSite T L) (interfaceSites T L) => μ) from by
+    dsimp [productHaarMeasure, μ]]
+  -- Apply character orthogonality for product measures.
+  exact integral_prod_repCharacter_trivial μ
+    (FiniteLinkIndex (PeriodicSite T L) (interfaceSites T L))
+    ι dims hDims ρ hU hIrr σ_0 hσ_0_dims hσ_0_trivial
+    (fun l => w l.val)
+
+#print axioms interface_char_integral_trivial
+
+/-- **Surjectivity of `plaquetteLinkIdx`**: every link `(n, μ)` appears in at least
+one plaquette.  For any link `(n, μ)`, the plaquette `(n, μ, ν)` with `j = 0` gives
+`plaquetteLinkIdx (n, μ, ν) 0 = (n, μ)` by definition.
+
+This is the `hlinks_surj` hypothesis needed to apply
+`plaquette_product_separable_decomp` (PeterWeyl.lean:1358) to ALL plaquettes. -/
+lemma plaquetteLinkIdx_surj (T L : ℕ) [NeZero T] [NeZero L] :
+    ∀ (l : PeriodicSite T L × Fin 4),
+    ∃ (p : PlaquetteIndex T L) (j : Fin 4), plaquetteLinkIdx T L p j = l := by
+  intro ⟨n, μ⟩
+  -- The plaquette (n, μ, 0) has plaquetteLinkIdx ... 0 = (n, μ) by definition.
+  refine ⟨(n, μ, 0), 0, ?_⟩
+  simp [plaquetteLinkIdx]
+
+/-! ### Temporal/spatial split of interface links (L_0 = L_0_temporal ⊔ L_0_spatial)
+
+The interface links at time-0 (`interfaceLinkInt`, a.k.a. `L_0`) split into:
+- **Temporal** (μ=0): inverted by the σ reflection (`σ(w) = w⁻¹`).
+- **Spatial** (μ≠0): fixed by the σ reflection (`σ(u⁰_s) = u⁰_s`).
+
+This split is the key insight of §8.11.32: expanding the test function `f` in the
+Peter-Weyl basis of the temporal links ONLY (keeping spatial links as parameters)
+avoids the reorganization obstacle, because the spatial links are the same in both
+f-factors (fixed by σ) while the temporal links give a Gram matrix via the triple
+product integral (ρ(w⁻¹) = ρ(w)† provides the conjugation). -/
+
+/-- The temporal (time-like, μ=0) links among the time-0 interface links.
+Under σ, these are INVERTED: `σ(w) = w⁻¹`. -/
+noncomputable def interfaceLinkTemporal (T L : ℕ) [NeZero T] [NeZero L] :
+    Finset (InterfaceLink T L) :=
+  (interfaceLinkInt T L).filter (fun l => l.val.2 = 0)
+
+/-- The spatial (μ≠0) links among the time-0 interface links.
+Under σ, these are FIXED: `σ(u⁰_s) = u⁰_s`. -/
+noncomputable def interfaceLinkSpatial (T L : ℕ) [NeZero T] [NeZero L] :
+    Finset (InterfaceLink T L) :=
+  (interfaceLinkInt T L).filter (fun l => l.val.2 ≠ 0)
+
+/-- Membership in `interfaceLinkTemporal`: time-0 link with μ=0. -/
+lemma interfaceLinkTemporal_mem_iff (T L : ℕ) [NeZero T] [NeZero L]
+    (l : InterfaceLink T L) :
+    l ∈ interfaceLinkTemporal T L ↔ l ∈ interfaceLinkInt T L ∧ l.val.2 = 0 := by
+  simp [interfaceLinkTemporal]
+
+/-- Membership in `interfaceLinkSpatial`: time-0 link with μ≠0. -/
+lemma interfaceLinkSpatial_mem_iff (T L : ℕ) [NeZero T] [NeZero L]
+    (l : InterfaceLink T L) :
+    l ∈ interfaceLinkSpatial T L ↔ l ∈ interfaceLinkInt T L ∧ l.val.2 ≠ 0 := by
+  simp [interfaceLinkSpatial]
+
+/-- The temporal and spatial links partition the time-0 interface links (L_0). -/
+lemma interfaceLinkTemporal_spatial_partition (T L : ℕ) [NeZero T] [NeZero L] :
+    Disjoint (interfaceLinkTemporal T L) (interfaceLinkSpatial T L) ∧
+    interfaceLinkTemporal T L ∪ interfaceLinkSpatial T L = interfaceLinkInt T L := by
+  refine ⟨?_, ?_⟩
+  · refine Finset.disjoint_left.mpr (fun l hl hl' => ?_)
+    rw [interfaceLinkTemporal_mem_iff] at hl
+    rw [interfaceLinkSpatial_mem_iff] at hl'
+    exact hl'.2 hl.2
+  · ext l
+    simp only [Finset.mem_union, interfaceLinkTemporal_mem_iff,
+      interfaceLinkSpatial_mem_iff]
+    by_cases hμ : l.val.2 = 0 <;> simp [hμ]
+
+/-- The product over `interfaceLinkInt` equals the product over temporal ∪ spatial. -/
+lemma prod_interfaceLinkInt_eq_temporal_spatial (T L : ℕ) [NeZero T] [NeZero L]
+    {α : Type*} [CommMonoid α] (f : InterfaceLink T L → α) :
+    ∏ l ∈ interfaceLinkInt T L, f l =
+    (∏ l ∈ interfaceLinkTemporal T L, f l) * (∏ l ∈ interfaceLinkSpatial T L, f l) := by
+  have ⟨hdisj, hcover⟩ := interfaceLinkTemporal_spatial_partition T L
+  rw [← hcover]
+  exact Finset.prod_union hdisj
+
 /-- The product over all plaquettes with an if-condition equals the product over
 interface plaquettes only (non-interface terms contribute 1).  This is the
 "filter product" step connecting G3 (`exp_neg_beta_wilsonActionOSInterface_eq_prod`)
@@ -1282,10 +1650,13 @@ lemma interface_product_character_expansion (N T L : ℕ) (β : ℝ) [NeZero T] 
           (∏ l ∈ interfaceLinkPos T L, repCharacter (ρ (w l)) (interfaceLinkVar N T L U l)) *
           (∏ l ∈ interfaceLinkInt T L, repCharacter (ρ (w l)) (interfaceLinkVar N T L U l)) *
           star (∏ l ∈ interfaceLinkNeg T L, repCharacter (ρ (dual (w l))) (interfaceLinkVar N T L U l)) := by
-  obtain ⟨ι, hι, dims, ρ, hU, hMeas, hIrr, hDims, coeff, hcoeff, cg, hcg, hcg_decomp, dual, hdual,
+  obtain ⟨ι, hι, dims, ρ, hU, hMeas, hIrr, hDims, σ_0, hσ_0_dims, hσ_0_trivial, coeff, hcoeff, cg, hcg, hcg_decomp, dual, hdual,
       cgME, hcgME_decomp, hcgME_unitary,
-      Λ, hΛ, dimsΛ, ρΛ, hUΛ, hIrrΛ, hDimsΛ, emb, hemb, μ, hμ, hexp4, hL2⟩ :=
+      Λ, hΛ, dimsΛ, ρΛ, hUΛ, hIrrΛ, hDimsΛ, emb, hemb, μ, hμ,
+      cgMEΛ, hcgMEΛ_support, hexp4, hL2, hSchurΛ, hcgMEΛ_parts⟩ :=
     peterWeyl_clebschGordan_plaquette N (β * β / N) (plaquetteBoltzmann_tm_coupling_nonneg N β hN)
+  obtain ⟨hSchurΛ_int, hSchurΛ_diag, hSchurΛ_offdiag⟩ := hSchurΛ
+  obtain ⟨hcgMEΛ_decomp, hcgMEΛ_unitary, hcgMEΛ_support_zero⟩ := hcgMEΛ_parts
   letI : Fintype ι := hι
   classical
   obtain ⟨F, hF, hF_decomp⟩ := interface_kernel_character_expansion
@@ -1343,6 +1714,477 @@ lemma interface_boltzmann_character_expansion (N T L : ℕ) (β : ℝ) [NeZero T
   rw [Complex.ofReal_mul, h]
 
 #print axioms interface_boltzmann_character_expansion
+
+/-! ### Full character expansion (ALL plaquettes)
+
+For the FULL character expansion (§8.11.61), we expand ALL plaquettes (bulk
+positive, bulk negative, AND interface) in characters, not just the interface
+ones.  This uses the full link partition (`allLinkPos`/`allLinkInt`/`allLinkNeg`)
+and `plaquetteLinkIdx` (which assigns the 4 links of each plaquette).  The
+result is a character expansion with `F_full(w) ≥ 0` that covers ALL links,
+which is the key ingredient for the `dependsOnlyOnPositive` reflection
+positivity proof. -/
+
+/-- **Full Boltzmann factor as a positive constant times the abstract plaquette
+product.** The full Boltzmann factor `exp(-β·S_W)` equals a positive constant
+`C = ∏_{p ∈ PlaquetteIndex} exp(-β²)` times the abstract plaquette product
+`∏_{p ∈ PlaquetteIndex} exp((β²/N)·Re Tr(P_p))`, where `P_p` is the plaquette
+product `plaquetteProduct N U p.1 p.2.1 p.2.2`.
+
+This is the full-lattice analogue of `interface_boltzmann_eq_abstract_product`
+(which covers only interface plaquettes).  It combines
+`exp_neg_beta_wilsonActionFinite_eq_prod` (exp-of-sum for the full action) with
+`plaquetteContribution_exp_decomp_tm` (per-plaquette Boltzmann decomposition).
+The constant `C > 0` is absorbable into normalization.  Pure algebra —
+0 sorries, 0 custom axioms. -/
+lemma full_boltzmann_eq_abstract_product (N T L : ℕ) (β : ℝ) [NeZero T] [NeZero L] :
+    ∃ (C : ℝ) (hC : 0 < C),
+      ∀ (U : LinkVariable (SU N) (PeriodicSite T L)),
+      Real.exp (-β * wilsonActionFinite N β (Finset.univ : Finset (PeriodicSite T L)) U) =
+        C * ∏ p : PlaquetteIndex T L,
+          Real.exp ((β * β / N) * Complex.re (Matrix.trace
+            ((plaquetteProduct N U p.1 p.2.1 p.2.2 : SU N) :
+              Matrix (Fin N) (Fin N) ℂ))) := by
+  set C := ∏ p : PlaquetteIndex T L, Real.exp (-(β * β))
+  refine ⟨C, ?_, fun U => ?_⟩
+  · exact Finset.prod_pos (fun p _ => plaquetteBoltzmann_tm_const_pos β)
+  · rw [exp_neg_beta_wilsonActionFinite_eq_prod]
+    simp only [← Fintype.prod_prod_type']
+    simp only [plaquetteContribution_exp_decomp_tm]
+    rw [Finset.prod_mul_distrib]
+
+#print axioms full_boltzmann_eq_abstract_product
+
+/-! ## Full Boltzmann positive-definiteness (building block for Lüscher decomposition)
+
+The full Boltzmann factor `exp(-β·S_W)` is a product of plaquette Boltzmann factors,
+each positive-definite on `SU(N)⁴` (proven: `plaquetteBoltzmannPD_inv`).  By the Schur
+product theorem (`PositiveDefinite.finprod`), the full Boltzmann is positive-definite
+on the link group `G = SU(N)^{allLinks}`.  This is the key building block for the
+spatial hopping operator V in the Lüscher decomposition T = V^{1/2}·U·V^{1/2}.
+See `docs/transfer_matrix_positivity_design.md` §8.11.67. -/
+
+
+theorem fullBoltzmannPD (N T L : ℕ) [NeZero T] [NeZero L] (β : ℝ) (hβ : 0 ≤ β) :
+    PositiveDefinite (fun (U : LinkVariable (SU N) (PeriodicSite T L)) =>
+      (Real.exp (-β * wilsonActionFinite N β (Finset.univ : Finset (PeriodicSite T L)) U) : ℂ)) := by
+  -- Step 1: Obtain the product form from full_boltzmann_eq_abstract_product
+  obtain ⟨C, hC_pos, h_eq⟩ := full_boltzmann_eq_abstract_product N T L β
+  -- Step 2: The coupling constant c = β²/N ≥ 0
+  set c := β * β / N
+  have hc : 0 ≤ c := div_nonneg (mul_self_nonneg β) (Nat.cast_nonneg _)
+  -- Step 3: For each plaquette p, the plaquette factor is PD.
+  -- We use PositiveDefinite.congr (not convert/exact) to avoid the whnf timeout
+  -- caused by addVectorPeriodic's match on Fin 4 (which gets stuck when the
+  -- direction μ is a variable).  The function equality is proved by funext + simp
+  -- (which handles the stuck match via equational rewriting), then PD is transferred.
+  let φ (q : ((SU N × SU N) × SU N) × SU N) : ℂ :=
+    (Real.exp (c * (Matrix.trace ((q.1.1.1 * q.1.1.2 * q.1.2⁻¹ * q.2⁻¹ : SU N) :
+      Matrix (Fin N) (Fin N) ℂ)).re) : ℂ)
+  have hφ : PositiveDefinite φ := plaquetteBoltzmannPD_inv N c hc
+  have hφ_PD : ∀ (p : PlaquetteIndex T L), PositiveDefinite
+      (fun (U : LinkVariable (SU N) (PeriodicSite T L)) =>
+        (Real.exp (c * Complex.re (Matrix.trace
+          ((plaquetteProduct N U p.1 p.2.1 p.2.2 : SU N) :
+            Matrix (Fin N) (Fin N) ℂ))) : ℂ)) := by
+    intro p
+    have hcomp : PositiveDefinite (fun g => φ (plaquetteProjection N p.1 p.2.1 p.2.2 g)) :=
+      PositiveDefinite.comp_hom (plaquetteProjection N p.1 p.2.1 p.2.2) hφ
+    have hfun : (fun (U : LinkVariable (SU N) (PeriodicSite T L)) =>
+        (Real.exp (c * Complex.re (Matrix.trace
+          ((plaquetteProduct N U p.1 p.2.1 p.2.2 : SU N) :
+            Matrix (Fin N) (Fin N) ℂ))) : ℂ)) =
+        (fun g => φ (plaquetteProjection N p.1 p.2.1 p.2.2 g)) := by
+      funext U
+      show (Real.exp (c * Complex.re (Matrix.trace
+        ((plaquetteProduct N U p.1 p.2.1 p.2.2 : SU N) :
+          Matrix (Fin N) (Fin N) ℂ))) : ℂ) =
+        (Real.exp (c * (Matrix.trace
+          (((plaquetteProjection N p.1 p.2.1 p.2.2 U).1.1.1 *
+            (plaquetteProjection N p.1 p.2.1 p.2.2 U).1.1.2 *
+            (plaquetteProjection N p.1 p.2.1 p.2.2 U).1.2⁻¹ *
+            (plaquetteProjection N p.1 p.2.1 p.2.2 U).2⁻¹ : SU N) :
+            Matrix (Fin N) (Fin N) ℂ)).re) : ℂ)
+      simp only [plaquetteProjection, plaquetteProduct, MonoidHom.coe_mk, Complex.re]
+      rfl
+    exact PositiveDefinite.congr hfun hcomp
+  -- Step 4: The product of PD functions is PD (Schur product theorem).
+  -- Use congr to avoid the whnf timeout caused by addVectorPeriodic's stuck
+  -- match on Fin 4.  Build hprod_PD' WITHOUT a declared type (so no conclusion
+  -- defeq check against the ∏ notation), then transfer PD with congr + funext.
+  -- The funext goal is alpha-equivalent (renaming bound variables), so rfl is
+  -- fast — isDefEq confirms structural equality without unfolding plaquetteProduct.
+  have hprod_PD' := PositiveDefinite.finprod Finset.univ
+    (fun (p : PlaquetteIndex T L) (U : LinkVariable (SU N) (PeriodicSite T L)) =>
+      (Real.exp (c * Complex.re (Matrix.trace
+        ((plaquetteProduct N U p.1 p.2.1 p.2.2 : SU N) :
+          Matrix (Fin N) (Fin N) ℂ))) : ℂ))
+    (fun p _ => hφ_PD p)
+  have hprod_PD : PositiveDefinite (fun (U : LinkVariable (SU N) (PeriodicSite T L)) =>
+    (∏ p : PlaquetteIndex T L,
+      (Real.exp (c * Complex.re (Matrix.trace
+        ((plaquetteProduct N U p.1 p.2.1 p.2.2 : SU N) :
+          Matrix (Fin N) (Fin N) ℂ))) : ℂ))) := by
+    apply PositiveDefinite.congr _ hprod_PD'
+    funext U
+    rfl
+  -- Step 5: C times the product is PD (C ≥ 0).  Same congr pattern.
+  have hCprod_PD' := PositiveDefinite.smul_nonneg (le_of_lt hC_pos) hprod_PD
+  have hCprod_PD : PositiveDefinite (fun (U : LinkVariable (SU N) (PeriodicSite T L)) =>
+    ((C : ℂ) * ∏ p : PlaquetteIndex T L,
+      (Real.exp (c * Complex.re (Matrix.trace
+        ((plaquetteProduct N U p.1 p.2.1 p.2.2 : SU N) :
+          Matrix (Fin N) (Fin N) ℂ))) : ℂ))) := by
+    apply PositiveDefinite.congr _ hCprod_PD'
+    funext U
+    rfl
+  -- Step 6: The full Boltzmann equals C times the product (pointwise).
+  have hfun_final : (fun (U : LinkVariable (SU N) (PeriodicSite T L)) =>
+      (Real.exp (-β * wilsonActionFinite N β (Finset.univ : Finset (PeriodicSite T L)) U) : ℂ)) =
+    (fun (U : LinkVariable (SU N) (PeriodicSite T L)) =>
+      ((C : ℂ) * ∏ p : PlaquetteIndex T L,
+        (Real.exp (c * Complex.re (Matrix.trace
+          ((plaquetteProduct N U p.1 p.2.1 p.2.2 : SU N) :
+            Matrix (Fin N) (Fin N) ℂ))) : ℂ))) := by
+    funext U
+    exact_mod_cast h_eq U
+  exact PositiveDefinite.congr hfun_final hCprod_PD
+
+#print axioms fullBoltzmannPD
+
+/-! ## Spatial/temporal plaquette decomposition (Lüscher decomposition §8.11.67)
+
+The Lüscher decomposition T = V^{1/2}·U·V^{1/2} requires splitting the Wilson action
+into spatial plaquettes (both directions nonzero — plaquettes within a single time
+slice) and temporal plaquettes (at least one direction is the time direction 0 —
+plaquettes spanning two adjacent time slices).  The spatial plaquettes give the
+positive multiplication operator V (PD by the Schur product theorem), and the
+temporal plaquettes give the integral operator U (positive by the Lüscher cascade
++ `character_kernel_integral_nonneg`).
+See `docs/transfer_matrix_positivity_design.md` §8.11.67. -/
+
+/-- A plaquette is **spatial** if both directions are nonzero (μ ≠ 0 and ν ≠ 0).
+Such a plaquette lies entirely within a single time slice. -/
+def isSpatialPlaquette {T L : ℕ} (p : PlaquetteIndex T L) : Prop :=
+  p.2.1 ≠ 0 ∧ p.2.2 ≠ 0
+
+/-- A plaquette is **temporal** if at least one direction is the time direction 0
+(μ = 0 or ν = 0).  Such a plaquette spans two adjacent time slices. -/
+def isTemporalPlaquette {T L : ℕ} (p : PlaquetteIndex T L) : Prop :=
+  p.2.1 = 0 ∨ p.2.2 = 0
+
+/-- The set of spatial plaquettes (both directions nonzero). -/
+def spatialPlaquettes (T L : ℕ) [NeZero T] [NeZero L] : Finset (PlaquetteIndex T L) :=
+  Finset.univ.filter (fun p => p.2.1 ≠ 0 ∧ p.2.2 ≠ 0)
+
+/-- The set of temporal plaquettes (at least one direction is 0). -/
+def temporalPlaquettes (T L : ℕ) [NeZero T] [NeZero L] : Finset (PlaquetteIndex T L) :=
+  Finset.univ.filter (fun p => p.2.1 = 0 ∨ p.2.2 = 0)
+
+/-- Membership in `spatialPlaquettes`: both directions nonzero. -/
+lemma spatialPlaquettes_mem_iff (T L : ℕ) [NeZero T] [NeZero L]
+    (p : PlaquetteIndex T L) :
+    p ∈ spatialPlaquettes T L ↔ p.2.1 ≠ 0 ∧ p.2.2 ≠ 0 := by
+  unfold spatialPlaquettes
+  simp [Finset.mem_filter, Finset.mem_univ]
+
+/-- Membership in `temporalPlaquettes`: at least one direction is 0. -/
+lemma temporalPlaquettes_mem_iff (T L : ℕ) [NeZero T] [NeZero L]
+    (p : PlaquetteIndex T L) :
+    p ∈ temporalPlaquettes T L ↔ p.2.1 = 0 ∨ p.2.2 = 0 := by
+  unfold temporalPlaquettes
+  simp [Finset.mem_filter, Finset.mem_univ]
+
+/-- Spatial and temporal plaquettes partition all plaquettes (disjoint + cover). -/
+lemma spatial_temporal_plaquette_partition (T L : ℕ) [NeZero T] [NeZero L] :
+    Disjoint (spatialPlaquettes T L) (temporalPlaquettes T L) ∧
+    spatialPlaquettes T L ∪ temporalPlaquettes T L = Finset.univ := by
+  refine ⟨?_, ?_⟩
+  · refine Finset.disjoint_left.mpr (fun p hp hp' => ?_)
+    rw [spatialPlaquettes_mem_iff] at hp
+    rw [temporalPlaquettes_mem_iff] at hp'
+    cases hp' with
+    | inl h => exact hp.1 h
+    | inr h => exact hp.2 h
+  · ext p
+    simp only [Finset.mem_union, spatialPlaquettes_mem_iff, temporalPlaquettes_mem_iff,
+      Finset.mem_univ]
+    tauto
+
+/-- The spatial part of the Wilson action: sum over spatial plaquettes only. -/
+noncomputable def wilsonActionSpatial (N T L : ℕ) (β : ℝ) [NeZero T] [NeZero L]
+    (U : LinkVariable (SU N) (PeriodicSite T L)) : ℝ :=
+  ∑ p ∈ spatialPlaquettes T L, plaquetteContribution N β U p.1 p.2.1 p.2.2
+
+/-- The temporal part of the Wilson action: sum over temporal plaquettes only. -/
+noncomputable def wilsonActionTemporal (N T L : ℕ) (β : ℝ) [NeZero T] [NeZero L]
+    (U : LinkVariable (SU N) (PeriodicSite T L)) : ℝ :=
+  ∑ p ∈ temporalPlaquettes T L, plaquetteContribution N β U p.1 p.2.1 p.2.2
+
+/-- **Spatial/temporal plaquette decomposition of the Wilson action.**
+`S_W = S_spatial + S_temporal` where `S_spatial` is the sum over spatial plaquettes
+(both directions nonzero) and `S_temporal` is the sum over temporal plaquettes
+(at least one direction is the time direction 0).  This is sub-step 1 of the
+Lüscher decomposition T = V^{1/2}·U·V^{1/2} (§8.11.67). -/
+lemma wilsonActionFinite_eq_spatial_plus_temporal (N T L : ℕ) (β : ℝ) [NeZero T] [NeZero L]
+    (U : LinkVariable (SU N) (PeriodicSite T L)) :
+    wilsonActionFinite N β (Finset.univ : Finset (PeriodicSite T L)) U =
+      wilsonActionSpatial N T L β U + wilsonActionTemporal N T L β U := by
+  -- Step 1: Convert wilsonActionFinite to a sum over PlaquetteIndex.
+  -- wilsonActionFinite N β Finset.univ U = ∑ n, ∑ μ, ∑ ν, plaquetteContribution N β U n μ ν
+  -- Merge the three nested sums into one over PlaquetteIndex T L (right-associated).
+  have h_eq : wilsonActionFinite N β (Finset.univ : Finset (PeriodicSite T L)) U =
+      ∑ p : PlaquetteIndex T L, plaquetteContribution N β U p.1 p.2.1 p.2.2 := by
+    simp only [Lattice.wilsonActionFinite]
+    -- ∑ n ∈ Finset.univ, ∑ μ, ∑ ν, plaquetteContribution N β U n μ ν
+    -- = ∑ p : PlaquetteIndex T L, plaquetteContribution N β U p.1 p.2.1 p.2.2
+    -- Use the same pattern as prod_if_interface_eq_prod_subtype:
+    -- ← Fintype.sum_prod_type' merges nested Fintype sums into a product-type sum.
+    simp only [← Fintype.sum_prod_type']
+  -- Step 2: Split by the spatial/temporal partition.
+  rw [h_eq]
+  have ⟨hdisj, hcover⟩ := spatial_temporal_plaquette_partition T L
+  rw [← hcover, Finset.sum_union hdisj]
+  rfl
+
+#print axioms wilsonActionFinite_eq_spatial_plus_temporal
+
+/-! ## Spatial Boltzmann factor positive-definiteness (V operator, Lüscher §8.11.67)
+
+The spatial Boltzmann factor `exp(-β·S_spatial)` is a product of spatial plaquette
+Boltzmann factors, each PD on `SU(N)⁴` (proven: `plaquetteBoltzmannPD_inv`).  By the
+Schur product theorem (`PositiveDefinite.finprod`), the spatial Boltzmann is PD on
+the link group `G = SU(N)^{allLinks}`.  This is the key building block for the
+spatial hopping operator V in the Lüscher decomposition T = V^{1/2}·U·V^{1/2}.
+See `docs/transfer_matrix_positivity_design.md` §8.11.67. -/
+
+/-- **Spatial Boltzmann factor as a positive constant times the abstract spatial
+plaquette product.** The spatial Boltzmann factor `exp(-β·S_spatial)` equals a
+positive constant `C = ∏_{p ∈ spatialPlaquettes} exp(-β²)` times the abstract
+plaquette product `∏_{p ∈ spatialPlaquettes} exp((β²/N)·Re Tr(P_p))`.
+This is the spatial analogue of `full_boltzmann_eq_abstract_product`.
+Pure algebra — 0 sorries, 0 custom axioms. -/
+lemma spatial_boltzmann_eq_abstract_product (N T L : ℕ) (β : ℝ) [NeZero T] [NeZero L] :
+    ∃ (C : ℝ) (hC : 0 < C),
+      ∀ (U : LinkVariable (SU N) (PeriodicSite T L)),
+      Real.exp (-β * wilsonActionSpatial N T L β U) =
+        C * ∏ p ∈ spatialPlaquettes T L,
+          Real.exp ((β * β / N) * Complex.re (Matrix.trace
+            ((plaquetteProduct N U p.1 p.2.1 p.2.2 : SU N) :
+              Matrix (Fin N) (Fin N) ℂ))) := by
+  set C := ∏ p ∈ spatialPlaquettes T L, Real.exp (-(β * β))
+  refine ⟨C, ?_, fun U => ?_⟩
+  · exact Finset.prod_pos (fun p _ => plaquetteBoltzmann_tm_const_pos β)
+  · -- exp(-β·S_spatial) = ∏_{p ∈ spatial} exp(-β·plaquetteContribution)
+    have h_exp_sum : Real.exp (-β * wilsonActionSpatial N T L β U) =
+        ∏ p ∈ spatialPlaquettes T L,
+          Real.exp (-β * plaquetteContribution N β U p.1 p.2.1 p.2.2) := by
+      show Real.exp (-β * ∑ p ∈ spatialPlaquettes T L, plaquetteContribution N β U p.1 p.2.1 p.2.2) =
+        ∏ p ∈ spatialPlaquettes T L, Real.exp (-β * plaquetteContribution N β U p.1 p.2.1 p.2.2)
+      rw [Finset.mul_sum, Real.exp_sum]
+    rw [h_exp_sum]
+    -- Per-plaquette: exp(-β·plaquetteContribution) = exp(-β²)·exp((β²/N)·Re Tr)
+    simp only [plaquetteContribution_exp_decomp_tm]
+    rw [Finset.prod_mul_distrib]
+
+#print axioms spatial_boltzmann_eq_abstract_product
+
+/-- **The spatial Boltzmann factor is positive-definite.** The spatial Boltzmann
+factor `exp(-β·S_spatial)` is a product of spatial plaquette Boltzmann factors,
+each PD on `SU(N)⁴` (proven: `plaquetteBoltzmannPD_inv`).  By the Schur product
+theorem (`PositiveDefinite.finprod`), the spatial Boltzmann is PD on the link
+group `G = SU(N)^{allLinks}`.  This is sub-step 2 of the Lüscher decomposition
+(§8.11.67): V (the spatial hopping operator) is a positive multiplication
+operator because the spatial Boltzmann factor is PD. -/
+theorem spatialBoltzmannPD (N T L : ℕ) [NeZero T] [NeZero L] (β : ℝ) (hβ : 0 ≤ β) :
+    PositiveDefinite (fun (U : LinkVariable (SU N) (PeriodicSite T L)) =>
+      (Real.exp (-β * wilsonActionSpatial N T L β U) : ℂ)) := by
+  -- Step 1: Obtain the product form from spatial_boltzmann_eq_abstract_product
+  obtain ⟨C, hC_pos, h_eq⟩ := spatial_boltzmann_eq_abstract_product N T L β
+  -- Step 2: The coupling constant c = β²/N ≥ 0
+  set c := β * β / N
+  have hc : 0 ≤ c := div_nonneg (mul_self_nonneg β) (Nat.cast_nonneg _)
+  -- Step 3: For each spatial plaquette p, the plaquette factor is PD.
+  -- Use PositiveDefinite.congr to avoid the whnf timeout caused by
+  -- addVectorPeriodic's match on Fin 4 (same technique as fullBoltzmannPD).
+  let φ (q : ((SU N × SU N) × SU N) × SU N) : ℂ :=
+    (Real.exp (c * (Matrix.trace ((q.1.1.1 * q.1.1.2 * q.1.2⁻¹ * q.2⁻¹ : SU N) :
+      Matrix (Fin N) (Fin N) ℂ)).re) : ℂ)
+  have hφ : PositiveDefinite φ := plaquetteBoltzmannPD_inv N c hc
+  have hφ_PD : ∀ (p : PlaquetteIndex T L), PositiveDefinite
+      (fun (U : LinkVariable (SU N) (PeriodicSite T L)) =>
+        (Real.exp (c * Complex.re (Matrix.trace
+          ((plaquetteProduct N U p.1 p.2.1 p.2.2 : SU N) :
+            Matrix (Fin N) (Fin N) ℂ))) : ℂ)) := by
+    intro p
+    have hcomp : PositiveDefinite (fun g => φ (plaquetteProjection N p.1 p.2.1 p.2.2 g)) :=
+      PositiveDefinite.comp_hom (plaquetteProjection N p.1 p.2.1 p.2.2) hφ
+    have hfun : (fun (U : LinkVariable (SU N) (PeriodicSite T L)) =>
+        (Real.exp (c * Complex.re (Matrix.trace
+          ((plaquetteProduct N U p.1 p.2.1 p.2.2 : SU N) :
+            Matrix (Fin N) (Fin N) ℂ))) : ℂ)) =
+        (fun g => φ (plaquetteProjection N p.1 p.2.1 p.2.2 g)) := by
+      funext U
+      show (Real.exp (c * Complex.re (Matrix.trace
+        ((plaquetteProduct N U p.1 p.2.1 p.2.2 : SU N) :
+          Matrix (Fin N) (Fin N) ℂ))) : ℂ) =
+        (Real.exp (c * (Matrix.trace
+          (((plaquetteProjection N p.1 p.2.1 p.2.2 U).1.1.1 *
+            (plaquetteProjection N p.1 p.2.1 p.2.2 U).1.1.2 *
+            (plaquetteProjection N p.1 p.2.1 p.2.2 U).1.2⁻¹ *
+            (plaquetteProjection N p.1 p.2.1 p.2.2 U).2⁻¹ : SU N) :
+            Matrix (Fin N) (Fin N) ℂ)).re) : ℂ)
+      simp only [plaquetteProjection, plaquetteProduct, MonoidHom.coe_mk, Complex.re]
+      rfl
+    exact PositiveDefinite.congr hfun hcomp
+  -- Step 4: The product of PD functions over spatial plaquettes is PD (Schur product).
+  -- Use congr to avoid the whnf timeout caused by addVectorPeriodic's stuck match.
+  have hprod_PD' := PositiveDefinite.finprod (spatialPlaquettes T L)
+    (fun (p : PlaquetteIndex T L) (U : LinkVariable (SU N) (PeriodicSite T L)) =>
+      (Real.exp (c * Complex.re (Matrix.trace
+        ((plaquetteProduct N U p.1 p.2.1 p.2.2 : SU N) :
+          Matrix (Fin N) (Fin N) ℂ))) : ℂ))
+    (fun p _ => hφ_PD p)
+  have hprod_PD : PositiveDefinite (fun (U : LinkVariable (SU N) (PeriodicSite T L)) =>
+    (∏ p ∈ spatialPlaquettes T L,
+      (Real.exp (c * Complex.re (Matrix.trace
+        ((plaquetteProduct N U p.1 p.2.1 p.2.2 : SU N) :
+          Matrix (Fin N) (Fin N) ℂ))) : ℂ))) := by
+    apply PositiveDefinite.congr _ hprod_PD'
+    funext U
+    rfl
+  -- Step 5: C times the product is PD (C ≥ 0).
+  have hCprod_PD' := PositiveDefinite.smul_nonneg (le_of_lt hC_pos) hprod_PD
+  have hCprod_PD : PositiveDefinite (fun (U : LinkVariable (SU N) (PeriodicSite T L)) =>
+    ((C : ℂ) * ∏ p ∈ spatialPlaquettes T L,
+      (Real.exp (c * Complex.re (Matrix.trace
+        ((plaquetteProduct N U p.1 p.2.1 p.2.2 : SU N) :
+          Matrix (Fin N) (Fin N) ℂ))) : ℂ))) := by
+    apply PositiveDefinite.congr _ hCprod_PD'
+    funext U
+    rfl
+  -- Step 6: The spatial Boltzmann equals C times the product (pointwise).
+  have hfun_final : (fun (U : LinkVariable (SU N) (PeriodicSite T L)) =>
+      (Real.exp (-β * wilsonActionSpatial N T L β U) : ℂ)) =
+    (fun (U : LinkVariable (SU N) (PeriodicSite T L)) =>
+      ((C : ℂ) * ∏ p ∈ spatialPlaquettes T L,
+        (Real.exp (c * Complex.re (Matrix.trace
+          ((plaquetteProduct N U p.1 p.2.1 p.2.2 : SU N) :
+            Matrix (Fin N) (Fin N) ℂ))) : ℂ))) := by
+    funext U
+    exact_mod_cast h_eq U
+  exact PositiveDefinite.congr hfun_final hCprod_PD
+
+#print axioms spatialBoltzmannPD
+
+/-! ## Character expansion of the full plaquette product.
+
+Applying `interface_kernel_character_expansion` (Peter-Weyl / Clebsch-Gordan) to ALL
+plaquettes (not just interface ones), the full plaquette product
+`∏_{p ∈ PlaquetteIndex} exp((β²/N)·Re Tr(P_p))` (viewed in `ℂ`) admits the
+separable character expansion
+
+    ∏_p exp(c·Re Tr(...)) = ∑_w F(w) · Φ_w(U) · Ψ_w(U) · conj(Φ_w(U))
+
+with `F(w) ≥ 0`, where `Φ_w(U) = ∏_{l ∈ allLinkPos} χ_{w(l)}(U.value l.1 l.2)`,
+`Ψ_w(U) = ∏_{l ∈ allLinkInt} χ_{w(l)}(U.value l.1 l.2)`, and the negative-link
+factor uses the dual (contragredient) map.
+This is the full-lattice analogue of `interface_product_character_expansion`.
+Uses the `peterWeyl_clebschGordan_plaquette` axiom (count 6); 0 sorries. -/
+lemma full_product_character_expansion (N T L : ℕ) (β : ℝ) [NeZero T] [NeZero L]
+    (hN : 1 ≤ N) :
+    ∃ (ι : Type) (hι : Fintype ι) (dims : ι → ℕ)
+      (ρ : ∀ i, SU N →* Matrix (Fin (dims i)) (Fin (dims i)) ℂ)
+      (hU : ∀ i, IsUnitaryRepresentation (ρ i))
+      (hMeas : ∀ i, Measurable (repCharacter (ρ i)))
+      (dual : ι → ι)
+      (F : ((PeriodicSite T L × Fin 4) → ι) → ℝ) (hF : ∀ w, 0 ≤ F w),
+      ∀ (U : LinkVariable (SU N) (PeriodicSite T L)),
+      ∏ p : PlaquetteIndex T L,
+        (Real.exp ((β * β / N) * Complex.re (Matrix.trace
+          ((plaquetteProduct N U p.1 p.2.1 p.2.2 : SU N) :
+            Matrix (Fin N) (Fin N) ℂ))) : ℂ) =
+        ∑ w : (PeriodicSite T L × Fin 4) → ι, (F w : ℂ) *
+          (∏ l ∈ allLinkPos T L, repCharacter (ρ (w l)) (U.value l.1 l.2)) *
+          (∏ l ∈ allLinkInt T L, repCharacter (ρ (w l)) (U.value l.1 l.2)) *
+          star (∏ l ∈ allLinkNeg T L, repCharacter (ρ (dual (w l))) (U.value l.1 l.2)) := by
+  obtain ⟨ι, hι, dims, ρ, hU, hMeas, hIrr, hDims, σ_0, hσ_0_dims, hσ_0_trivial, coeff, hcoeff, cg, hcg, hcg_decomp, dual, hdual,
+      cgME, hcgME_decomp, hcgME_unitary,
+      Λ, hΛ, dimsΛ, ρΛ, hUΛ, hIrrΛ, hDimsΛ, emb, hemb, μ, hμ,
+      cgMEΛ, hcgMEΛ_support, hexp4, hL2, hSchurΛ, hcgMEΛ_parts⟩ :=
+    peterWeyl_clebschGordan_plaquette N (β * β / N) (plaquetteBoltzmann_tm_coupling_nonneg N β hN)
+  letI : Fintype ι := hι
+  classical
+  obtain ⟨F, hF, hF_decomp⟩ := interface_kernel_character_expansion
+    ρ hU coeff hcoeff cg hcg hcg_decomp dual hdual
+    (β * β / N) (plaquetteBoltzmann_tm_coupling_nonneg N β hN) hexp4
+    (PlaquetteIndex T L) (PeriodicSite T L × Fin 4) (plaquetteLinkIdx T L)
+    (plaquetteLinkIdx_surj T L)
+    (allLinkPos T L) (allLinkInt T L) (allLinkNeg T L)
+    (allLinkPartition_hdisj T L) (allLinkPartition_hcover T L)
+  refine ⟨ι, hι, dims, ρ, hU, hMeas, dual, F, hF, fun U => ?_⟩
+  have h := hF_decomp (fun l => U.value l.1 l.2)
+  -- h : (∏ p, exp(...U.value(plaquetteLinkIdx p 0)·...·⁻¹)) = ∑ w, ...
+  -- Goal: (∏ p, exp(...plaquetteProduct...)) = ∑ w, ...
+  -- Rewrite plaquetteProduct in the goal to the linkIdx form via plaquetteProduct_eq_linkIdx.
+  have h_eq : (∏ p : PlaquetteIndex T L,
+      (Real.exp ((β * β / N) * Complex.re (Matrix.trace
+        ((plaquetteProduct N U p.1 p.2.1 p.2.2 : SU N) :
+          Matrix (Fin N) (Fin N) ℂ))) : ℂ)) =
+      (∏ p : PlaquetteIndex T L,
+      (Real.exp ((β * β / N) * Complex.re (Matrix.trace
+        ((U.value (plaquetteLinkIdx T L p 0).1 (plaquetteLinkIdx T L p 0).2 *
+          U.value (plaquetteLinkIdx T L p 1).1 (plaquetteLinkIdx T L p 1).2 *
+          (U.value (plaquetteLinkIdx T L p 2).1 (plaquetteLinkIdx T L p 2).2)⁻¹ *
+          (U.value (plaquetteLinkIdx T L p 3).1 (plaquetteLinkIdx T L p 3).2)⁻¹ : SU N) :
+          Matrix (Fin N) (Fin N) ℂ))) : ℂ)) := by
+    apply Finset.prod_congr rfl
+    intro p _
+    rw [plaquetteProduct_eq_linkIdx]
+  rw [h_eq]
+  exact h
+
+#print axioms full_product_character_expansion
+
+/-- **Combined character expansion of the full Boltzmann factor.** Composing
+`full_boltzmann_eq_abstract_product` (exp(-β·S_W) = C · ∏_p exp(c·Re Tr(...)))
+with `full_product_character_expansion` (∏_p exp(c·Re Tr(...)) = ∑_w F(w)·Φ_w·Ψ_w·V_w),
+the full Boltzmann factor admits the character expansion (viewed in ℂ)
+
+    (exp(-β·S_W(U)) : ℂ) = (C : ℂ) · ∑_w F(w) · Φ_w(U) · Ψ_w(U) · V_w(U)
+
+with C > 0 and F(w) ≥ 0, where Φ_w(U) = ∏_{l ∈ allLinkPos} χ_{w(l)}(U.value l.1 l.2),
+Ψ_w(U) = ∏_{l ∈ allLinkInt} χ_{w(l)}(U.value l.1 l.2),
+V_w(U) = star(∏_{l ∈ allLinkNeg} χ_{dual(w(l))}(U.value l.1 l.2)).
+This is the full-lattice analogue of `interface_boltzmann_character_expansion`.
+Uses `peterWeyl_clebschGordan_plaquette` (axiom count 6, unchanged); 0 sorries. -/
+lemma full_boltzmann_character_expansion (N T L : ℕ) (β : ℝ) [NeZero T] [NeZero L]
+    (hN : 1 ≤ N) :
+    ∃ (C : ℝ) (hC : 0 < C)
+      (ι : Type) (hι : Fintype ι) (dims : ι → ℕ)
+      (ρ : ∀ i, SU N →* Matrix (Fin (dims i)) (Fin (dims i)) ℂ)
+      (hU : ∀ i, IsUnitaryRepresentation (ρ i))
+      (hMeas : ∀ i, Measurable (repCharacter (ρ i)))
+      (dual : ι → ι)
+      (F : ((PeriodicSite T L × Fin 4) → ι) → ℝ) (hF : ∀ w, 0 ≤ F w),
+      ∀ (U : LinkVariable (SU N) (PeriodicSite T L)),
+      (Real.exp (-β * wilsonActionFinite N β (Finset.univ : Finset (PeriodicSite T L)) U) : ℂ) =
+        (C : ℂ) * ∑ w : (PeriodicSite T L × Fin 4) → ι, (F w : ℂ) *
+          (∏ l ∈ allLinkPos T L, repCharacter (ρ (w l)) (U.value l.1 l.2)) *
+          (∏ l ∈ allLinkInt T L, repCharacter (ρ (w l)) (U.value l.1 l.2)) *
+          star (∏ l ∈ allLinkNeg T L, repCharacter (ρ (dual (w l))) (U.value l.1 l.2)) := by
+  obtain ⟨C, hC, hC_eq_all⟩ := full_boltzmann_eq_abstract_product N T L β
+  obtain ⟨ι, hι, dims, ρ, hU, hMeas, dual, F, hF, hF_decomp⟩ :=
+    full_product_character_expansion N T L β hN
+  letI : Fintype ι := hι
+  classical
+  refine ⟨C, hC, ι, hι, dims, ρ, hU, hMeas, dual, F, hF, fun U => ?_⟩
+  rw [hC_eq_all U]
+  have h := hF_decomp U
+  norm_cast at h
+  rw [Complex.ofReal_mul, h]
+
+#print axioms full_boltzmann_character_expansion
 
 /-! ### Bridge lemmas: link partition ↔ site partition
 
@@ -2312,12 +3154,178 @@ noncomputable def osG (N T L : ℕ) (β : ℝ) [NeZero T] [NeZero L]
     (U : LinkVariable (SU N) (PeriodicSite T L)) : ℝ :=
   f U * Real.exp (-β * wilsonActionOSPositive N T L β U) *
   Real.exp (-β * wilsonActionOSInterface N T L β U / 2)
+/-! ## Key gauge-invariance lemma: matrix elements vanish for non-trivial representations
+
+For a gauge-invariant function `φ`, the integral `∫ φ(U) · (ρ_γ(U(x,μ)))_{r,s} dμ(U)`
+vanishes for non-trivial irreducible representations `γ ≠ trivial`.  This is the key
+lemma for closing `transferMatrixPositivity_axiom`: it shows that the character
+expansion of a gauge-invariant function collapses to the trivial representation,
+where the cyclic-shift obstacle (§8.11.51) disappears.
+-/
+
+open MeasureTheory
+open Complex
+open scoped ComplexConjugate
+
+/-- For a gauge-invariant `φ`, the integral `∫ φ(ext cfg) · f(ext cfg .value x μ) dμ₀`
+is invariant under left-multiplying the link `U(x,μ)` by any `h ∈ SU(N)`. -/
+lemma gaugeInvariant_integral_leftMul
+    (N : ℕ) {Λ : Type} [DecidableEq Λ] [AddVector Λ] [Fintype Λ]
+    (φ : LinkVariable (SU N) Λ → ℂ)
+    (hφ_gauge : IsGaugeInvariantC N φ)
+    (x : Λ) (μ : Fin 4) (h_xμ : AddVector.addVector x μ ≠ x)
+    (f : SU N → ℂ)
+    (h_int : Integrable (fun cfg =>
+        φ (extendLinkVariable N Λ Finset.univ cfg) * f ((extendLinkVariable N Λ Finset.univ cfg).value x μ))
+        (productHaarMeasure N Λ Finset.univ))
+    (h : SU N) :
+    ∫ (cfg : FiniteLinkConfig N Λ Finset.univ),
+        φ (extendLinkVariable N Λ Finset.univ cfg) * f ((extendLinkVariable N Λ Finset.univ cfg).value x μ)
+        ∂(productHaarMeasure N Λ Finset.univ) =
+    ∫ (cfg : FiniteLinkConfig N Λ Finset.univ),
+        φ (extendLinkVariable N Λ Finset.univ cfg) * f (h * (extendLinkVariable N Λ Finset.univ cfg).value x μ)
+        ∂(productHaarMeasure N Λ Finset.univ) := by
+  set μ₀ : Measure _ := productHaarMeasure N Λ Finset.univ with hμ₀
+  set ext := extendLinkVariable N Λ Finset.univ
+  set g_h : Λ → SU N := fun y => if y = x then h else 1 with hg_h
+  have h_mp : MeasurePreserving (gaugeTransformConfig N Finset.univ g_h) μ₀ μ₀ :=
+    gaugeTransformConfig_measurePreserving N Finset.univ g_h
+  have h_map : Measure.map (gaugeTransformConfig N Finset.univ g_h) μ₀ = μ₀ := h_mp.map_eq
+  have h_aemeas : AEMeasurable (gaugeTransformConfig N Finset.univ g_h) μ₀ := h_mp.measurable.aemeasurable
+  have h_aesm : AEStronglyMeasurable (fun cfg => φ (ext cfg) * f ((ext cfg).value x μ)) μ₀ :=
+    h_int.aestronglyMeasurable
+  have h1 : ∫ (cfg : _), φ (ext cfg) * f ((ext cfg).value x μ) ∂μ₀ =
+      ∫ (cfg : _), φ (ext cfg) * f ((ext cfg).value x μ) ∂(Measure.map (gaugeTransformConfig N Finset.univ g_h) μ₀) := by rw [h_map]
+  rw [h1, integral_map h_aemeas (by rw [h_map]; exact h_aesm)]
+  apply integral_congr_ae
+  apply Filter.Eventually.of_forall
+  intro cfg
+  show φ (extendLinkVariable N Λ Finset.univ (gaugeTransformConfig N Finset.univ g_h cfg)) *
+      f ((extendLinkVariable N Λ Finset.univ (gaugeTransformConfig N Finset.univ g_h cfg)).value x μ) =
+    φ (extendLinkVariable N Λ Finset.univ cfg) *
+    f (h * (extendLinkVariable N Λ Finset.univ cfg).value x μ)
+  rw [extendLinkVariable_gaugeTransformConfig N g_h cfg]
+  rw [hφ_gauge g_h (extendLinkVariable N Λ Finset.univ cfg)]
+  have h_key : (gaugeTransformLinkVariable N g_h (extendLinkVariable N Λ Finset.univ cfg)).value x μ =
+      h * (extendLinkVariable N Λ Finset.univ cfg).value x μ :=
+    gaugeTransformLinkVariable_single_site N x μ h (extendLinkVariable N Λ Finset.univ cfg) h_xμ
+  rw [h_key]
+
+/-- **Key lemma: matrix elements of non-trivial representations vanish for gauge-invariant φ.**
+
+For a gauge-invariant `φ`, an irreducible unitary representation `ρ_σ` with `σ ≠ σ_0`
+(trivial), and a link `(x, μ)` with `x + e_μ ≠ x`:
+`∫ φ(U) · (ρ_σ(U(x,μ)))_{r,s} dμ(U) = 0`.
+
+Proof: by gauge invariance, the integral is invariant under `U(x,μ) ↦ h · U(x,μ)`.
+Expanding `(ρ(h·U))_{r,s} = Σ_k (ρ h)_{r,k} · (ρ U)_{k,s}` and averaging over `h`
+gives `A_{r,s} = Σ_k [∫ (ρ h)_{r,k} dμ(h)] · A_{k,s}`.  By Schur orthogonality,
+`∫ (ρ h)_{r,k} dμ = 0` for `σ ≠ σ_0`, hence `A_{r,s} = 0`. -/
+lemma gaugeInvariant_matrixElement_integral_zero
+    (N : ℕ) {Λ : Type} [DecidableEq Λ] [AddVector Λ] [Fintype Λ]
+    (φ : LinkVariable (SU N) Λ → ℂ)
+    (hφ_gauge : IsGaugeInvariantC N φ)
+    (ι : Type) [Fintype ι] [DecidableEq ι] (dims : ι → ℕ) (hDims : ∀ i, 0 < dims i)
+    (ρ : ∀ i, SU N →* Matrix (Fin (dims i)) (Fin (dims i)) ℂ)
+    (hU : ∀ i, IsUnitaryRepresentation (ρ i))
+    (hIrr : ∀ i, IsIrreducible (ρ i))
+    (σ_0 : ι) (hσ_0_dims : dims σ_0 = 1) (hσ_0_trivial : ∀ g, (ρ σ_0 g) = 1)
+    (σ : ι) (hσ_ne : σ ≠ σ_0)
+    (x : Λ) (μ : Fin 4) (h_xμ : AddVector.addVector x μ ≠ x)
+    (r : Fin (dims σ)) (s : Fin (dims σ))
+    (hφ_int_all : ∀ (k : Fin (dims σ)) (j : Fin (dims σ)),
+        Integrable (fun cfg =>
+          φ (extendLinkVariable N Λ Finset.univ cfg) *
+          (ρ σ ((extendLinkVariable N Λ Finset.univ cfg).value x μ)) k j)
+          (productHaarMeasure N Λ Finset.univ)) :
+    ∫ (cfg : FiniteLinkConfig N Λ Finset.univ),
+        φ (extendLinkVariable N Λ Finset.univ cfg) *
+        (ρ σ ((extendLinkVariable N Λ Finset.univ cfg).value x μ)) r s
+        ∂(productHaarMeasure N Λ Finset.univ) = 0 := by
+  set μ₀ : Measure _ := productHaarMeasure N Λ Finset.univ with hμ₀
+  set ext := extendLinkVariable N Λ Finset.univ
+  set A : Fin (dims σ) → Fin (dims σ) → ℂ := fun k j =>
+    ∫ (cfg : FiniteLinkConfig N Λ Finset.univ), φ (ext cfg) * (ρ σ ((ext cfg).value x μ)) k j ∂μ₀
+  let K : TopologicalSpace.PositiveCompacts (SU N) :=
+    ⟨⟨Set.univ, isCompact_univ⟩, by simpa using Set.univ_nonempty (α := SU N)⟩
+  set ν : Measure (SU N) := MeasureTheory.Measure.haarMeasure K with hν
+  haveI : IsProbabilityMeasure ν := by
+    refine ⟨?_⟩
+    simpa [K, hν] using MeasureTheory.Measure.haarMeasure_self (K₀ := K)
+  -- Key identity: for all h, A r s = Σ_k (ρ_σ h)_{r,k} · A_{k,s}
+  have h_id : ∀ (h : SU N), A r s = ∑ k : Fin (dims σ), (ρ σ h) r k * A k s := by
+    intro h
+    have h_leftMul := gaugeInvariant_integral_leftMul N φ hφ_gauge x μ h_xμ
+      (fun g => (ρ σ g) r s) (hφ_int_all r s) h
+    -- Unfold A r s on the LHS
+    show (∫ (cfg : FiniteLinkConfig N Λ Finset.univ), φ (ext cfg) * (ρ σ ((ext cfg).value x μ)) r s ∂μ₀) = _
+    rw [h_leftMul]
+    have h_expand : ∀ (cfg : FiniteLinkConfig N Λ Finset.univ),
+        (ρ σ (h * (ext cfg).value x μ)) r s =
+        ∑ k : Fin (dims σ), (ρ σ h) r k * (ρ σ ((ext cfg).value x μ)) k s := by
+      intro cfg
+      rw [MonoidHom.map_mul (ρ σ) h ((ext cfg).value x μ), Matrix.mul_apply]
+    rw [integral_congr_ae (Filter.Eventually.of_forall (fun cfg => by
+      show φ (ext cfg) * (ρ σ (h * (ext cfg).value x μ)) r s =
+        ∑ k : Fin (dims σ), (ρ σ h) r k * (φ (ext cfg) * (ρ σ ((ext cfg).value x μ)) k s)
+      rw [h_expand cfg, Finset.mul_sum]
+      exact Finset.sum_congr rfl (fun k _ => by ring)))]
+    rw [integral_finsetSum Finset.univ (fun k _ => (hφ_int_all k s).const_mul ((ρ σ h) r k))]
+    simp only [integral_const_mul, A]
+  -- Schur orthogonality: ∫ (ρ_σ h)_{r,k} dν = 0 for σ ≠ σ_0
+  have h_int_schur : ∀ (k : Fin (dims σ)),
+      ∫ (h : SU N), (ρ σ h) r k ∂ν = 0 := by
+    intro k
+    have h := integral_matrix_element_trivial_projection ν ι dims hDims ρ hU hIrr
+      σ_0 hσ_0_dims hσ_0_trivial σ r k
+    rw [h, if_neg hσ_ne]
+  -- Integrate h_id over h: A r s = Σ_k A_{k,s} · 0 = 0
+  have h_const_int : ∫ (h : SU N), A r s ∂ν = A r s := by
+    rw [integral_const]; simp
+  -- Integrability of the sum for the exchange
+  obtain ⟨hInt, _, _⟩ := characterOrthogonality ν ι dims hDims ρ hU hIrr
+  have i0 : Fin (dims σ_0) := ⟨0, hDims σ_0⟩
+  have h_conj00 : ∀ h, conj ((ρ σ_0 h) i0 i0) = 1 := by
+    intro h; rw [hσ_0_trivial h]; simp [Matrix.one_apply]
+  have h_int_rk : ∀ (k : Fin (dims σ)), Integrable (fun h => (ρ σ h) r k) ν := by
+    intro k
+    have h := hInt σ σ_0 r k i0 i0
+    have h_eq : (fun h => (ρ σ h) r k * conj ((ρ σ_0 h) i0 i0)) = (fun h => (ρ σ h) r k) := by
+      funext h; rw [h_conj00 h, mul_one]
+    rw [h_eq] at h
+    exact h
+  have h_int_summand : ∀ (k : Fin (dims σ)), Integrable (fun h => (ρ σ h) r k * A k s) ν := by
+    intro k
+    have h := (h_int_rk k).const_mul (A k s)
+    exact Integrable.congr h (Filter.Eventually.of_forall (fun g => by ring))
+  have h_int_sum : Integrable (fun h => ∑ k : Fin (dims σ), (ρ σ h) r k * A k s) ν :=
+    integrable_finsetSum Finset.univ (fun k _ => h_int_summand k)
+  have h_zero : A r s = 0 := by
+    have h_eq : A r s = ∫ (h : SU N), ∑ k : Fin (dims σ), (ρ σ h) r k * A k s ∂ν := by
+      rw [← h_const_int]
+      exact integral_congr_ae (Filter.Eventually.of_forall (fun h => h_id h))
+    rw [h_eq, integral_finsetSum Finset.univ (fun k _ => h_int_summand k)]
+    simp only [integral_mul_const, h_int_schur]
+    simp
+  exact h_zero
+
+#print axioms gaugeInvariant_matrixElement_integral_zero
 
 /-- **Axiom (Transfer-matrix positivity).**
 
-For `f` depending only on positive-time and interface links, the integral
-`∫ G(U)·G(θU) dμ₀ ≥ 0`, where `G = osG` is the Osterwalder-Seiler Boltzmann
-factor and `θ` is the time-reflection.
+For `f` depending only on positive-time and **spatial** interface links (i.e.
+`dependsOnlyOnPosSpatialInterface`), the integral `∫ G(U)·G(θU) dμ₀ ≥ 0`,
+where `G = osG` is the Osterwalder-Seiler Boltzmann factor and `θ` is the
+time-reflection.
+
+⚠️ **The hypothesis `dependsOnlyOnPosSpatialInterface` (not the weaker
+`dependsOnlyOnPosInterface`) is essential.**  The weaker condition allows `f`
+to depend on temporal interface links (`μ = 0` at `t = 0`), for which the
+axiom is **false**: for `β = 0`, `f(g) = Im Tr(g)` on a single temporal
+interface link gives `∫ f(g)·f(g⁻¹) dg = -∫ (Im Tr(g))² dg < 0`.  The
+temporal-link inversion `σ` (which inverts `μ = 0` links at the interface)
+is the sole obstacle.  See `docs/transfer_matrix_positivity_design.md`
+§8.11.36.
 
 This is the positivity of the transfer matrix `T` constructed from the
 plaquette Boltzmann factor.  The mathematical justification is:
@@ -2328,7 +3336,10 @@ plaquette Boltzmann factor.  The mathematical justification is:
    `plaquetteBoltzmannPD`.
 2. Positive-definiteness of the plaquette factor implies that the transfer
    matrix `T` (which integrates out the negative-time links with the
-   reflection kernel) is a positive operator on `L²(SU(N)^{interface})`.
+   reflection kernel) is a positive operator on `L²(SU(N)^{spatial})`.
+   The temporal interface links are integrated out as part of the transfer
+   matrix kernel (Lüscher decomposition `T = V^{1/2}·U·V^{1/2}`), avoiding
+   the `σ` twist.
 3. The identity `∫ G(U)·G(θU) dμ₀ = ∫ g(u)·(Tg)(u) dμ⁺⁰` (proved in
    `TransferMatrix.lean` as `integral_G_thetaG_eq_inner_g_Tg`) then gives
    `∫ G·G(θU) ≥ 0` from the positivity of `T`.
@@ -2337,10 +3348,16 @@ Steps 2–3 require the full transfer-matrix construction (measure-theoretic
 factorization of the product Haar measure, Fubini, and the character-expansion
 argument).  The positive-definiteness of the plaquette factor (step 1) is the
 key input and is proved in `PeterWeyl.lean`; the remaining measure theory is
-axiomatized here.  See `docs/found_issues.md` §3 and `docs/gap_analysis.md`. -/
+axiomatized here.  See `docs/found_issues.md` §3 and `docs/gap_analysis.md`.
+
+Note: a gauge-invariance hypothesis (`IsGaugeInvariant N f`) was previously
+included (session 62) based on the §8.11.51 analysis, but has been REMOVED
+(session 65) after §8.11.53 showed that analysis was flawed — the positivity
+holds for ALL `f` with `dependsOnlyOnPosSpatialInterface`, not just
+gauge-invariant `f`.  See `docs/transfer_matrix_positivity_design.md` §8.11.53. -/
 axiom transferMatrixPositivity_axiom (N T L : ℕ) (β : ℝ) [NeZero T] [NeZero L]
     (hT : Odd T) (f : LinkVariable (SU N) (PeriodicSite T L) → ℝ)
-    (hf_supported : dependsOnlyOnPosInterface N T L f) :
+    (hf_supported : dependsOnlyOnPosSpatialInterface N T L f) :
     0 ≤ ∫ (cfg : FiniteLinkConfig N (PeriodicSite T L)
         (Finset.univ : Finset (PeriodicSite T L))),
       osG N T L β f
@@ -2355,7 +3372,7 @@ axiom transferMatrixPositivity_axiom (N T L : ℕ) (β : ℝ) [NeZero T] [NeZero
 
 lemma gibbsExpectationPeriodic_reflection_positive (N T L : ℕ) (β : ℝ) [NeZero T] [NeZero L]
     (hT : Odd T) (f : LinkVariable (SU N) (PeriodicSite T L) → ℝ)
-    (hf_supported : dependsOnlyOnPosInterface N T L f) :
+    (hf_supported : dependsOnlyOnPosSpatialInterface N T L f) :
     0 ≤ gibbsExpectation N β (PeriodicSite T L) (Finset.univ : Finset (PeriodicSite T L))
       (λ U => f U * reflectObservable N f U) := by
   dsimp [gibbsExpectation]
@@ -2499,6 +3516,147 @@ lemma osG_thetaG_factorization
   rw [Real.exp_add]
   ring
 
+/-- **Step 2: Pointwise character expansion of the reflection-positivity integrand.**
+
+Substituting the character expansion of `exp(-β·S_int)` (from
+`interface_boltzmann_character_expansion`) into the factorization
+`osG(U)·osG(θU) = f(U)·f(θU)·exp(-β·S_pos)·exp(-β·S_neg)·exp(-β·S_int)`
+(from `osG_thetaG_factorization` + `total_decomposition_os_periodic`), the
+integrand admits the pointwise expansion (viewed in ℂ)
+
+    (osG(U)·osG(θU) : ℂ) = (C : ℂ) · ∑_w (F w : ℂ) · ↑r(U) · Φ_w(U) · Ψ_w(U) · V_w(U)
+
+with `C > 0`, `F(w) ≥ 0`, and `r(U) = f(U)·f(θU)·exp(-β·S_pos(U))·exp(-β·S_neg(U))`
+(the real prefactor from the positive and negative bulk actions).  The
+character factors `Φ_w`, `Ψ_w`, `V_w` are the same as in
+`interface_boltzmann_character_expansion`.  This is step 2 of the formalization
+path in §8.11.53.  Pure algebra — 0 sorries, uses `peterWeyl_clebschGordan_plaquette`
+(axiom count 6, unchanged). -/
+lemma osG_thetaG_eq_char_expansion_pointwise
+    (N T L : ℕ) (β : ℝ) [NeZero T] [NeZero L] (hT : Odd T) (hN : 1 ≤ N)
+    (f : LinkVariable (SU N) (PeriodicSite T L) → ℝ) :
+    ∃ (C : ℝ) (hC : 0 < C)
+      (ι : Type) (hι : Fintype ι) (dims : ι → ℕ)
+      (ρ : ∀ i, SU N →* Matrix (Fin (dims i)) (Fin (dims i)) ℂ)
+      (hU : ∀ i, IsUnitaryRepresentation (ρ i))
+      (hMeas : ∀ i, Measurable (repCharacter (ρ i)))
+      (dual : ι → ι)
+      (F : (InterfaceLink T L → ι) → ℝ) (hF : ∀ w, 0 ≤ F w),
+      ∀ (U : LinkVariable (SU N) (PeriodicSite T L)),
+      (osG N T L β f U * osG N T L β f (reflectLinkVariable N U) : ℂ) =
+        (C : ℂ) * ∑ w : InterfaceLink T L → ι, (F w : ℂ) *
+          ↑(f U * f (reflectLinkVariable N U) *
+            Real.exp (-β * wilsonActionOSPositive N T L β U) *
+            Real.exp (-β * wilsonActionOSNegative N T L β U)) *
+          (∏ l ∈ interfaceLinkPos T L, repCharacter (ρ (w l)) (interfaceLinkVar N T L U l)) *
+          (∏ l ∈ interfaceLinkInt T L, repCharacter (ρ (w l)) (interfaceLinkVar N T L U l)) *
+          star (∏ l ∈ interfaceLinkNeg T L, repCharacter (ρ (dual (w l))) (interfaceLinkVar N T L U l)) := by
+  -- Obtain the character-expansion data (C, ι, ρ, dual, F) from the interface Boltzmann factor.
+  obtain ⟨C, hC, ι, hι, dims, ρ, hU, hMeas, dual, F, hF, h_char⟩ :=
+    interface_boltzmann_character_expansion N T L β hN
+  letI : Fintype ι := hι
+  classical
+  refine ⟨C, hC, ι, hι, dims, ρ, hU, hMeas, dual, F, hF, fun U => ?_⟩
+  -- Factor osG(U)·osG(θU) = f(U)·f(θU)·exp(-β·S_W(U)) and decompose S_W = S_pos + S_neg + S_int.
+  have h_factor := osG_thetaG_factorization N T L β hT f U
+  have h_total := total_decomposition_os_periodic N T L β U
+  -- Sub-lemma: the LHS as a complex number, with exp(-β·S_int) split out from the real prefactor.
+  have h_LHS : (osG N T L β f U * osG N T L β f (reflectLinkVariable N U) : ℂ) =
+      ↑(f U * f (reflectLinkVariable N U) *
+        Real.exp (-β * wilsonActionOSPositive N T L β U) *
+        Real.exp (-β * wilsonActionOSNegative N T L β U)) *
+        (Real.exp (-β * wilsonActionOSInterface N T L β U) : ℂ) := by
+    -- Combine ↑(osG U) * ↑(osG θU) = ↑(osG U * osG θU), then factor and decompose.
+    rw [← Complex.ofReal_mul, h_factor, h_total]
+    -- Distribute -β over the sum of three actions.
+    have h_dist : (-β * (wilsonActionOSPositive N T L β U + wilsonActionOSNegative N T L β U +
+        wilsonActionOSInterface N T L β U) : ℝ) =
+        (-β * wilsonActionOSPositive N T L β U) + (-β * wilsonActionOSNegative N T L β U) +
+        (-β * wilsonActionOSInterface N T L β U) := by ring
+    rw [h_dist, Real.exp_add, Real.exp_add]
+    -- Rearrange in ℝ: f·f·(exp_pos·(exp_neg·exp_int)) = (f·f·exp_pos·exp_neg)·exp_int.
+    have h_rearrange :
+        f U * f (reflectLinkVariable N U) *
+          (Real.exp (-β * wilsonActionOSPositive N T L β U) *
+            Real.exp (-β * wilsonActionOSNegative N T L β U) *
+            Real.exp (-β * wilsonActionOSInterface N T L β U)) =
+        (f U * f (reflectLinkVariable N U) *
+          Real.exp (-β * wilsonActionOSPositive N T L β U) *
+          Real.exp (-β * wilsonActionOSNegative N T L β U)) *
+        Real.exp (-β * wilsonActionOSInterface N T L β U) := by ring
+    -- Rearrange LHS, then combine RHS coercions to match.
+    rw [h_rearrange, ← Complex.ofReal_mul]
+  -- Substitute the character expansion for exp(-β·S_int) and distribute the real prefactor.
+  rw [h_LHS, h_char U]
+  set r := f U * f (reflectLinkVariable N U) *
+    Real.exp (-β * wilsonActionOSPositive N T L β U) *
+    Real.exp (-β * wilsonActionOSNegative N T L β U)
+  -- Distribute C and ↑r into the sums on both sides, then match per-weight.
+  rw [Finset.mul_sum, Finset.mul_sum, Finset.mul_sum]
+  refine Finset.sum_congr rfl (fun w _ => ?_)
+  -- Per-weight: ↑r · (C · (F · Φ · Ψ · V)) = C · (F · ↑r · Φ · Ψ · V) (commutativity).
+  ring
+
+#print axioms osG_thetaG_eq_char_expansion_pointwise
+#print axioms osG_thetaG_eq_char_expansion_pointwise
+
+/-- **Step 2 (full): Pointwise character expansion of the reflection-positivity
+integrand using the FULL Boltzmann factor.**
+
+Substituting the FULL character expansion of `exp(-β·S_W)` (from
+`full_boltzmann_character_expansion`) into the factorization
+`osG(U)·osG(θU) = f(U)·f(θU)·exp(-β·S_W(U))` (from `osG_thetaG_factorization`),
+the integrand admits the pointwise expansion (viewed in ℂ)
+
+    (osG(U)·osG(θU) : ℂ) = (C : ℂ) · ∑_w (F w : ℂ) · ↑(f(U)·f(θU)) · Φ_w(U) · Ψ_w(U) · V_w(U)
+
+with `C > 0`, `F(w) ≥ 0`, and the character factors `Φ_w`, `Ψ_w`, `V_w` ranging
+over ALL links (`allLinkPos`/`allLinkInt`/`allLinkNeg`).  This is the full-lattice
+analogue of `osG_thetaG_eq_char_expansion_pointwise` (which expands only the
+interface Boltzmann factor).  The real prefactor is just `f(U)·f(θU)` (no bulk
+action factors, since the FULL Boltzmann is expanded).  Uses
+`peterWeyl_clebschGordan_plaquette` (axiom count 6, unchanged); 0 sorries. -/
+lemma full_osG_thetaG_eq_char_expansion_pointwise
+    (N T L : ℕ) (β : ℝ) [NeZero T] [NeZero L] (hT : Odd T) (hN : 1 ≤ N)
+    (f : LinkVariable (SU N) (PeriodicSite T L) → ℝ) :
+    ∃ (C : ℝ) (hC : 0 < C)
+      (ι : Type) (hι : Fintype ι) (dims : ι → ℕ)
+      (ρ : ∀ i, SU N →* Matrix (Fin (dims i)) (Fin (dims i)) ℂ)
+      (hU : ∀ i, IsUnitaryRepresentation (ρ i))
+      (hMeas : ∀ i, Measurable (repCharacter (ρ i)))
+      (dual : ι → ι)
+      (F : ((PeriodicSite T L × Fin 4) → ι) → ℝ) (hF : ∀ w, 0 ≤ F w),
+      ∀ (U : LinkVariable (SU N) (PeriodicSite T L)),
+      (osG N T L β f U * osG N T L β f (reflectLinkVariable N U) : ℂ) =
+        (C : ℂ) * ∑ w : (PeriodicSite T L × Fin 4) → ι, (F w : ℂ) *
+          ↑(f U * f (reflectLinkVariable N U)) *
+          (∏ l ∈ allLinkPos T L, repCharacter (ρ (w l)) (U.value l.1 l.2)) *
+          (∏ l ∈ allLinkInt T L, repCharacter (ρ (w l)) (U.value l.1 l.2)) *
+          star (∏ l ∈ allLinkNeg T L, repCharacter (ρ (dual (w l))) (U.value l.1 l.2)) := by
+  -- Obtain the full character-expansion data (C, ι, ρ, dual, F) from the full Boltzmann factor.
+  obtain ⟨C, hC, ι, hι, dims, ρ, hU, hMeas, dual, F, hF, h_char⟩ :=
+    full_boltzmann_character_expansion N T L β hN
+  letI : Fintype ι := hι
+  classical
+  refine ⟨C, hC, ι, hι, dims, ρ, hU, hMeas, dual, F, hF, fun U => ?_⟩
+  -- Factor osG(U)·osG(θU) = f(U)·f(θU)·exp(-β·S_W(U)).
+  have h_factor := osG_thetaG_factorization N T L β hT f U
+  -- Sub-lemma: the LHS as a complex number, with exp(-β·S_W) split out from the real prefactor.
+  have h_LHS : (osG N T L β f U * osG N T L β f (reflectLinkVariable N U) : ℂ) =
+      ↑(f U * f (reflectLinkVariable N U)) *
+        (Real.exp (-β * wilsonActionFinite N β (Finset.univ : Finset (PeriodicSite T L)) U) : ℂ) := by
+    rw [← Complex.ofReal_mul, h_factor, Complex.ofReal_mul]
+  -- Substitute the full character expansion for exp(-β·S_W) and distribute the real prefactor.
+  rw [h_LHS, h_char U]
+  set r := f U * f (reflectLinkVariable N U)
+  -- Distribute C and ↑r into the sums on both sides, then match per-weight.
+  rw [Finset.mul_sum, Finset.mul_sum, Finset.mul_sum]
+  refine Finset.sum_congr rfl (fun w _ => ?_)
+  -- Per-weight: ↑r · (C · (F · Φ · Ψ · V)) = C · (F · ↑r · Φ · Ψ · V) (commutativity).
+  ring
+
+#print axioms full_osG_thetaG_eq_char_expansion_pointwise
+
 structure PeriodicExpectation (N T L : ℕ) (β : ℝ) [NeZero T] [NeZero L] (hT : Odd T) : Type 1 where
   /-- The partition function Z = ∫ exp(-S_W) dU. -/
   partitionFunction : ℝ
@@ -2522,9 +3680,9 @@ structure PeriodicExpectation (N T L : ℕ) (β : ℝ) [NeZero T] [NeZero L] (hT
   /-- Positivity: if F ≥ 0 pointwise, then evaluate F ≥ 0. -/
   positivity : ∀ (F : LinkVariable (SU N) (PeriodicSite T L) → ℝ),
     (∀ U, F U ≥ 0) → evaluate F ≥ 0
-  /-- Reflection positivity: if f depends only on positive+interface links, then ⟨f · θ(f)⟩ ≥ 0. -/
+  /-- Reflection positivity: if f depends only on positive + spatial-interface links, then ⟨f · θ(f)⟩ ≥ 0. -/
   reflectionPositive : ∀ (f : LinkVariable (SU N) (PeriodicSite T L) → ℝ),
-    dependsOnlyOnPosInterface N T L f →
+    dependsOnlyOnPosSpatialInterface N T L f →
     evaluate (λ U => f U * reflectObservable N f U) ≥ 0
 /--
 Construct a `PeriodicExpectation` for the Wilson action on a finite periodic lattice.
@@ -2547,13 +3705,18 @@ noncomputable def wilsonPeriodicExpectation (N T L : ℕ) (β : ℝ) [NeZero T] 
 /--
 The SU(N) lattice Yang-Mills measure with the Wilson action on a finite periodic lattice
 is reflection positive for observables that depend only on links in the positive-time
-and interface (time-0) regions.  This is the content of the Osterwalder-Seiler theorem.
+and **spatial** interface (time-0) regions.  Temporal interface links (μ=0 at t=0)
+are excluded: they are integrated out as part of the transfer matrix kernel
+(Lüscher decomposition), avoiding the σ-twist obstacle.  This is the content of
+the Osterwalder-Seiler theorem.
 -/
 theorem lattice_ym_reflection_positive_periodic (N T L : ℕ) (β : ℝ) [NeZero T] [NeZero L] (hβ : β > 0) (hT : Odd T) :
     ∀ (f : LinkVariable (SU N) (PeriodicSite T L) → ℝ),
-      dependsOnlyOnPosInterface N T L f →
+      dependsOnlyOnPosSpatialInterface N T L f →
       (wilsonPeriodicExpectation N T L β hT).evaluate (λ U => f U * reflectObservable N f U) ≥ 0 := by
   intro f hf_supported
   exact (wilsonPeriodicExpectation N T L β hT).reflectionPositive f hf_supported
+
+#print axioms lattice_ym_reflection_positive_periodic
 
 end PeriodicSite

@@ -73,6 +73,7 @@ import Mathlib.Topology.Algebra.Group.Defs
 import Mathlib.Topology.Compactness.Compact
 import Mathlib.Order.Disjointed
 import Mathlib.Topology.Constructions.SumProd
+import Mathlib.MeasureTheory.Group.Measure
 import YangMills.Proofs.PositiveDefinite
 
 namespace YangMills
@@ -1162,4 +1163,382 @@ lemma character_expansion_nonneg
     intro i _
     exact mul_nonneg (ha i) (sq_nonneg _)
   exact Complex.zero_le_real.mpr hnn
+
+/-! ## Shared-variable character-expansion positivity
+
+The following lemma generalizes `character_expansion_nonneg` to the setting
+where a variable `z` is **shared** between the `x` and `y` integrals (not a
+product measure).  This is the structure that arises in the Lüscher
+transfer-matrix positivity proof: after the σ-twist disappears from the test
+function `g` (because `f` satisfies `dependsOnlyOnPosSpatialInterface`), the
+integral becomes `∫_z ∫_x ∫_y g(x,z) · g(y,z) · K(x,y,z) dμ dμ dν` where `z`
+(the spatial interface links) is shared between the `x` (positive links) and
+`y` (reflected positive links) integrals.
+
+For each fixed `z`, `character_expansion_positivity` (with `θ = id`) gives the
+inner double integral as `↑(∑_i a(z,i) · ‖∫_x g(x,z) · Φ_i(z,x) dμ‖²)`; since
+`a(z,i) ≥ 0` this is a non-negative real (as a complex), and integrating over
+`z` preserves non-negativity.  The key Mathlib lemmas are `integral_congr_ae`
+(no integrability hypothesis) to rewrite the outer integral pointwise,
+`integral_ofReal` (`@[norm_cast]`, no integrability hypothesis) to pull the
+`ofReal` out of the integral, and `integral_nonneg` for the final real
+non-negativity.  See §8.11.37 in the design doc for the full analysis. -/
+
+/-- **Shared-variable character-expansion non-negativity.**  If a kernel
+`K : X → X → Z → ℂ` has, for each `z`, a finite separable decomposition
+`K(x, y, z) = ∑_i a(z,i) · Φ_i(z,x) · conj(Φ_i(z,y))` with `a(z,i) ≥ 0`, then
+for real-valued `g : X → Z → ℝ`:
+`∫_z ∫_x ∫_y g(x,z) · g(y,z) · K(x,y,z) dμ dμ dν ≥ 0`.
+
+For each fixed `z` this is `character_expansion_positivity` with `θ = id`; the
+inner double integral equals `↑(∑_i a(z,i) · ‖∫_x g(x,z)·Φ_i(z,x) dμ‖²)`, a
+non-negative real embedded in `ℂ`, and integrating over `z` preserves
+non-negativity. -/
+lemma character_expansion_nonneg_shared
+    {X Z : Type*} [MeasurableSpace X] [MeasurableSpace Z]
+    (μ : Measure X) (ν : Measure Z) [SigmaFinite μ] [SigmaFinite ν]
+    (ι : Type*) [Fintype ι] [DecidableEq ι]
+    (a : Z → ι → ℝ) (ha : ∀ z i, 0 ≤ a z i)
+    (Φ : ι → Z → X → ℂ) (g : X → Z → ℝ)
+    (hΦ_meas : ∀ i z, AEStronglyMeasurable (Φ i z) μ)
+    (hg_meas : ∀ z, AEStronglyMeasurable (fun x => (g x z : ℂ)) μ)
+    (hgΦ_int : ∀ z i, Integrable (fun x => (g x z : ℂ) * Φ i z x) μ)
+    (K : X → X → Z → ℂ)
+    (hK : ∀ x y z, K x y z = ∑ i, (a z i : ℂ) * (Φ i z x * conj (Φ i z y))) :
+    0 ≤ ∫ z, ∫ x, ∫ y, (g x z : ℂ) * (g y z : ℂ) * K x y z ∂μ ∂μ ∂ν := by
+  -- Pointwise: for each z, the inner double integral equals
+  -- ↑(∑ i, a z i * ‖∫ g(x,z)·Φ_i(z,x) dμ‖²) by character_expansion_positivity
+  -- with θ = id (so f(θ y) = f(y) = g(y,z)).
+  have heq : ∀ z,
+      (∫ x, ∫ y, (g x z : ℂ) * (g y z : ℂ) * K x y z ∂μ ∂μ) =
+        ↑(∑ i, a z i * ‖∫ x, (g x z : ℂ) * Φ i z x ∂μ‖^2) := by
+    intro z
+    exact character_expansion_positivity μ μ id (MeasurePreserving.id μ) ι (a z)
+      (fun i x => Φ i z x) (fun x => g x z) (fun i => hΦ_meas i z) (hg_meas z)
+      (fun i => hgΦ_int z i) (fun x y => K x y z) (fun x y => hK x y z)
+  -- Rewrite the outer integral using the pointwise (hence a.e.) equality.
+  rw [integral_congr_ae (ae_of_all ν heq)]
+  -- The pointwise equality produces `Complex.ofReal` coercions, while
+  -- `integral_ofReal` is stated with `RCLike.ofReal`; they are defeq
+  -- (`RCLike.ofReal_eq_complex_ofReal`) but not syntactically equal, so we
+  -- normalise the coercion first, then pull the `ofReal` out of the integral.
+  simp only [← RCLike.ofReal_eq_complex_ofReal]
+  rw [integral_ofReal]
+  -- The integral of a non-negative real function is non-negative.
+  apply Complex.zero_le_real.mpr
+  apply integral_nonneg
+  intro z
+  apply Finset.sum_nonneg
+  intro i _
+  exact mul_nonneg (ha z i) (sq_nonneg _)
+
+/-! ## Step 4: cascade integral non-negativity
+
+The 2D character-level cascade `luscher_2site_2D_cascade_charlevel`
+(`PositiveDefinite.lean`) reduces the 2-site integral to
+`∑_ν cg(s₁,s₂,ν)·cg(t₁,t₂,ν)·(1/dims ν)·χ_ν(W·V)`.  The following
+lemma shows this kernel, integrated against `f(W)·f(V⁻¹)`, is
+non-negative.  The key is the trace expansion
+`χ_ν(W·V) = ∑_{a,b} (ρ_ν W)_{ab}·conj((ρ_ν V⁻¹)_{ab})` (unitarity),
+which puts the kernel into the separable form required by
+`character_expansion_nonneg` with `θ = inv` (measure-preserving by
+`IsInvInvariant`).  The coefficients
+`cg(s₁,s₂,ν)·cg(t₁,t₂,ν)·(1/dims ν) ≥ 0` come from `hcg` and
+`hDims`. -/
+
+/-- Helper: trace expansion of `χ_ν(W·V)` using unitarity.
+`χ_ν(W·V) = Tr(ρ_ν(W)·ρ_ν(V)) = ∑_{a,b} (ρ_ν W)_{ab}·(ρ_ν V)_{ba}`,
+and `(ρ_ν V)_{ba} = conj((ρ_ν V⁻¹)_{ab})` by `repMatrixElement_inv`. -/
+lemma repCharacter_trace_expand
+    {G : Type*} [Group G] {n : ℕ} (ρ : G →* Matrix (Fin n) (Fin n) ℂ)
+    (hU : IsUnitaryRepresentation ρ) (W V : G) :
+    repCharacter ρ (W * V) =
+      ∑ a : Fin n, ∑ b : Fin n, (ρ W) a b * conj ((ρ V⁻¹) a b) := by
+  have htrace_mul : ∀ (A B : Matrix (Fin n) (Fin n) ℂ),
+      Matrix.trace (A * B) = ∑ i : Fin n, ∑ j : Fin n, A i j * B j i := by
+    intro A B; simp [Matrix.trace, Matrix.mul_apply]
+  rw [repCharacter, MonoidHom.map_mul, htrace_mul]
+  apply Finset.sum_congr rfl
+  intro a _
+  apply Finset.sum_congr rfl
+  intro b _
+  have h := repMatrixElement_inv ρ hU V a b
+  rw [h, Complex.conj_conj]
+
+/-- **Step 4: the cascade integral is non-negative.**  The kernel
+`K(W,V) = ∑_ν cg(s₁,s₂,ν)·cg(t₁,t₂,ν)·(1/dims ν)·χ_ν(W·V)` (the output
+of `luscher_2site_2D_cascade_charlevel`) integrated against
+`f(W)·f(V⁻¹)` is non-negative, since `χ_ν(W·V)` expands via unitarity
+into a separable form `∑_{a,b} (ρ_ν W)_{ab}·conj((ρ_ν V⁻¹)_{ab})` with
+non-negative coefficients `cg·cg·(1/dims ν) ≥ 0`, and `θ = inv` is
+measure-preserving (`IsInvInvariant`). -/
+lemma cascade_integral_nonneg
+    {G : Type*} [Group G] [TopologicalSpace G]
+    [CompactSpace G] [MeasurableSpace G] [BorelSpace G]
+    (μ : Measure G) [IsProbabilityMeasure μ]
+    (hθ : MeasurePreserving (Inv.inv : G → G) μ μ)
+    (ι : Type) [Fintype ι] [DecidableEq ι] (dims : ι → ℕ)
+    (hDims : ∀ i, 0 < dims i)
+    (ρ : ∀ i, G →* Matrix (Fin (dims i)) (Fin (dims i)) ℂ)
+    (hU : ∀ i, IsUnitaryRepresentation (ρ i))
+    (cg : ι → ι → ι → ℝ)
+    (hcg : ∀ s t w, 0 ≤ cg s t w)
+    (s₁ s₂ t₁ t₂ : ι)
+    (f : G → ℝ)
+    (hf_meas : AEStronglyMeasurable (fun g => (f g : ℂ)) μ)
+    (hρ_meas : ∀ ν (a b : Fin (dims ν)), AEStronglyMeasurable (fun g => (ρ ν g) a b) μ)
+    (hfρ_int : ∀ ν (a b : Fin (dims ν)), Integrable (fun g => (f g : ℂ) * (ρ ν g) a b) μ) :
+    0 ≤ ∫ W, ∫ V,
+      (f W : ℂ) * (f V⁻¹ : ℂ) *
+      ∑ ν : ι, (cg s₁ s₂ ν : ℂ) * (cg t₁ t₂ ν : ℂ) *
+        ((1 / dims ν : ℂ) * repCharacter (ρ ν) (W * V)) ∂μ ∂μ := by
+  -- Sigma index type: ι' = Σ ν, Fin(dims ν) × Fin(dims ν)
+  -- Use the sigma type directly (no let/set binding) so Finset.univ_sigma_univ
+  -- and the Fintype instance from inferInstance agree.
+  set_option maxHeartbeats 400000 in
+  letI : Fintype (Σ ν : ι, Fin (dims ν) × Fin (dims ν)) := inferInstance
+  haveI : DecidableEq (Σ ν : ι, Fin (dims ν) × Fin (dims ν)) := Classical.decEq _
+  -- Coefficients: a'(i) = cg(s₁,s₂,i.1)·cg(t₁,t₂,i.1)/dims(i.1) ≥ 0
+  let a' : (Σ ν : ι, Fin (dims ν) × Fin (dims ν)) → ℝ :=
+    fun i => cg s₁ s₂ i.1 * cg t₁ t₂ i.1 / dims i.1
+  -- Basis: Φ'(i)(g) = (ρ_{i.1} g)_{i.2.1, i.2.2}
+  let Φ' : (Σ ν : ι, Fin (dims ν) × Fin (dims ν)) → G → ℂ :=
+    fun i g => (ρ i.1) g i.2.1 i.2.2
+  -- Kernel: K(W,V) = ∑_ν cg·cg·(1/dims)·χ_ν(W·V)
+  let K : G → G → ℂ := fun W V =>
+    ∑ ν, (cg s₁ s₂ ν : ℂ) * (cg t₁ t₂ ν : ℂ) *
+      ((1 / dims ν : ℂ) * repCharacter (ρ ν) (W * V))
+  -- Non-negativity of coefficients
+  have ha' : ∀ i, 0 ≤ a' i := by
+    intro i
+    exact div_nonneg (mul_nonneg (hcg s₁ s₂ i.1) (hcg t₁ t₂ i.1)) (Nat.cast_nonneg _)
+  -- Kernel expansion: K(W,V) = ∑_i a'(i)·Φ'(i)(W)·conj(Φ'(i)(V⁻¹))
+  have hK : ∀ W V, K W V =
+      ∑ i : Σ ν : ι, Fin (dims ν) × Fin (dims ν), (a' i : ℂ) * (Φ' i W * conj (Φ' i (V⁻¹))) := by
+    intro W V
+    -- Step 1: Expand K to nested form ∑ ν, ∑ a, ∑ b, ...
+    have hK_nested : K W V = ∑ ν, ∑ a, ∑ b,
+        (cg s₁ s₂ ν * cg t₁ t₂ ν / dims ν : ℂ) * ((ρ ν W) a b * conj ((ρ ν (V⁻¹)) a b)) := by
+      show ∑ ν, (cg s₁ s₂ ν : ℂ) * (cg t₁ t₂ ν : ℂ) *
+          ((1 / dims ν : ℂ) * repCharacter (ρ ν) (W * V)) =
+        ∑ ν, ∑ a, ∑ b,
+          (cg s₁ s₂ ν * cg t₁ t₂ ν / dims ν : ℂ) * ((ρ ν W) a b * conj ((ρ ν (V⁻¹)) a b))
+      apply Finset.sum_congr rfl
+      intro ν _
+      rw [repCharacter_trace_expand (ρ ν) (hU ν) W V]
+      rw [show ((cg s₁ s₂ ν : ℂ) * (cg t₁ t₂ ν : ℂ) * ((1 / dims ν : ℂ) *
+            (∑ a, ∑ b, (ρ ν W) a b * conj ((ρ ν V⁻¹) a b)))) =
+          ((cg s₁ s₂ ν : ℂ) * (cg t₁ t₂ ν : ℂ) * (1 / dims ν : ℂ)) *
+            (∑ a, ∑ b, (ρ ν W) a b * conj ((ρ ν V⁻¹) a b)) from by ring]
+      rw [Finset.mul_sum]
+      apply Finset.sum_congr rfl
+      intro a _
+      rw [Finset.mul_sum]
+      apply Finset.sum_congr rfl
+      intro b _
+      ring
+    -- Step 2: Convert nested form to sigma form
+    rw [hK_nested]
+    have hstep1 : (∑ ν, ∑ a, ∑ b, (cg s₁ s₂ ν * cg t₁ t₂ ν / dims ν : ℂ) *
+          ((ρ ν W) a b * conj ((ρ ν (V⁻¹)) a b))) =
+        ∑ ν, ∑ p ∈ (Finset.univ : Finset (Fin (dims ν) × Fin (dims ν))),
+          (cg s₁ s₂ ν * cg t₁ t₂ ν / dims ν : ℂ) *
+          ((ρ ν W) p.1 p.2 * conj ((ρ ν (V⁻¹)) p.1 p.2)) := by
+      apply Finset.sum_congr rfl
+      intro ν _
+      rw [← Finset.sum_product', Finset.univ_product_univ]
+    rw [hstep1, Finset.sum_sigma', Finset.univ_sigma_univ]
+    apply Finset.sum_congr rfl
+    rintro i _
+    simp only [a', Φ']
+    push_cast [Complex.ofReal_div, Complex.ofReal_mul]
+    ring
+  -- Measurability of basis functions
+  have hΦ'_meas : ∀ i, AEStronglyMeasurable (Φ' i) μ := by
+    intro i
+    exact hρ_meas i.1 i.2.1 i.2.2
+  -- Integrability of f · basis functions
+  have hfΦ'_int : ∀ i, Integrable (fun g => (f g : ℂ) * Φ' i g) μ := by
+    intro i
+    exact hfρ_int i.1 i.2.1 i.2.2
+  -- Apply character_expansion_nonneg with θ = Inv.inv (measure-preserving by hθ)
+  exact character_expansion_nonneg μ μ (Inv.inv : G → G) hθ _ a' ha' Φ' f
+    hΦ'_meas hf_meas hfΦ'_int K hK
+
+#print axioms cascade_integral_nonneg
+
+/-! ## Step 4 (generalized): character-kernel integral non-negativity
+
+The following lemma generalizes `cascade_integral_nonneg` to arbitrary non-negative
+coefficients `coeff : ι → ℝ` (instead of the specific `cg s₁ s₂ ν · cg t₁ t₂ ν · (1/dims ν)`
+form from the 2-character CG cascade).  This is the key non-negativity lemma for the
+Lüscher mechanism (step 4 of the formalization plan, §8.11.45): after the Lüscher cascade
+integrates out the temporal links, the resulting kernel has the form
+`∑_ν a_ν · χ_ν(W·V)` with `a_ν ≥ 0`, and this lemma gives the non-negativity of the
+integral `∫∫ f(W)·f(V⁻¹)·K(W,V) ≥ 0`.
+
+The proof is identical in structure to `cascade_integral_nonneg`: expand `χ_ν(W·V)` via
+`repCharacter_trace_expand` (unitarity) into the separable form
+`∑_{a,b} (ρ_ν W)_{ab}·conj((ρ_ν V⁻¹)_{ab})`, then apply `character_expansion_nonneg`
+with `θ = inv` (measure-preserving by `hθ`).  The only difference is the coefficient:
+`a'(i) = coeff(i.1)` instead of `cg s₁ s₂ i.1 · cg t₁ t₂ i.1 / dims i.1`. -/
+
+/-- **Generalized character-kernel integral non-negativity.** For a compact group `G`
+with probability measure `μ` (invariant under inversion), a finite family of irreducible
+unitary reps `ρ_ν` of dimension `dims ν`, and non-negative coefficients `coeff : ι → ℝ`
+with `coeff ν ≥ 0`, the integral
+
+    ∫ W, ∫ V, (f W : ℂ) * (f V⁻¹ : ℂ) * ∑_ν (coeff ν : ℂ) * χ_ν(W * V) ∂μ ∂μ
+
+is non-negative.  The key is the trace expansion
+`χ_ν(W·V) = ∑_{a,b} (ρ_ν W)_{ab}·conj((ρ_ν V⁻¹)_{ab})` (unitarity),
+which puts the kernel into the separable form required by
+`character_expansion_nonneg` with `θ = inv` (measure-preserving by `hθ`).
+
+This generalizes `cascade_integral_nonneg` (which has the specific coefficient
+`cg s₁ s₂ ν · cg t₁ t₂ ν · (1/dims ν)`) to arbitrary non-negative coefficients. -/
+lemma character_kernel_integral_nonneg
+    {G : Type*} [Group G] [TopologicalSpace G]
+    [CompactSpace G] [MeasurableSpace G] [BorelSpace G]
+    (μ : Measure G) [IsProbabilityMeasure μ]
+    (hθ : MeasurePreserving (Inv.inv : G → G) μ μ)
+    (ι : Type) [Fintype ι] [DecidableEq ι] (dims : ι → ℕ)
+    (hDims : ∀ i, 0 < dims i)
+    (ρ : ∀ i, G →* Matrix (Fin (dims i)) (Fin (dims i)) ℂ)
+    (hU : ∀ i, IsUnitaryRepresentation (ρ i))
+    (coeff : ι → ℝ) (hcoeff : ∀ ν, 0 ≤ coeff ν)
+    (f : G → ℝ)
+    (hf_meas : AEStronglyMeasurable (fun g => (f g : ℂ)) μ)
+    (hρ_meas : ∀ ν (a b : Fin (dims ν)), AEStronglyMeasurable (fun g => (ρ ν g) a b) μ)
+    (hfρ_int : ∀ ν (a b : Fin (dims ν)), Integrable (fun g => (f g : ℂ) * (ρ ν g) a b) μ) :
+    0 ≤ ∫ W, ∫ V,
+      (f W : ℂ) * (f V⁻¹ : ℂ) *
+      ∑ ν : ι, (coeff ν : ℂ) * repCharacter (ρ ν) (W * V) ∂μ ∂μ := by
+  set_option maxHeartbeats 400000 in
+  letI : Fintype (Σ ν : ι, Fin (dims ν) × Fin (dims ν)) := inferInstance
+  haveI : DecidableEq (Σ ν : ι, Fin (dims ν) × Fin (dims ν)) := Classical.decEq _
+  let a' : (Σ ν : ι, Fin (dims ν) × Fin (dims ν)) → ℝ :=
+    fun i => coeff i.1
+  let Φ' : (Σ ν : ι, Fin (dims ν) × Fin (dims ν)) → G → ℂ :=
+    fun i g => (ρ i.1) g i.2.1 i.2.2
+  let K : G → G → ℂ := fun W V =>
+    ∑ ν, (coeff ν : ℂ) * repCharacter (ρ ν) (W * V)
+  have ha' : ∀ i, 0 ≤ a' i := fun i => hcoeff i.1
+  have hK : ∀ W V, K W V =
+      ∑ i : Σ ν : ι, Fin (dims ν) × Fin (dims ν), (a' i : ℂ) * (Φ' i W * conj (Φ' i (V⁻¹))) := by
+    intro W V
+    have hK_nested : K W V = ∑ ν, ∑ c, ∑ d,
+        (coeff ν : ℂ) * ((ρ ν W) c d * conj ((ρ ν (V⁻¹)) c d)) := by
+      show ∑ ν, (coeff ν : ℂ) * repCharacter (ρ ν) (W * V) =
+        ∑ ν, ∑ c, ∑ d,
+          (coeff ν : ℂ) * ((ρ ν W) c d * conj ((ρ ν (V⁻¹)) c d))
+      apply Finset.sum_congr rfl
+      intro ν _
+      rw [repCharacter_trace_expand (ρ ν) (hU ν) W V]
+      rw [show ((coeff ν : ℂ) *
+            (∑ a, ∑ b, (ρ ν W) a b * conj ((ρ ν (V⁻¹)) a b))) =
+          (∑ a, ∑ b, (coeff ν : ℂ) *
+            ((ρ ν W) a b * conj ((ρ ν (V⁻¹)) a b))) from by
+        rw [Finset.mul_sum]
+        apply Finset.sum_congr rfl
+        intro a _
+        rw [Finset.mul_sum]]
+    rw [hK_nested]
+    have hstep1 : (∑ ν, ∑ c, ∑ d, (coeff ν : ℂ) *
+          ((ρ ν W) c d * conj ((ρ ν (V⁻¹)) c d))) =
+        ∑ ν, ∑ p ∈ (Finset.univ : Finset (Fin (dims ν) × Fin (dims ν))),
+          (coeff ν : ℂ) *
+          ((ρ ν W) p.1 p.2 * conj ((ρ ν (V⁻¹)) p.1 p.2)) := by
+      apply Finset.sum_congr rfl
+      intro ν _
+      rw [← Finset.sum_product', Finset.univ_product_univ]
+    rw [hstep1, Finset.sum_sigma', Finset.univ_sigma_univ]
+  have hΦ'_meas : ∀ i, AEStronglyMeasurable (Φ' i) μ := fun i => hρ_meas i.1 i.2.1 i.2.2
+  have hfΦ'_int : ∀ i, Integrable (fun g => (f g : ℂ) * Φ' i g) μ := fun i => hfρ_int i.1 i.2.1 i.2.2
+  exact character_expansion_nonneg μ μ (Inv.inv : G → G) hθ _ a' ha' Φ' f
+    hΦ'_meas hf_meas hfΦ'_int K hK
+
+#print axioms character_kernel_integral_nonneg
+
+/-! ## Step 3+4 combination: cascade kernel integral non-negativity
+
+The following lemma combines `luscher_2site_cascade_coeff` (step 3: the Lüscher cascade
+integrates out temporal links `g₀, g₁`, producing a kernel `∑_s F(s,s)·(1/d_s)·χ_s(W·V)`)
+with `character_kernel_integral_nonneg` (step 4: non-negativity of `∫∫ f(W)·f(V⁻¹)·K(W,V)` for
+any kernel `K(W,V) = ∑_ν a_ν·χ_ν(W·V)` with `a_ν ≥ 0`).
+
+The result: for arbitrary non-negative coefficients `F : ι → ι → ℝ` with `F s t ≥ 0`, the
+full 4-fold integral (outer `W, V` × inner cascade `g₀, g₁`) is non-negative:
+
+    0 ≤ ∫ W ∫ V (f W)·(f V⁻¹)·[∫ g₀ ∫ g₁ ∑_{s,t} F(s,t)·χ_s(g₀·W·g₁⁻¹)·χ_t(g₁·V·g₀⁻¹)] ∂μ ∂μ ∂μ ∂μ
+
+The proof: (1) the inner cascade equals `∑_s (F s s / dims s)·χ_s(W·V)` by
+`luscher_2site_cascade_coeff` + coefficient conversion; (2) the coefficient
+`F s s / dims s ≥ 0` (since `F s s ≥ 0` and `dims s > 0`); (3) apply
+`character_kernel_integral_nonneg` with `coeff s = F s s / dims s`. 0 sorries, 0 new axioms. -/
+lemma luscher_2site_cascade_integral_nonneg
+    {G : Type*} [Group G] [TopologicalSpace G]
+    [CompactSpace G] [MeasurableSpace G] [BorelSpace G]
+    (μ : Measure G) [IsProbabilityMeasure μ]
+    (hθ : MeasurePreserving (Inv.inv : G → G) μ μ)
+    (ι : Type) [Fintype ι] [DecidableEq ι] (dims : ι → ℕ)
+    (hDims : ∀ i, 0 < dims i)
+    (ρ : ∀ i, G →* Matrix (Fin (dims i)) (Fin (dims i)) ℂ)
+    (hU : ∀ i, IsUnitaryRepresentation (ρ i))
+    (hIrr : ∀ i, IsIrreducible (ρ i))
+    (F : ι → ι → ℝ) (hF : ∀ s t, 0 ≤ F s t)
+    (f : G → ℝ)
+    (hf_meas : AEStronglyMeasurable (fun g => (f g : ℂ)) μ)
+    (hρ_meas : ∀ ν (a b : Fin (dims ν)), AEStronglyMeasurable (fun g => (ρ ν g) a b) μ)
+    (hfρ_int : ∀ ν (a b : Fin (dims ν)), Integrable (fun g => (f g : ℂ) * (ρ ν g) a b) μ) :
+    0 ≤ ∫ W, ∫ V, (f W : ℂ) * (f V⁻¹ : ℂ) *
+      ∫ g₀, ∫ g₁, ∑ s, ∑ t, (F s t : ℂ) *
+        (repCharacter (ρ s) (g₀ * W * g₁⁻¹) * repCharacter (ρ t) (g₁ * V * g₀⁻¹)) ∂μ ∂μ ∂μ ∂μ := by
+  let coeff : ι → ℝ := fun s => F s s / dims s
+  have hcoeff : ∀ s, 0 ≤ coeff s := fun s => div_nonneg (hF s s) (Nat.cast_nonneg _)
+  have hKernel : ∀ W V,
+      (∫ g₀, ∫ g₁, ∑ s, ∑ t, (F s t : ℂ) *
+        (repCharacter (ρ s) (g₀ * W * g₁⁻¹) * repCharacter (ρ t) (g₁ * V * g₀⁻¹)) ∂μ ∂μ) =
+      ∑ s, (coeff s : ℂ) * repCharacter (ρ s) (W * V) := by
+    intro W V
+    rw [luscher_2site_cascade_coeff μ ι dims hDims ρ hU hIrr F hF W V]
+    apply Finset.sum_congr rfl
+    intro s _
+    have hne : (dims s : ℂ) ≠ 0 := by
+      have h : 0 < (dims s : ℂ) := by exact mod_cast (hDims s)
+      exact ne_of_gt h
+    rw [show coeff s = F s s / dims s from rfl]
+    push_cast
+    field_simp
+  rw [show (∫ W, ∫ V, (f W : ℂ) * (f V⁻¹ : ℂ) *
+        (∫ g₀, ∫ g₁, ∑ s, ∑ t, (F s t : ℂ) *
+          (repCharacter (ρ s) (g₀ * W * g₁⁻¹) * repCharacter (ρ t) (g₁ * V * g₀⁻¹)) ∂μ ∂μ) ∂μ ∂μ) =
+      (∫ W, ∫ V, (f W : ℂ) * (f V⁻¹ : ℂ) *
+        (∑ s, (coeff s : ℂ) * repCharacter (ρ s) (W * V)) ∂μ ∂μ) from by
+    congr 1 with W
+    congr 1 with V
+    rw [hKernel]]
+  exact character_kernel_integral_nonneg μ hθ ι dims hDims ρ hU coeff hcoeff
+    f hf_meas hρ_meas hfρ_int
+
+#print axioms luscher_2site_cascade_integral_nonneg
+
+/-! ## Key finding: 3-site cascade does NOT directly combine with character_kernel_integral_nonneg
+
+The 3-site cascade (`luscher_3site_cascade_coeff` in `PositiveDefinite.lean`) evaluates to
+`∑_s F(s,s,s) · (1/d_s)² · χ_s(W₀·W₁·W₂)` — a CONSTANT (not a kernel in W, V).
+The outer integral `∫ W ∫ V f(W)·f(V⁻¹)·[constant]` = `[constant]·|∫f|²`,
+and the constant is a sum of characters (complex in general), so the product is
+NOT necessarily non-negative.
+
+This contrasts with the 2-site case, where the cascade produces a KERNEL
+`K(W,V) = ∑_s coeff_s · χ_s(W·V)` (a function of W·V), which matches
+`character_kernel_integral_nonneg` directly.
+
+The 3-site cascade coefficient lemma is correct and useful for evaluating cascades,
+but the non-negativity combination requires a different approach: either (a) a generalized
+non-negativity lemma for kernels of the form `χ_s(W·M·V)` with a fixed bridge M, (b) the
+specific lattice structure where the cascade produces `χ_s(W·V)` directly, or (c) pairwise
+decomposition using the 2-site cascade repeatedly. See §8.11.49 of the design doc. -/
+
 end YangMills

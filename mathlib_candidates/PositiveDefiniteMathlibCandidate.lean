@@ -444,3 +444,7 @@ lemma PositiveDefinite.integralOperator_nonneg
       exact h_abs.trans hS_bound
     linarith
 
+#print axioms PositiveDefinite.sum_nonneg_of_map
+#print axioms PositiveDefinite.integral
+#print axioms PositiveDefinite.integralOperator_nonneg
+

@@ -9,13 +9,13 @@ formalization (see "Provenance" below).
 Two standalone, Yang-Mills-free files are provided so each result group can
 be evaluated independently:
 
-- `PositiveDefiniteKernelMathlibCandidate.lean` — **priority candidate** —
-  Mercer-type positive-definite kernels (no group structure required). This
-  candidate has no known duplicate in any checked repository (Mathlib or
-  external); see §3 for the comparison with `Vilin97/lean-pool` which only
-  covers the group-theoretic case.
-- `PositiveDefiniteMathlibCandidate.lean` — group-theoretic positive-definite
-  functions on a group.
+- `mathlib_candidates/PositiveDefiniteKernelMathlibCandidate.lean` — **priority
+  candidate** — Mercer-type positive-definite kernels (no group structure
+  required). This candidate has no known duplicate in any checked repository
+  (Mathlib or external); see §3 for the comparison with `Vilin97/lean-pool`
+  which only covers the group-theoretic case.
+- `mathlib_candidates/PositiveDefiniteMathlibCandidate.lean` —
+  group-theoretic positive-definite functions on a group.
 
 ---
 
@@ -24,12 +24,16 @@ be evaluated independently:
 ### 1a. Mercer-type positive-definite kernels (priority)
 
 **Plain language.** A kernel `K : X → X → ℂ` is *positive-definite in the
-Mercer sense* if for every finite set `{x_i}` and coefficients `{c_i}`,
-`Σ_{i,j} c_i · conj(c_j) · K(x_i, x_j) ≥ 0`. This generalizes the
-group-theoretic notion of positive-definiteness (where `K(x, y) = φ(x⁻¹·y)`
-for a PD function `φ` on a group) to arbitrary spaces: the reduction
-group-PD ⟹ Mercer-PD is proved as `PositiveDefinite.toPositiveDefiniteKernel`.
-(Only this one direction is proved; no claim of proper containment is made.)
+Mercer sense* if every finite submatrix `(K(x_i, x_j))_{i,j ∈ s}` is
+positive-semidefinite in the sense of `Matrix.PosSemidef`. This is equivalent
+to the quadratic-form formulation
+`Σ_{i,j} c_i · conj(c_j) · K(x_i, x_j) ≥ 0` (the equivalence is proved as
+`PositiveDefiniteKernel.quadratic_form_nonneg` / `.of_quadratic_form`).
+This generalizes the group-theoretic notion of positive-definiteness (where
+`K(x, y) = φ(x⁻¹·y)` for a PD function `φ` on a group) to arbitrary spaces:
+the reduction group-PD ⟹ Mercer-PD is proved as
+`PositiveDefinite.toPositiveDefiniteKernel`. (Only this one direction is
+proved; no claim of proper containment is made.)
 
 **Why this is the priority candidate.** The group-theoretic `PositiveDefinite`
 (§1b) has a functionally similar counterpart in the external repo
@@ -47,9 +51,24 @@ uniform continuity on `X × X` (Heine–Cantor). No group structure is needed.
 **Lean signatures.**
 
 ```lean
+/-- Direct `Matrix.PosSemidef` formulation (suggested by Yaël Dillies):
+every finite submatrix is positive-semidefinite. -/
 def PositiveDefiniteKernel {X : Type*} (K : X → X → ℂ) : Prop :=
-  ∀ (s : Finset X) (c : X → ℂ),
+  ∀ (s : Finset X), Matrix.PosSemidef (Matrix.of fun (i j : ↥s) => K i.val j.val)
+
+/-- The quadratic form `Σ c_i * conj(c_j) * K(x_i, x_j) ≥ 0` (forward direction
+of the equivalence with the old quadratic-form definition). -/
+lemma PositiveDefiniteKernel.quadratic_form_nonneg
+    {X : Type*} {K : X → X → ℂ} (hK : PositiveDefiniteKernel K)
+    (s : Finset X) (c : X → ℂ) :
     0 ≤ ∑ i ∈ s, ∑ j ∈ s, c i * conj (c j) * K i j
+
+/-- Reverse direction: non-negative quadratic form ⟹ Mercer-PD kernel. -/
+lemma PositiveDefiniteKernel.of_quadratic_form
+    {X : Type*} (K : X → X → ℂ)
+    (h : ∀ (s : Finset X) (c : X → ℂ),
+      0 ≤ ∑ i ∈ s, ∑ j ∈ s, c i * conj (c j) * K i j) :
+    PositiveDefiniteKernel K
 
 lemma PositiveDefiniteKernel.integralOperator_nonneg
     {X : Type*} [PseudoMetricSpace X] [CompactSpace X]
@@ -61,17 +80,25 @@ lemma PositiveDefiniteKernel.integralOperator_nonneg
     0 ≤ ∫ x, ∫ y, f x * conj (f y) * K x y ∂μ ∂μ
 ```
 
-**Supporting lemma suite** (all in `PositiveDefiniteKernelMathlibCandidate.lean`):
+**Supporting lemma suite** (all in
+`mathlib_candidates/PositiveDefiniteKernelMathlibCandidate.lean`):
 
+- `PositiveDefiniteKernel.quadratic_form_nonneg` — the quadratic form
+  `Σ c_i * conj(c_j) * K(x_i, x_j) ≥ 0` derived from `Matrix.PosSemidef`
+  (forward direction of the equivalence with the quadratic-form definition).
+- `PositiveDefiniteKernel.of_quadratic_form` — reverse direction: a
+  non-negative quadratic form for all finite sets and coefficients implies
+  `PositiveDefiniteKernel` (uses the private helper `quadratic_form_conj_symm`
+  for the Hermitian-symmetry part of `Matrix.PosSemidef`).
 - `PositiveDefiniteKernel.sum_nonneg_of_map` — the quadratic form with a
   mapped (possibly non-injective) index set is non-negative (key grouping
   argument; uses the `private` helper `sum_fiber_kernel`).
 - `PositiveDefiniteKernel.conj_symm` — Hermitian symmetry
-  `K(x, y) = conj(K(y, x))`, via the 2-point quadratic-form trick.
+  `K(x, y) = conj(K(y, x))`, via `quadratic_form_conj_symm` +
+  `quadratic_form_nonneg`.
 - `PositiveDefiniteKernel.one` — the constant-one kernel is PD.
-- `PositiveDefiniteKernel.matrix_posSemidef` (`private`) — a Mercer-PD kernel
-  gives a PSD matrix on any finite subset (used by `.mul`).
-- `PositiveDefiniteKernel.mul` — Schur / Hadamard product theorem.
+- `PositiveDefiniteKernel.mul` — Schur / Hadamard product theorem (direct
+  application of `Matrix.PosSemidef.hadamard` under the new definition).
 - `PositiveDefiniteKernel.smul_nonneg` — non-negative scaling.
 - `PositiveDefiniteKernel.finprod` — n-ary Schur product.
 - `PositiveDefiniteKernel.comp` — PD preserved by composition with `f : X → Y`.
@@ -206,41 +233,44 @@ standalone files compile standalone, reusing the already-built `.lake`
 cache, via:
 
 ```
-lake env lean PositiveDefiniteKernelMathlibCandidate.lean
-lake env lean PositiveDefiniteMathlibCandidate.lean
+lake env lean mathlib_candidates/PositiveDefiniteKernelMathlibCandidate.lean
+lake env lean mathlib_candidates/PositiveDefiniteMathlibCandidate.lean
 ```
 
 (Both exit 0 with no errors. Run from the repo root so the `.lake` cache is
 found.)
 
-**`#print axioms` output** (identical from the original
-`src/lean/YangMills/Proofs/PositiveDefiniteIntegral.lean` location and from
-both standalone files):
+**`#print axioms` output** (from the standalone
+`mathlib_candidates/PositiveDefiniteKernelMathlibCandidate.lean` file, which
+has `#print axioms` commands at the bottom):
 
 ```
-'PositiveDefinite.integral' depends on axioms: [propext, Classical.choice, Quot.sound]
-'PositiveDefinite.integralOperator_nonneg' depends on axioms: [propext, Classical.choice, Quot.sound]
-'PositiveDefiniteKernel.integralOperator_nonneg' depends on axioms: [propext, Classical.choice, Quot.sound]
-'PositiveDefiniteKernel.sum_nonneg_of_map' depends on axioms: [propext, Classical.choice, Quot.sound]
+'PositiveDefiniteKernel.quadratic_form_nonneg' depends on axioms: [propext, Classical.choice, Quot.sound]
+'PositiveDefiniteKernel.of_quadratic_form' depends on axioms: [propext, Classical.choice, Quot.sound]
 'PositiveDefiniteKernel.conj_symm' depends on axioms: [propext, Classical.choice, Quot.sound]
-'PositiveDefinite.toPositiveDefiniteKernel' depends on axioms: [propext, Classical.choice, Quot.sound]
+'PositiveDefiniteKernel.one' depends on axioms: [propext, Classical.choice, Quot.sound]
 'PositiveDefiniteKernel.mul' depends on axioms: [propext, Classical.choice, Quot.sound]
+'PositiveDefiniteKernel.smul_nonneg' depends on axioms: [propext, Classical.choice, Quot.sound]
 'PositiveDefiniteKernel.finprod' depends on axioms: [propext, Classical.choice, Quot.sound]
 'PositiveDefiniteKernel.comp' depends on axioms: [propext, Classical.choice, Quot.sound]
 'PositiveDefiniteKernel.continuous_comp' depends on axioms: [propext, Classical.choice, Quot.sound]
-'PositiveDefiniteKernel.one' depends on axioms: [propext, Classical.choice, Quot.sound]
-'PositiveDefiniteKernel.smul_nonneg' depends on axioms: [propext, Classical.choice, Quot.sound]
+'PositiveDefiniteKernel.sum_nonneg_of_map' depends on axioms: [propext, Classical.choice, Quot.sound]
+'PositiveDefiniteKernel.integralOperator_nonneg' depends on axioms: [propext, Classical.choice, Quot.sound]
+'PositiveDefinite.toPositiveDefiniteKernel' depends on axioms: [propext, Classical.choice, Quot.sound]
 ```
 
+The group-theoretic file (`PositiveDefiniteMathlibCandidate.lean`) produces
+the same three-axiom result for `PositiveDefinite.integral`,
+`PositiveDefinite.integralOperator_nonneg`, and
+`PositiveDefinite.sum_nonneg_of_map` (add `#print axioms` lines to verify).
+
 Only the three standard Lean axioms (`propext`, `Classical.choice`,
-`Quot.sound`); no custom axiom, no `sorry`. To reproduce, add the
-`#print axioms` lines to the bottom of the relevant file (or a scratch file
-importing it) and run `lake env lean <file>.lean`.
+`Quot.sound`); no custom axiom, no `sorry`.
 
 **File paths:**
 
-- `PositiveDefiniteKernelMathlibCandidate.lean` (repo root) — Mercer kernel.
-- `PositiveDefiniteMathlibCandidate.lean` (repo root) — group-theoretic PD.
+- `mathlib_candidates/PositiveDefiniteKernelMathlibCandidate.lean` — Mercer kernel.
+- `mathlib_candidates/PositiveDefiniteMathlibCandidate.lean` — group-theoretic PD.
 - Original source: `src/lean/YangMills/Proofs/PositiveDefiniteIntegral.lean`
   (and `src/lean/YangMills/Proofs/PositiveDefinite.lean` for the group-PD
   definition and `sum_nonneg_of_map`).

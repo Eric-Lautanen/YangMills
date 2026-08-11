@@ -7,13 +7,13 @@
 the hard part of closing `transferMatrixPositivity_axiom`, while the headline "axiom
 count stays at 6" framing hides that growth?
 
-**Short answer: yes.** The axiom has been strengthened **six** times. At least **three**
+**Short answer: yes.** The axiom has been strengthened **seven** times. At least **four**
 of those strengthenings directly followed a session concluding that the target axiom
 could *not* be closed with the current axioms. Unfolded into separately-named axioms,
-`peterWeyl_clebschGordan_plaquette` would be **seven** axioms, **four** of them substantial
-theorems, and **two** of them (L² completeness, matrix-element CG) individually as
-substantial as `characterOrthogonality` already is. The "count 6 → 5" framing is therefore
-misleading unless stated alongside this growth.
+`peterWeyl_clebschGordan_plaquette` would be **nine** axioms, **six** of them substantial
+theorems, and **three** of them (L² completeness, matrix-element CG, Schur for `Λ`)
+individually as substantial as `characterOrthogonality` already is. The "count 6 → 5"
+framing is therefore misleading unless stated alongside this growth.
 
 ---
 
@@ -160,8 +160,9 @@ character-level CG. **Comparable in substance to `characterOrthogonality`.**
 | 4 | 2026-08-02 | L² completeness (Peter–Weyl) | (b) substantial | ⚠️⚠️ Yes — 2026-07-31 said "NOT possible" |
 | 5 | 2026-08-02 s3 | Matrix-element CG + unitarity | (b) substantial | ⚠️ Yes — "cannot be derived" |
 | 6 | 2026-08-03 | Character measurability `hMeas` | (a) narrow | Mild — integrability wiring (see §6) |
+| 7 | 2026-08-09 s70 | Schur orthogonality for `Λ` + CG for `ι×Λ` | (b) substantial | ⚠️ Yes — §8.11.55 said "fundamental mismatch" (see §7) |
 
-**Three of the six strengthenings (##1, #4, #5) directly followed a session that
+**Four of the seven strengthenings (##1, #4, #5, #7) directly followed a session that
 concluded the target axiom could not be closed with the current axioms.** In each case
 the next session added the exact missing ingredient to `peterWeyl_clebschGordan_plaquette`
 and noted the axiom count stayed flat. This is the pattern the audit was asked to flag:
@@ -172,7 +173,7 @@ the axiom count is held constant while axiom *content* grows to route around wal
 ## 3. Content-added estimate: unfolded axiom count
 
 If `peterWeyl_clebschGordan_plaquette` were unfolded into separately-named axioms
-instead of one enriched one, it would be **seven** axioms:
+instead of one enriched one, it would be **nine** axioms:
 
 | Unfolded axiom | Source | (a)/(b) | As substantial as `characterOrthogonality`? |
 |----------------|--------|---------|---------------------------------------------|
@@ -183,11 +184,13 @@ instead of one enriched one, it would be **seven** axioms:
 | **A4** L² completeness (Peter–Weyl completeness theorem) | strengthening #4 | (b) substantial | **Yes — at least as substantial** |
 | **A5** Matrix-element CG coefficients + unitarity | strengthening #5 | (b) substantial | **Yes — comparable** |
 | **A6** Character measurability `hMeas` | strengthening #6 | (a) narrow | No |
+| **A7** Schur orthogonality for `Λ` (Great Orthogonality Theorem, countable) | strengthening #7 | (b) substantial | **Yes — at least as substantial** |
+| **A8** CG decomposition for `ι × Λ` (finite `Finset` support) | strengthening #7 | (b) substantial | **Yes — comparable to A5** |
 
-**Summary:** 7 unfolded axioms, **4 of them substantial** (b), and **2 of them (A4, A5)
+**Summary:** 9 unfolded axioms, **6 of them substantial** (b), and **3 of them (A4, A5, A7)
 individually as substantial as `characterOrthogonality`** — which is itself a major
-axiom (the Great Orthogonality Theorem). A0 and A1 are also substantial theorems.
-A6 (character measurability) is (a) narrow — a one-line consequence of continuity.
+axiom (the Great Orthogonality Theorem). A0, A1, and A8 are also substantial theorems.
+A2, A3, A6 are (a) narrow — one-line-citable facts.
 
 For comparison, the *other* axioms in the project are each a single, named,
 bounded statement:
@@ -198,7 +201,7 @@ bounded statement:
 - `transferMatrixPositivity_axiom` — one statement (the target).
 
 `peterWeyl_clebschGordan_plaquette` is the **only** axiom that bundles multiple major
-theorems, and it has grown to bundle **four** of them.
+theorems, and it has grown to bundle **six** of them.
 
 ---
 
@@ -209,24 +212,27 @@ to 5. **This is only honest progress if `peterWeyl_clebschGordan_plaquette`'s co
 has not grown to be a bigger, harder-to-justify assumption than the axiom it
 replaced.** The audit shows it has:
 
-- The axiom was strengthened 6 times; 3 of those strengthenings (char-level CG, L²
-  completeness, matrix-element CG) directly followed a session concluding the target
-  could not be closed with the current axioms (the 6th, character measurability
-  `hMeas`, was a narrow (a) wiring ingredient — see §6).
-- The content added — L² completeness (a major theorem, own textbook chapter) and
-  matrix-element CG with unitarity (a major structural result) — was added
-  *specifically because* the target could not be closed without it.
-- Unfolded, the single axiom is 7 axioms, 4 substantial, 2 as large as
+- The axiom was strengthened 7 times; 4 of those strengthenings (char-level CG, L²
+  completeness, matrix-element CG, Schur for `Λ` + CG for `ι×Λ`) directly followed a
+  session concluding the target could not be closed with the current axioms (the 6th,
+  character measurability `hMeas`, was a narrow (a) wiring ingredient — see §6).
+- The content added — L² completeness (a major theorem, own textbook chapter),
+  matrix-element CG with unitarity (a major structural result), and Schur orthogonality
+  for `Λ` + CG for `ι×Λ` (the Great Orthogonality Theorem for all irreps, plus a mixed
+  finite×countable CG decomposition) — was added *specifically because* the target could
+  not be closed without it.
+- Unfolded, the single axiom is 9 axioms, 6 substantial, 3 as large as
   `characterOrthogonality`.
 
 **Honest framing:** closing `transferMatrixPositivity_axiom` does *not* reduce the
 project's assumption burden from 6 to 5 in any meaningful sense. It replaces one
 axiom (a single positivity statement) by absorbing into `peterWeyl_clebschGordan_plaquette`
-the content of ~3 additional major theorems (char-level CG, L² completeness,
-matrix-element CG), added specifically because the target could not be closed without
-them. The resulting single axiom is a **larger and harder-to-justify assumption than
-the axiom it replaced**. The "count 6 → 5" headline must always be accompanied by this
-caveat; the count alone implies progress that the content does not support.
+the content of ~5 additional major theorems (char-level CG, L² completeness,
+matrix-element CG, Schur for `Λ`, CG for `ι×Λ`), added specifically because the target
+could not be closed without them. The resulting single axiom is a **larger and
+harder-to-justify assumption than the axiom it replaced**. The "count 6 → 5" headline
+must always be accompanied by this caveat; the count alone implies progress that the
+content does not support.
 
 A genuinely honest reduction would require *proving* one of the bundled major theorems
 (e.g. L² completeness, or the matrix-element CG decomposition) from more primitive
@@ -275,3 +281,79 @@ representation-theory / measure-theory textbook. This is strictly weaker than as
 **Updated unfolded count:** The axiom now unfolds to **seven** axioms (A0–A5 above plus
 **A6** Character measurability), of which **A6 is (a) narrow**. The count of *substantial*
 unfolded axioms remains 4 (A0, A1, A4, A5); A6 adds no substantial content.
+
+---
+
+## 7. Strengthening #7 — 2026-08-09 session 70
+
+**Content added:** Two new conjuncts (Parts 3–4) to the axiom, plus two new existential
+witnesses (`cgMEΛ`, `hcgMEΛ_support`) inserted after `hμ` in the existential chain:
+
+- **Part 3 — Schur orthogonality for `Λ` (countable).** Three conjuncts: (i) integrability
+  of every matrix-element product `(ρΛ_ν g)_{pq} · conj((ρΛ_{μ₂} g)_{kl})` w.r.t. `μ`;
+  (ii) diagonal Schur `∫ (ρΛ_ν g)_{pq} · conj((ρΛ_ν g)_{kl}) dμ = if p=k ∧ q=l then
+  1/dimsΛ(ν) else 0`; (iii) off-diagonal Schur `∫ (ρΛ_ν g)_{pq} · conj((ρΛ_{μ₂} g)_{kl}) dμ
+  = 0` for `ν ≠ μ₂`. This is the **Great Orthogonality Theorem** for the full countable set
+  of irreps `Λ`, extending `characterOrthogonality` (which covers the finite subset `ι`
+  only). (Variable name `μ₂` is used for the second irrep to avoid shadowing the measure `μ`.)
+
+- **Part 4 — Clebsch–Gordan decomposition for `ι × Λ` (finite `Finset` support).** Three
+  conjuncts: (i) decomposition `(ρ_s g)_{ab} · (ρΛ_t g)_{ij} = ∑_{ν ∈ hcgMEΛ_support s t}
+  ∑_{p,q} cgMEΛ s t ν a i p · (ρΛ_ν g)_{pq} · conj(cgMEΛ s t ν b j q)`; (ii) unitarity
+  `∑_{ν ∈ support} ∑_p conj(cgMEΛ) · cgMEΛ = if a=b ∧ i=j then 1 else 0`; (iii) support-zero
+  `cgMEΛ s t ν a i p = 0` for `ν ∉ hcgMEΛ_support s t`. The support is a `Finset Λ` (finite),
+  reflecting that the tensor product `ρ_s ⊗ ρΛ_t` decomposes as a *finite* direct sum of
+  irreps even though `Λ` itself is countable.
+
+**Obstruction it resolved:** The **infinite Peter–Weyl expansion obstacle** (design doc
+§8.11.55–56, sessions 68–69). After step 4 (temporal collapse), the remaining integral is
+`Σ_w F(w) · ∫_{u⁰_s} Ψ_w^{spatial} · |A_w|² dμ_s`, where `A_w(u⁰_s) = ∫_{U⁺} f · Φ_w dμ⁺`
+is an *arbitrary* function of the spatial interface links (it depends on the arbitrary test
+function `f`). Expanding `A_w` in matrix elements requires the **full** Peter–Weyl basis
+`Λ` (countable), not just the finite `ι` from the plaquette character expansion. The
+triple-product integral `∫ χ_s · (ρΛ_ν)_{ij} · conj((ρΛ_μ)_{kl}) dμ` that arises from
+`∫ Ψ_w · |A_w|²` then needs (a) Schur orthogonality for `ν, μ ∈ Λ` (countable) and
+(b) CG decomposition for `s ∈ ι, t ∈ Λ` (mixed finite×countable). The pre-strengthening
+axiom provided `characterOrthogonality` for `ι` (finite) and matrix-element CG for `ι × ι`
+(finite) only — neither suffices for `Λ`. Session 68 (§8.11.55) named "Extend the axiom to
+provide CG decomposition for `Λ`" as the most promising approach; session 70 did exactly
+that.
+
+**Timing flag:** ⚠️ **DIRECTLY follows an identified obstruction.** Session 68 (§8.11.55)
+concluded the infinite expansion is a "fundamental mismatch" and listed "Extend the axiom
+to provide CG decomposition for `Λ`" as Approach 1 (the recommended one). Session 69
+(§8.11.56) confirmed the obstacle is "FUNDAMENTAL." Session 70 then added the exact missing
+ingredients (Schur for `Λ` + CG for `ι × Λ`) to the axiom while noting the count stays flat
+at 6. This is the same pattern as strengthenings #1, #4, #5: a session identifies a wall, the
+next session widens the axiom to route around it.
+
+**Classification:** **(b) substantial** for *both* parts.
+
+- **Part 3 (Schur for `Λ`)** is the **Great Orthogonality Theorem** for all irreps of a
+  compact group — the same theorem `characterOrthogonality` already encodes, but extended
+  from the finite subset `ι` to the full countable set `Λ`. It is *at least as substantial*
+  as `characterOrthogonality` (which is itself flagged as a major axiom in this audit and
+  in the README). Own chapter in any representation-theory / harmonic-analysis textbook
+  (Folland Ch. 5; Deitmar Ch. 7).
+- **Part 4 (CG for `ι × Λ`)** is the **Clebsch–Gordan decomposition at the matrix-element
+  level for a mixed finite×countable pair**, with explicit unitary change-of-basis matrices
+  and finite `Finset` support. This is strictly more general than strengthening #5
+  (matrix-element CG for `ι × ι`), which was already classified (b) substantial and
+  "comparable in substance to `characterOrthogonality`." Part 4 is comparable to #5 in
+  substance.
+
+**Updated unfolded count:** The axiom now unfolds to **nine** axioms (A0–A6 above plus
+**A7** Schur orthogonality for `Λ`, **A8** CG decomposition for `ι × Λ`), of which **A7 and
+A8 are both (b) substantial**. The count of *substantial* unfolded axioms rises from 4 to
+**6** (A0, A1, A4, A5, A7, A8); the count of *narrow* unfolded axioms remains 3 (A2, A3, A6).
+Two of the new substantial axioms (A7) are individually as substantial as
+`characterOrthogonality`, and one (A8) is comparable to the existing matrix-element CG (A5).
+
+**Same-session verification:** The new lemma `triple_product_character_matrix_integral_Λ`
+(PeterWeyl.lean:2031) is PROVEN from Parts 3–4 with `#print axioms` reporting only
+`[propext, Classical.choice, Quot.sound]` — i.e. the generalized triple-product integral
+`∫ χ_s · (ρΛ_t)_{ij} · conj((ρΛ_u)_{kl}) = (1/dimsΛ u) · ∑_a cgMEΛ s t u a i k ·
+conj(cgMEΛ s t u a j l)` is *pure algebra from the strengthened axiom's hypotheses*, with no
+additional `sorry` or custom axiom. This confirms the added content is exactly what is
+needed and sufficient for the step-3 key ingredient. Build GREEN (2972 jobs), 0 sorries,
+6 axioms (count unchanged — same axiom extended, not a new axiom added).

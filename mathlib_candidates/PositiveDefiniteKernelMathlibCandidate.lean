@@ -63,12 +63,141 @@ def PositiveDefinite {G : Type*} [Group G] (φ : G → ℂ) : Prop :=
   ∀ (s : Finset G) (c : G → ℂ),
     0 ≤ ∑ i ∈ s, ∑ j ∈ s, c i * conj (c j) * φ (i⁻¹ * j)
 
-/-- A kernel `K : X → X → ℂ` is positive-definite (Mercer sense): for every
-finite set `{x_i}` and coefficients `{c_i}`, the quadratic form
-`∑ c_i * conj(c_j) * K(x_i, x_j) ≥ 0`. -/
+/-- A kernel `K : X → X → ℂ` is positive-definite (Mercer sense): every finite
+submatrix `(K x_i x_j)_{i,j ∈ s}` is positive-semidefinite in the sense of
+`Matrix.PosSemidef`.  This is the direct `Matrix.PosSemidef` formulation
+(suggested by Yaël Dillies): `PositiveDefiniteKernel K ↔
+∀ s : Finset X, (Matrix.of (fun i j : ↥s => K i.val j.val)).PosSemidef`.
+The equivalence with the quadratic-form formulation
+`∀ s c, 0 ≤ Σ c_i * conj(c_j) * K(x_i, x_j)` is provided by
+`PositiveDefiniteKernel.quadratic_form_nonneg` (forward) and
+`PositiveDefiniteKernel.of_quadratic_form` (backward). -/
 def PositiveDefiniteKernel {X : Type*} (K : X → X → ℂ) : Prop :=
-  ∀ (s : Finset X) (c : X → ℂ),
-    0 ≤ ∑ i ∈ s, ∑ j ∈ s, c i * conj (c j) * K i j
+  ∀ (s : Finset X), Matrix.PosSemidef (Matrix.of fun (i j : ↥s) => K i.val j.val)
+
+/-- The quadratic form `Σ c_i * conj(c_j) * K(x_i, x_j) ≥ 0` — derived from
+`Matrix.PosSemidef.dotProduct_mulVec_nonneg` via the new definition.  This is
+the "old definition" direction of the equivalence
+`PositiveDefiniteKernel K ↔ ∀ s c, 0 ≤ Σ c_i * conj(c_j) * K(x_i, x_j)`. -/
+lemma PositiveDefiniteKernel.quadratic_form_nonneg
+    {X : Type*} {K : X → X → ℂ} (hK : PositiveDefiniteKernel K)
+    (s : Finset X) (c : X → ℂ) :
+    0 ≤ ∑ i ∈ s, ∑ j ∈ s, c i * conj (c j) * K i j := by
+  classical
+  haveI : DecidableEq ↥s := Classical.decEq _
+  let M : Matrix ↥s ↥s ℂ := fun i j => K i.val j.val
+  have hM : M.PosSemidef := hK s
+  let x : ↥s → ℂ := fun i => conj (c i.val)
+  have hquad : 0 ≤ star x ⬝ᵥ (M *ᵥ x) :=
+    Matrix.PosSemidef.dotProduct_mulVec_nonneg hM x
+  have hdot : star x ⬝ᵥ (M *ᵥ x) =
+      ∑ i ∈ s, ∑ j ∈ s, c i * conj (c j) * K i j := by
+    rw [Matrix.dot_mulVec_eq_sum_sum, Finset.sum_comm]
+    simp only [M, x, Pi.star_apply, Complex.star_def, Complex.conj_conj]
+    rw [Finset.sum_coe_sort s
+        (fun a => ∑ j : ↥s, c a * K a j.val * conj (c j.val))]
+    apply Finset.sum_congr rfl
+    intro i _
+    rw [Finset.sum_coe_sort s (fun b => c i * K i b * conj (c b))]
+    apply Finset.sum_congr rfl
+    intro j _
+    exact mul_right_comm _ _ _
+  rw [← hdot]; exact hquad
+
+/-- Hermitian symmetry `K(x,y) = conj(K(y,x))` derived from the quadratic form
+(non-negativity for all finite sets and coefficients).  This is the key
+ingredient for `of_quadratic_form` (quadratic form → `PosSemidef`). -/
+private lemma quadratic_form_conj_symm
+    {X : Type*} (K : X → X → ℂ)
+    (h : ∀ (s : Finset X) (c : X → ℂ),
+      0 ≤ ∑ i ∈ s, ∑ j ∈ s, c i * conj (c j) * K i j) :
+    ∀ x y, K x y = conj (K y x) := by
+  intro x y
+  classical
+  have h_diag : ∀ z, 0 ≤ K z z := fun z => by
+    have h' := h (Finset.cons z ∅ (by simp)) (fun _ => 1)
+    simp at h'; exact h'
+  have h_diag_im : ∀ z, (K z z).im = 0 := fun z =>
+    (Complex.nonneg_iff.mp (h_diag z)).2.symm
+  by_cases hxy : x = y
+  · subst hxy; exact (Complex.conj_eq_iff_im.mpr (h_diag_im x)).symm
+  · have hne1' : (y : X) ∉ (∅ : Finset X) := by simp
+    have hne2 : (x : X) ∉ Finset.cons y ∅ hne1' := by simp [hxy]
+    have hS : ∀ t : ℂ,
+        0 ≤ K x x + conj t * K x y + t * K y x + (t * conj t) * K y y := by
+      intro t
+      have h' := h (Finset.cons x (Finset.cons y ∅ hne1') hne2)
+          (fun z => if z = x then 1 else t)
+      have hsum : (∑ i ∈ Finset.cons x (Finset.cons y ∅ hne1') hne2,
+          ∑ j ∈ Finset.cons x (Finset.cons y ∅ hne1') hne2,
+          (if i = x then 1 else t) * conj (if j = x then 1 else t) * K i j) =
+          K x x + conj t * K x y + t * K y x + (t * conj t) * K y y := by
+        simp only [Finset.sum_cons, Finset.sum_empty,
+          ite_true, if_neg (Ne.symm hxy), one_mul, mul_one, map_one]
+        ring
+      rw [hsum] at h'; exact h'
+    have h_im_sum : (K x y).im + (K y x).im = 0 := by
+      have key := (Complex.nonneg_iff.mp (hS 1)).2
+      have hkey : K x x + conj 1 * K x y + 1 * K y x + (1 * conj 1) * K y y =
+          K x x + K x y + K y x + K y y := by simp
+      rw [hkey] at key
+      have h2 : (K x x + K x y + K y x + K y y).im =
+          (K x x).im + (K x y).im + (K y x).im + (K y y).im := by simp [Complex.add_im]
+      rw [h2, h_diag_im x, h_diag_im y] at key; linarith
+    have h_re_diff : (K y x).re - (K x y).re = 0 := by
+      have key := (Complex.nonneg_iff.mp (hS Complex.I)).2
+      have heq : K x x + conj Complex.I * K x y + Complex.I * K y x +
+          (Complex.I * conj Complex.I) * K y y =
+          K x x + K y y + Complex.I * (K y x - K x y) := by simp [Complex.conj_I]; ring
+      rw [heq] at key
+      have h2 : (K x x + K y y + Complex.I * (K y x - K x y)).im =
+          (K x x).im + (K y y).im + ((K y x).re - (K x y).re) := by
+        simp [Complex.add_im, Complex.mul_im, Complex.sub_re, Complex.sub_im,
+          Complex.I_re, Complex.I_im]
+      rw [h2, h_diag_im x, h_diag_im y] at key; linarith
+    apply Complex.ext
+    · rw [Complex.conj_re]; linarith
+    · rw [Complex.conj_im]; linarith
+
+/-- If the quadratic form is non-negative for every finite set and coefficients,
+then `K` is a Mercer-PD kernel (the reverse direction of the equivalence). -/
+lemma PositiveDefiniteKernel.of_quadratic_form
+    {X : Type*} (K : X → X → ℂ)
+    (h : ∀ (s : Finset X) (c : X → ℂ),
+      0 ≤ ∑ i ∈ s, ∑ j ∈ s, c i * conj (c j) * K i j) :
+    PositiveDefiniteKernel K := by
+  intro s
+  classical
+  haveI : DecidableEq ↥s := Classical.decEq _
+  let M : Matrix ↥s ↥s ℂ := fun i j => K i.val j.val
+  change Matrix.PosSemidef M
+  refine Matrix.posSemidef_iff_dotProduct_mulVec.mpr ?_
+  refine ⟨?_, ?_⟩
+  · apply Matrix.IsHermitian.ext
+    intro i j
+    -- `IsHermitian.ext` wants `star (M j i) = M i j`; `quadratic_form_conj_symm`
+    -- gives `K i j = conj (K j i)`, so we take the symmetric form.
+    exact (quadratic_form_conj_symm K h i.val j.val).symm
+  · intro x
+    let c : X → ℂ := fun g => if hg : g ∈ s then conj (x ⟨g, hg⟩) else 0
+    have hc'val : ∀ i : ↥s, c i.val = conj (x i) := fun i => by
+      simp only [c, dif_pos i.property]
+    have hPD := h s c
+    have hdot : (∑ i ∈ s, ∑ j ∈ s, c i * conj (c j) * K i j) = star x ⬝ᵥ (M *ᵥ x) := by
+      rw [Matrix.dot_mulVec_eq_sum_sum]
+      conv_rhs => rw [Finset.sum_comm]
+      simp only [M, Pi.star_apply, Complex.star_def]
+      rw [← Finset.sum_coe_sort s
+          (fun a => ∑ j ∈ s, c a * conj (c j) * K a j)]
+      apply Finset.sum_congr rfl
+      intro i _
+      rw [← Finset.sum_coe_sort s
+          (fun b => c i.val * conj (c b) * K i.val b)]
+      simp only [hc'val, Complex.conj_conj]
+      apply Finset.sum_congr rfl
+      intro j _
+      exact mul_right_comm _ _ _
+    rw [← hdot]; exact hPD
 
 /-- Helper: sum over fibers of a function.  For any `f : α → X`, the sum
 `∑ i ∈ s, w i * Φ (f i)` can be regrouped by the value of `f i`. -/
@@ -165,78 +294,26 @@ lemma PositiveDefiniteKernel.sum_nonneg_of_map
         intro h hh
         rw [← mul_assoc]
       rw [h_rearr, ← Finset.mul_sum]
-    _ ≥ 0 := hK t d
+    _ ≥ 0 := hK.quadratic_form_nonneg t d
 
 /-- A group-theoretic PD function gives a Mercer-PD kernel `K(x, y) = φ(x⁻¹ * y)`.
 This shows the Mercer notion generalizes the group-theoretic one. -/
 lemma PositiveDefinite.toPositiveDefiniteKernel
     {G : Type*} [Group G] {φ : G → ℂ} (hφ : PositiveDefinite φ) :
     PositiveDefiniteKernel (fun x y => φ (x⁻¹ * y)) := by
-  intro s c
-  exact hφ s c
+  apply PositiveDefiniteKernel.of_quadratic_form
+  intro s c; exact hφ s c
 
-/-- A Mercer-PD kernel is Hermitian: `K(x, y) = conj(K(y, x))`.  The proof
-uses the 2-element quadratic form with coefficients `1` and `t` for varying
-`t ∈ ℂ`, extracting the real and imaginary constraints. -/
+/-- A Mercer-PD kernel is Hermitian: `K(x, y) = conj(K(y, x))`, derived from
+`Matrix.PosSemidef.IsHermitian` via the quadratic-form argument. -/
 lemma PositiveDefiniteKernel.conj_symm {X : Type*} {K : X → X → ℂ}
-    (hK : PositiveDefiniteKernel K) : ∀ x y, K x y = conj (K y x) := by
-  intro x y
-  classical
-  have h_diag : ∀ z, 0 ≤ K z z := fun z => by
-    have h := hK (Finset.cons z ∅ (by simp)) (fun _ => 1)
-    simp at h
-    exact h
-  have h_diag_im : ∀ z, (K z z).im = 0 := fun z =>
-    (Complex.nonneg_iff.mp (h_diag z)).2.symm
-  by_cases hxy : x = y
-  · subst hxy; exact (Complex.conj_eq_iff_im.mpr (h_diag_im x)).symm
-  · have hne1' : (y : X) ∉ (∅ : Finset X) := by simp
-    have hne2 : (x : X) ∉ Finset.cons y ∅ hne1' := by simp [hxy]
-    have hS : ∀ t : ℂ,
-        0 ≤ K x x + conj t * K x y + t * K y x + (t * conj t) * K y y := by
-      intro t
-      have h := hK (Finset.cons x (Finset.cons y ∅ hne1') hne2)
-          (fun z => if z = x then 1 else t)
-      have hsum : (∑ i ∈ Finset.cons x (Finset.cons y ∅ hne1') hne2,
-          ∑ j ∈ Finset.cons x (Finset.cons y ∅ hne1') hne2,
-          (if i = x then 1 else t) * conj (if j = x then 1 else t) * K i j) =
-          K x x + conj t * K x y + t * K y x + (t * conj t) * K y y := by
-        simp only [Finset.sum_cons, Finset.sum_empty,
-          ite_true, if_neg (Ne.symm hxy), one_mul, mul_one, map_one]
-        ring
-      rw [hsum] at h
-      exact h
-    have h_im_sum : (K x y).im + (K y x).im = 0 := by
-      have key := (Complex.nonneg_iff.mp (hS 1)).2
-      have hkey : K x x + conj 1 * K x y + 1 * K y x + (1 * conj 1) * K y y =
-          K x x + K x y + K y x + K y y := by
-        simp only [map_one, one_mul, mul_one]
-      rw [hkey] at key
-      have h2 : (K x x + K x y + K y x + K y y).im =
-          (K x x).im + (K x y).im + (K y x).im + (K y y).im := by
-        simp [Complex.add_im]
-      rw [h2, h_diag_im x, h_diag_im y] at key
-      linarith
-    have h_re_diff : (K y x).re - (K x y).re = 0 := by
-      have key := (Complex.nonneg_iff.mp (hS Complex.I)).2
-      have heq : K x x + conj Complex.I * K x y + Complex.I * K y x +
-          (Complex.I * conj Complex.I) * K y y =
-          K x x + K y y + Complex.I * (K y x - K x y) := by
-        simp [Complex.conj_I]; ring
-      rw [heq] at key
-      have h2 : (K x x + K y y + Complex.I * (K y x - K x y)).im =
-          (K x x).im + (K y y).im + ((K y x).re - (K x y).re) := by
-        simp [Complex.add_im, Complex.mul_im, Complex.sub_re, Complex.sub_im,
-          Complex.I_re, Complex.I_im]
-      rw [h2, h_diag_im x, h_diag_im y] at key
-      linarith
-    apply Complex.ext
-    · rw [Complex.conj_re]; linarith
-    · rw [Complex.conj_im]; linarith
+    (hK : PositiveDefiniteKernel K) : ∀ x y, K x y = conj (K y x) :=
+  quadratic_form_conj_symm K hK.quadratic_form_nonneg
 
-/-- The constant-one kernel is Mercer-PD. -/
+/-- The constant-one kernel is Mercer-PD (via `of_quadratic_form`). -/
 lemma PositiveDefiniteKernel.one (X : Type*) :
     PositiveDefiniteKernel (fun (_ _ : X) => (1 : ℂ)) := by
+  apply PositiveDefiniteKernel.of_quadratic_form
   intro s c
   have hsum : (∑ i ∈ s, ∑ j ∈ s, c i * conj (c j) * 1) =
       conj (∑ i ∈ s, c i) * (∑ i ∈ s, c i) := by
@@ -245,91 +322,31 @@ lemma PositiveDefiniteKernel.one (X : Type*) :
   rw [hsum, ← Complex.normSq_eq_conj_mul_self]
   exact Complex.zero_le_real.mpr (Complex.normSq_nonneg _)
 
-/-- A Mercer-PD kernel gives a positive-semidefinite matrix on any finite subset. -/
-private lemma PositiveDefiniteKernel.matrix_posSemidef {X : Type*}
-    {K : X → X → ℂ} (hK : PositiveDefiniteKernel K) (s : Finset X) :
-    Matrix.PosSemidef (fun (i j : ↥s) => K i.val j.val : Matrix ↥s ↥s ℂ) := by
-  haveI : DecidableEq ↥s := Classical.decEq _
-  classical
-  refine (Matrix.posSemidef_iff_dotProduct_mulVec
-      (M := (fun (i j : ↥s) => K i.val j.val : Matrix ↥s ↥s ℂ))).mpr ?_
-  refine ⟨?_, ?_⟩
-  · apply Matrix.IsHermitian.ext
-    intro i j
-    show conj (K j.val i.val) = K i.val j.val
-    rw [hK.conj_symm i.val j.val]
-  · intro x
-    let c' : X → ℂ := fun g => if hg : g ∈ s then conj (x ⟨g, hg⟩) else 0
-    have hPD := hK s c'
-    have hc'val : ∀ i : ↥s, c' i.val = conj (x i) := by
-      intro i
-      simp only [c', dif_pos i.property]
-    have hc'conj : ∀ j : ↥s, conj (c' j.val) = x j := by
-      intro j
-      rw [hc'val j]
-      exact star_star _
-    let M : Matrix ↥s ↥s ℂ := fun i j => K i.val j.val
-    have hdot : star x ⬝ᵥ (M *ᵥ x) =
-        (∑ i ∈ s, ∑ j ∈ s, c' i * conj (c' j) * K i j) := by
-      rw [Matrix.dot_mulVec_eq_sum_sum, Finset.sum_comm]
-      simp only [M, Pi.star_apply, Complex.star_def]
-      conv_rhs => rw [← Finset.sum_coe_sort]
-      apply Finset.sum_congr rfl
-      intro i _
-      conv_rhs => rw [← Finset.sum_coe_sort]
-      simp only [hc'val, Complex.conj_conj]
-      apply Finset.sum_congr rfl
-      intro j _
-      exact mul_right_comm _ _ _
-    rw [hdot]
-    exact hPD
-
 /-- **Schur product theorem for Mercer-PD kernels.**  The pointwise product of
-two Mercer-PD kernels is again Mercer-PD. -/
+two Mercer-PD kernels is again Mercer-PD.  With the `Matrix.PosSemidef`-based
+definition, this is a direct application of `Matrix.PosSemidef.hadamard` (the
+Schur product theorem for positive-semidefinite matrices): the Hadamard product
+of the two finite submatrices is positive-semidefinite, and `Matrix.hadamard`
+is pointwise multiplication by definition. -/
 lemma PositiveDefiniteKernel.mul {X : Type*} {K1 K2 : X → X → ℂ}
     (hK1 : PositiveDefiniteKernel K1) (hK2 : PositiveDefiniteKernel K2) :
     PositiveDefiniteKernel (fun x y => K1 x y * K2 x y) := by
-  intro s c
-  classical
-  haveI : DecidableEq ↥s := Classical.decEq _
-  let A : Matrix ↥s ↥s ℂ := fun i j => K1 i.val j.val
-  let B : Matrix ↥s ↥s ℂ := fun i j => K2 i.val j.val
-  let v : ↥s → ℂ := fun i => c i.val
-  have hA : Matrix.PosSemidef A := hK1.matrix_posSemidef s
-  have hB : Matrix.PosSemidef B := hK2.matrix_posSemidef s
-  have hAB : Matrix.PosSemidef (A ⊙ B) := Matrix.PosSemidef.hadamard hA hB
-  let w : ↥s → ℂ := fun i => conj (v i)
-  have hquad : 0 ≤ star w ⬝ᵥ ((A ⊙ B) *ᵥ w) :=
-    Matrix.PosSemidef.dotProduct_mulVec_nonneg hAB w
-  have htarget : (∑ i ∈ s, ∑ j ∈ s, c i * conj (c j) * (K1 i j * K2 i j)) =
-      star w ⬝ᵥ ((A ⊙ B) *ᵥ w) := by
-    rw [Matrix.dot_mulVec_eq_sum_sum]
-    conv_rhs => rw [Finset.sum_comm]
-    simp only [Pi.star_apply, Complex.star_def, A, B, w, v,
-      Complex.conj_conj]
-    conv_lhs => rw [← Finset.sum_coe_sort]
-    apply Finset.sum_congr rfl
-    intro i _
-    conv_lhs => rw [← Finset.sum_coe_sort]
-    apply Finset.sum_congr rfl
-    intro j _
-    exact mul_right_comm _ _ _
-  rw [htarget]
-  exact hquad
+  intro s
+  exact Matrix.PosSemidef.hadamard (hK1 s) (hK2 s)
 
-/-- Non-negative scaling preserves Mercer-PD. -/
+/-- Non-negative scaling preserves Mercer-PD (via `of_quadratic_form`). -/
 lemma PositiveDefiniteKernel.smul_nonneg {X : Type*} {K : X → X → ℂ} {r : ℝ}
     (hr : 0 ≤ r) (hK : PositiveDefiniteKernel K) :
     PositiveDefiniteKernel (fun x y => (r : ℂ) * K x y) := by
+  apply PositiveDefiniteKernel.of_quadratic_form
   intro s c
-  have h := hK s c
+  have h := hK.quadratic_form_nonneg s c
   have hsum : (∑ i ∈ s, ∑ j ∈ s, c i * conj (c j) * ((r : ℂ) * K i j)) =
       (r : ℂ) * (∑ i ∈ s, ∑ j ∈ s, c i * conj (c j) * K i j) := by
     simp [Finset.mul_sum, mul_assoc, mul_comm, mul_left_comm]
   rw [hsum]
   have h_nonneg_complex : (0 : ℂ) ≤ (r : ℂ) := by
-    rw [Complex.nonneg_iff]
-    constructor
+    rw [Complex.nonneg_iff]; constructor
     · simpa using hr
     · simp
   exact mul_nonneg h_nonneg_complex h
@@ -359,6 +376,7 @@ If `K` is a Mercer-PD kernel on `Y` and `f : X → Y`, then
 lemma PositiveDefiniteKernel.comp {X Y : Type*} {K : Y → Y → ℂ}
     (hK : PositiveDefiniteKernel K) (f : X → Y) :
     PositiveDefiniteKernel (fun x y => K (f x) (f y)) := by
+  apply PositiveDefiniteKernel.of_quadratic_form
   intro s c
   exact hK.sum_nonneg_of_map s f c
 
@@ -569,3 +587,15 @@ lemma PositiveDefiniteKernel.integralOperator_nonneg
       exact h_abs.trans hS_bound
     linarith
 
+#print axioms PositiveDefiniteKernel.quadratic_form_nonneg
+#print axioms PositiveDefiniteKernel.of_quadratic_form
+#print axioms PositiveDefiniteKernel.conj_symm
+#print axioms PositiveDefiniteKernel.one
+#print axioms PositiveDefiniteKernel.mul
+#print axioms PositiveDefiniteKernel.smul_nonneg
+#print axioms PositiveDefiniteKernel.finprod
+#print axioms PositiveDefiniteKernel.comp
+#print axioms PositiveDefiniteKernel.continuous_comp
+#print axioms PositiveDefiniteKernel.sum_nonneg_of_map
+#print axioms PositiveDefiniteKernel.integralOperator_nonneg
+#print axioms PositiveDefinite.toPositiveDefiniteKernel

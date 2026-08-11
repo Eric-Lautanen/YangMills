@@ -76,7 +76,12 @@ formalization effort.
    own docstring gives the intended chain: plaquette Boltzmann factor PD
    (`plaquetteBoltzmannPD`, proved modulo the Peter–Weyl axiom) ⟹ transfer
    matrix `T` is a positive operator ⟹ `∫ G·G(θU) dμ₀ ≥ 0`.  The middle step
-   is the open one.
+   is the open one.  **Current plan: the Lüscher mechanism** (design doc
+   §8.11.41–42) — integrate out temporal links first via Schur orthogonality to
+   get non-negative coefficients, avoiding the `σ` twist.  Step 1 (the single-link
+   `luscher_key_identity`, `PositiveDefinite.lean:1037`) is **proved** (0 sorries,
+   0 new axioms); Steps 2–5 (single-site CG decomposition, 3D global cascade,
+   connection to `character_expansion_nonneg_shared`, closing the axiom) remain.
 
 2. **New infrastructure — `PositiveDefinite.integral` and
    `PositiveDefinite.integralOperator_nonneg`**
@@ -430,7 +435,136 @@ from 6 to 5) via the operator-theoretic `T = B*·B` argument has four steps:
       matrix-element basis, σ-inversion + `repMatrixElement_inv` + CG triple-product
       evaluation + Schur orthogonality → `∑ |Fourier coefficient|² ≥ 0`) and final
       assembly (lemma 6) to close `transferMatrixPositivity_axiom`.
+      **Update (2026-08-06 sessions 38–39): Lüscher roadmap — Step 1 DONE.**  The
+      plan to close `transferMatrixPositivity_axiom` (count 6 → 5) is now the
+      **Lüscher mechanism** (design doc §8.11.41–42): integrate out temporal links
+      *first* via Schur orthogonality (forcing matching representations and giving
+      strictly positive coefficients `1/d_γ > 0`), which avoids the `σ` twist that
+      obstructs the direct character-expansion approach (the `∑ A²` vs `∑ |A|²`
+      obstruction of §8.11.38).  **Step 1 is proved:** `luscher_key_identity`
+      (`PositiveDefinite.lean:1037`) — the single-link identity
+      `∫_G χ_γ(g·h)·χ_{γ'}(g⁻¹·k) ∂μ = δ_{γγ'}·(1/d_γ)·χ_γ(h·k)` for irreducible
+      unitary representations of a compact group with normalized Haar measure.
+      0 sorries, 0 NEW custom axioms — `#print axioms` confirms only
+      `propext, Classical.choice, Quot.sound, characterOrthogonality` (the existing
+      Schur-orthogonality axiom; axiom count remains **six**).  The proof expands
+      both characters into matrix elements (`Tr(AB)=∑_{ij}A_{ij}B_{ji}` +
+      `ρ(g⁻¹)=ρ(g)†`), distributes via `Fintype.sum_mul_sum`, exchanges four sums
+      with the integral via `integral_finsetSum`, factors constants via
+      `integral_smul`, and applies Schur orthogonality (diagonal: `Finset.sum_eq_single`
+      collapses the Kronecker deltas and `Matrix.trace_mul_comm` recognizes the
+      surviving trace as `χ_γ(h·k)`; off-diagonal: sum of zeros).  This is the
+      one-site integral the 1D/3D cascade iterates.  **Remaining:** the full 1D
+      cascade (`U_1D = ∑_γ (c_γ)^L/d_γ^{L-1}·χ_γ(∏_x W)`, a Fubini iteration of
+      the key identity), then Step 2 (single-site CG decomposition for 3D via
+      `hcgME_decomp`/`hcgME_unitary`), Step 3 (3D global cascade), Step 4 (connect
+      to `character_expansion_nonneg_shared`, `PositiveDefiniteIntegral.lean:1196`),
+      Step 5 (close `transferMatrixPositivity_axiom` via
+      `integral_G_thetaG_eq_inner_g_Tg`).  Build GREEN (full `lake build` 2972
+      jobs; targeted `YangMills.Proofs.PositiveDefinite` 2856 jobs).
+      **Update (2026-08-06 → 2026-08-08 sessions 41–52): Steps 2–4 DONE.**
+      Step 2: `cgME_decomp_3fold`/`_conj` + `single_site_3D_luscher_integral`
+      (`PeterWeyl.lean`).  Step 3(a–c): `cg_unitarity_nonneg`, `chainIntegral_eq`,
+      `luscher_2site_2D_cascade_charlevel` (`PositiveDefinite.lean`) — the
+      character-level 2-site 2D cascade reducing the integral to
+      `∑_ν cg(s₁,s₂,ν)·cg(t₁,t₂,ν)·(1/dims ν)·χ_ν(W·V)`.  Step 4:
+      `cascade_integral_nonneg` (`PositiveDefiniteIntegral.lean:1275`) — the
+      kernel `∑_ν cg·cg·(1/dims ν)·χ_ν(W·V)` integrated against `f(W)·f(V⁻¹)`
+      is `≥ 0`, via `character_expansion_nonneg` with Sigma index type
+      `ι' = Σ ν, Fin(dims ν)×Fin(dims ν)`.  0 sorries, build GREEN (2892 jobs),
+      `#print axioms` = `[propext, Classical.choice, Quot.sound]` (only 3 — no
+      `characterOrthogonality` needed).  **Remaining:** Step 5 — close
+      `transferMatrixPositivity_axiom` (axiom count 6 → 5).
+      **Update (2026-08-08 session 53): TM closure step 4 PROVED.**
+      `fourierCoeffPos_sigma_invisible` (`TransferMatrix.lean:4650`) — the
+      positive Fourier coefficient `A_w(u⁰) = fourierCoeffPos(w, u⁰)` is
+      σ-invisible: `A_w(σ(u⁰)) = A_w(u⁰)` when `f` satisfies
+      `dependsOnlyOnPosSpatialInterface`.  0 sorries, 3 axioms, build GREEN
+      (2972 jobs).  This is step 4 of the 6-step TM closure plan (§8.11.40):
+      steps 1–4 now PROVED; steps 5–6 remain (u⁰_t integral via character
+      orthogonality; non-negativity of remaining kernel via Lüscher mechanism).
+      **Update (2026-08-08 session 54): Step 5 sub-lemmas 1–2 PROVED.**
+      `charFactorInt_eq_temporal_spatial` (`TransferMatrix.lean:~2406`) —
+      `charFactorInt` decomposes into temporal (μ=0) and spatial (μ≠0) parts
+      via `prod_interfaceLinkInt_eq_temporal_spatial`. 0 sorries, 0 new axioms.
+      `fourierCoeffPos_independent_of_temporal` (`TransferMatrix.lean:~4822`) —
+      `fourierCoeffPos` depends only on `u⁰_s` (spatial interface links), not
+      `u⁰_t` (temporal interface links), because `g` and `S⁺` are both
+      invisible to changes in temporal interface links. 0 sorries, 0 new axioms.
+      Supporting lemmas: `extendLinkVariable_merge_spatial_agree`,
+      `f_temporal_invisible`, `osPositiveOfPosInterface_temporal_invariant`,
+      `g_posInterface_temporal_invisible` (all generalizations of their σ
+      counterparts). Build GREEN (2891 jobs). **Remaining:** step 5 sub-lemma 3
+      (temporal integral `∫χ_γ = δ_{γ,trivial}` — requires identifying the
+      trivial representation in `ι`, see §8.11.43) and step 6 (Lüscher mechanism
+      for non-negativity of the remaining kernel).
+      **Update (2026-08-08 session 55): Step 5 sub-lemma 3 PROVED (with hypothesis).**
+      `integral_repCharacter_eq_iff_trivial` (`PositiveDefinite.lean:~1066`) —
+      `∫_G χ_γ(g) ∂μ = if γ = triv then 1 else 0`, a direct corollary of
+      `character_orthogonality_from_schur` with `s = triv` (since `χ_{triv} = 1`
+      ⟹ `conj(χ_{triv}) = 1` ⟹ `∫ χ_γ · conj(χ_{triv}) = ∫ χ_γ`). 0 sorries,
+      0 new axioms, `#print axioms` = `[propext, Classical.choice, Quot.sound,
+      characterOrthogonality]`. The trivial rep is taken as a hypothesis
+      (`htriv : ∀ g, χ_{triv}(g) = 1`); deriving it from the axiom is analyzed in
+      §8.11.44 but not formalized. **Key analysis (§8.11.44):** the naive expansion
+      (steps 3–6) CANNOT close the axiom — the kernel coefficients are complex, not
+      non-negative reals. The Lüscher mechanism (step 6) bypasses steps 3–5 entirely
+      by using a PLAQUETTE-LEVEL character expansion (5-index from the axiom) where
+      each temporal link appears in multiple characters from adjacent plaquettes.
+      The Lüscher cascade then integrates out temporal links via Schur orthogonality,
+      giving non-negative coefficients matching `cascade_integral_nonneg`.
+      **Update (2026-08-10 sessions 73–79): §8.11.61 plan — Steps 1–4 DONE.**
+      A new plan (design doc §8.11.61) supersedes the Lüscher roadmap. The key
+      insight (§8.11.60): the correct mechanism is `dependsOnlyOnPositive` (f
+      depends only on positive links, NOT interface links) + the **full**
+      character expansion (over ALL links). This makes the interface link
+      integral **unweighted** character orthogonality (giving `δ_{w|_int, trivial}`).
+      Step 2 (full character expansion, §8.11.62), Step 3
+      (`interface_char_integral_trivial`, §8.11.64 — axiom extended to provide
+      `σ_0`), and Step 4 (full-lattice character factor lemmas, §8.11.65 —
+      `fullReflectReindexLink`, `charFactorPosAll`/`charFactorNegAll`, per-link
+      & product identities, all full-lattice analogues of the interface-only
+      versions) are all proved. All 0 sorries, 0 custom axioms (only standard 3:
+      propext, Classical.choice, Quot.sound). Build GREEN, axiom count 6 unchanged.
+      **Remaining:** Step 5 (REVISED, §8.11.66 — the `|Â_w|²` claim is INCORRECT;
+      actual result is `Â_w · Â_{w*}` with reflected weight `w*`, NOT trivially
+      non-negative; non-negativity requires PD of the u⁰-integrated kernel K)
+      and Step 6 (replace `transferMatrixPositivity_axiom` with proved lemma,
+      count 6 → 5).
+  **Update (2026-08-10 session 80): §8.11.66 CRITICAL ANALYSIS.** The §8.11.61
+  claim that Step 5 gives `|Â_w|²` is **INCORRECT**. The actual result is
+  `I = C · Σ_{w: trivial on int} F(w) · Â_w · Â_{w*}` where
+  `w* = fullReflectReindexLink dual w` is the **reflected** weight. This is a
+  product of two complex Fourier coefficients (NOT an absolute square), and is
+  **NOT trivially non-negative**. The non-negativity requires the **PD of the
+  u⁰-integrated kernel** `K = ∫_{u⁰} exp(-β·S_W) dμ⁰` (which IS PD, bypassing
+  the §8.11.60 per-u⁰ objection, because the u⁰ integral is done FIRST giving δ
+  by character orthogonality). No code changes — pure analysis. Build GREEN,
+  0 sorries, 6 axioms.
   See `docs/transfer_matrix_positivity_design.md` for the full design.
+
+  **Update (2026-08-10 session 81): §8.11.67 CRITICAL ANALYSIS.** The §8.11.66
+  strategy ("K is PD by PD of full Boltzmann") is **ALSO INCORRECT** — the
+  group-PD of B does NOT transfer to Mercer-PD of K (B(U) ≠ B(g⁻¹·h), θ is not
+  a group homomorphism). The **CORRECT mechanism** is the **Lüscher decomposition**
+  T = V^{1/2}·U·V^{1/2}: spatial plaquettes → V (PD multiplication operator via
+  Schur product), temporal plaquettes → U (positive integral operator via Lüscher
+  cascade + `character_kernel_integral_nonneg`). The full character expansion fails
+  because it expands ALL plaquettes in characters, giving `Â_w · Â_{w*}` (product at
+  different weights, NOT |Â_w|²). The Lüscher decomposition succeeds because it
+  separates temporal and spatial plaquettes and handles them by different mechanisms.
+  **Code**: `fullBoltzmannPD` theorem PROVED and build GREEN (session 83,
+  2026-08-11). The whnf timeout was caused by `addVectorPeriodic`'s `match μ
+  with | 0 => ... | 1 => ...` getting stuck during `whnf`/`isDefEq` when `μ`
+  is a variable (e.g. `p.2.1`). Fix: use `PositiveDefinite.congr` for ALL
+  steps — build PD proofs WITHOUT declared types (so no conclusion defeq
+  check against the `∏` notation), then transfer PD with `congr` + `funext`
+  + `rfl` (the `funext` goal is alpha-equivalent, so `rfl` is fast — `isDefEq`
+  confirms structural equality without unfolding `plaquetteProduct`). Step 6
+  uses `exact_mod_cast h_eq U`. `#print axioms` = `[propext,
+  Classical.choice, Quot.sound, peterWeyl_clebschGordan_plaquette]` (only 4 —
+  does NOT depend on `characterOrthogonality` or
+  `transferMatrixPositivity_axiom`). Full `lake build` GREEN (2972 jobs).
 
 ### Future work:
 - Wire `PositiveDefinite.integral` and `PositiveDefinite.integralOperator_nonneg`

@@ -254,6 +254,127 @@ lemma haarMeasure_inv_invariant (N : ℕ) :
     exact_mod_cast h'.symm
   rw [← Measure.inv_def, h_eq, h_scalar, one_smul]
 
+/-- The Haar measure on `SU(N)` is invariant under right multiplication `u ↦ u * h`.
+Compact groups are unimodular: the Haar measure is both left- and right-invariant.
+The proof uses the uniqueness of Haar measure on compact groups
+(`isMulInvariant_eq_smul_of_compactSpace`), evaluating the scalar on `Set.univ`. -/
+lemma haarMeasure_right_mul_invariant (N : ℕ) (h : SU N) :
+    let K : TopologicalSpace.PositiveCompacts (SU N) :=
+      ⟨⟨Set.univ, isCompact_univ⟩, by simpa using Set.univ_nonempty (α := SU N)⟩
+    Measure.map (fun u => u * h) (MeasureTheory.Measure.haarMeasure K) =
+      MeasureTheory.Measure.haarMeasure K := by
+  intro K
+  set μ := MeasureTheory.Measure.haarMeasure K with hμ_def
+  have hμ_univ : μ Set.univ = 1 := by
+    simpa [K, hμ_def] using MeasureTheory.Measure.haarMeasure_self (K₀ := K)
+  haveI : Measure.IsMulLeftInvariant (Measure.map (fun x => x * h) μ) :=
+    isMulLeftInvariant_map_mul_right h
+  have hmap_univ : Measure.map (fun x => x * h) μ Set.univ = 1 := by
+    rw [Measure.map_apply (measurable_mul_const h) MeasurableSet.univ, preimage_univ]
+    exact hμ_univ
+  haveI : IsFiniteMeasureOnCompacts (Measure.map (fun x => x * h) μ) := by
+    refine ⟨fun s _hs => ?_⟩
+    exact (measure_mono (Set.subset_univ _)).trans_lt
+      (hmap_univ.symm ▸ ENNReal.one_lt_top)
+  have h_eq : Measure.map (fun x => x * h) μ =
+      Measure.haarScalarFactor (Measure.map (fun x => x * h) μ) μ • μ :=
+    Measure.isMulInvariant_eq_smul_of_compactSpace _ _
+  have h_scalar : Measure.haarScalarFactor (Measure.map (fun x => x * h) μ) μ = 1 := by
+    have h' : Measure.map (fun x => x * h) μ Set.univ =
+        Measure.haarScalarFactor (Measure.map (fun x => x * h) μ) μ * μ Set.univ := by
+      have hstep : Measure.map (fun x => x * h) μ Set.univ =
+          (Measure.haarScalarFactor (Measure.map (fun x => x * h) μ) μ • μ) Set.univ :=
+        congr_arg (fun ν => ν Set.univ) h_eq
+      rw [hstep, Measure.coe_nnreal_smul_apply]
+    rw [hμ_univ, hmap_univ] at h'
+    simp at h'
+    exact_mod_cast h'.symm
+  rw [h_eq, h_scalar, one_smul]
+
+/-- The Haar measure on `SU(N)` is invariant under left-right multiplication
+`u ↦ a * u * b`.  This combines left invariance (`IsMulLeftInvariant`) with
+right invariance (`haarMeasure_right_mul_invariant`). -/
+lemma haarMeasure_left_right_mul_invariant (N : ℕ) (a b : SU N) :
+    let K : TopologicalSpace.PositiveCompacts (SU N) :=
+      ⟨⟨Set.univ, isCompact_univ⟩, by simpa using Set.univ_nonempty (α := SU N)⟩
+    Measure.map (fun u => a * u * b) (MeasureTheory.Measure.haarMeasure K) =
+      MeasureTheory.Measure.haarMeasure K := by
+  intro K
+  set μ := MeasureTheory.Measure.haarMeasure K with hμ_def
+  haveI : Measure.IsMulLeftInvariant μ := Measure.isMulLeftInvariant_haarMeasure K
+  have h_left : Measure.map (fun u => a * u) μ = μ :=
+    Measure.IsMulLeftInvariant.map_mul_left_eq_self a
+  have h_right : Measure.map (fun u => u * b) μ = μ :=
+    haarMeasure_right_mul_invariant N b
+  have hf : Measurable (fun u : SU N => a * u) := measurable_const.mul measurable_id
+  have hg : Measurable (fun u : SU N => u * b) := measurable_mul_const b
+  have h_map_comp : Measure.map (fun u => a * u * b) μ =
+      Measure.map (fun u => u * b) (Measure.map (fun u => a * u) μ) := by
+    rw [show (fun u => a * u * b) = (fun u => u * b) ∘ (fun u => a * u) from rfl]
+    exact (Measure.map_map (g := fun u => u * b) (f := fun u => a * u) hg hf).symm
+  rw [h_map_comp, h_left, h_right]
+
+/-- The gauge transformation on a finite link configuration: for a gauge
+parameter `g : Λ → SU N`, each link `(n, μ)` is conjugated as
+`U(n, μ) ↦ g(n) * U(n, μ) * g(n + e_μ)⁻¹`. -/
+def gaugeTransformConfig (N : ℕ) {Λ : Type} [DecidableEq Λ] [AddVector Λ]
+    (sites : Finset Λ) (g : Λ → SU N)
+    (cfg : FiniteLinkConfig N Λ sites) : FiniteLinkConfig N Λ sites :=
+  fun ⟨(n, μ), _hn⟩ => g n * cfg ⟨(n, μ), _hn⟩ * (g (AddVector.addVector n μ))⁻¹
+
+/-- The gauge transformation on a finite link configuration is measure-preserving
+with respect to the product Haar measure.  Each link is independently
+left-right-multiplied by `g(n)` and `g(n+e_μ)⁻¹`, and the Haar measure on
+`SU(N)` is invariant under left-right multiplication
+(`haarMeasure_left_right_mul_invariant`).  Since the product measure is a
+product of independent Haar factors, and each factor is individually preserved,
+the product is preserved (`measurePreserving_pi`). -/
+lemma gaugeTransformConfig_measurePreserving
+    (N : ℕ) {Λ : Type} [DecidableEq Λ] [AddVector Λ]
+    (sites : Finset Λ) (g : Λ → SU N) :
+    MeasurePreserving (gaugeTransformConfig N sites g)
+      (productHaarMeasure N Λ sites) (productHaarMeasure N Λ sites) := by
+  let K : TopologicalSpace.PositiveCompacts (SU N) :=
+    ⟨⟨Set.univ, isCompact_univ⟩, by simpa using Set.univ_nonempty (α := SU N)⟩
+  set ν : Measure (SU N) := MeasureTheory.Measure.haarMeasure K with hν_def
+  have hμ : productHaarMeasure N Λ sites =
+      Measure.pi (fun _ : FiniteLinkIndex Λ sites => ν) := by
+    simp only [productHaarMeasure, ν, K, hν_def]
+  have h_each : ∀ i : FiniteLinkIndex Λ sites,
+      MeasurePreserving (fun u => g i.1.1 * u * (g (AddVector.addVector i.1.1 i.1.2))⁻¹) ν ν := by
+    intro ⟨(n, μ), _hn⟩
+    refine ⟨?_, ?_⟩
+    · exact (measurable_const.mul measurable_id).mul measurable_const
+    · exact haarMeasure_left_right_mul_invariant N (g n) (g (AddVector.addVector n μ))⁻¹
+  have h := measurePreserving_pi (fun _ : FiniteLinkIndex Λ sites => ν) (fun _ => ν)
+    (f := fun i => fun u => g i.1.1 * u * (g (AddVector.addVector i.1.1 i.1.2))⁻¹)
+    (by intro i; exact h_each i)
+  rw [hμ]
+  convert h using 1
+  ext cfg i
+  rfl
+
+/-- For `sites = Finset.univ`, `extendLinkVariable` at link `(n, μ)` simply
+extracts `cfg ⟨(n, μ), Finset.mem_univ n⟩` (the `if` branch is always taken). -/
+lemma extendLinkVariable_univ (N : ℕ) {Λ : Type} [DecidableEq Λ] [Fintype Λ]
+    (cfg : FiniteLinkConfig N Λ Finset.univ) (n : Λ) (μ : Fin 4) :
+    (extendLinkVariable N Λ Finset.univ cfg).value n μ = cfg ⟨(n, μ), Finset.mem_univ n⟩ := by
+  change (if h : n ∈ Finset.univ then cfg ⟨(n, μ), h⟩ else 1) = cfg ⟨(n, μ), Finset.mem_univ n⟩
+  rw [dif_pos (Finset.mem_univ n)]
+
+/-- The gauge transformation commutes with `extendLinkVariable` when
+`sites = Finset.univ`: extending the gauge-transformed config equals the
+gauge transformation of the extended link variable.  This holds because
+every site is in `Finset.univ`, so the `if n ∈ sites` branches always fire. -/
+lemma extendLinkVariable_gaugeTransformConfig
+    (N : ℕ) {Λ : Type} [DecidableEq Λ] [AddVector Λ] [Fintype Λ]
+    (g : Λ → SU N) (cfg : FiniteLinkConfig N Λ Finset.univ) :
+    extendLinkVariable N Λ Finset.univ (gaugeTransformConfig N Finset.univ g cfg) =
+      gaugeTransformLinkVariable N g (extendLinkVariable N Λ Finset.univ cfg) := by
+  ext n μ
+  dsimp only [extendLinkVariable, gaugeTransformConfig, gaugeTransformLinkVariable]
+  rw [dif_pos (Finset.mem_univ n), dif_pos (Finset.mem_univ n)]
+
 /-- The reflection map on the full link-variable group is measure-preserving
 with respect to the product Haar measure.
 
