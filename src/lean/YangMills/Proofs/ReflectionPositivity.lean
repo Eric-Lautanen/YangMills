@@ -2077,6 +2077,288 @@ theorem spatialBoltzmannPD (N T L : ℕ) [NeZero T] [NeZero L] (β : ℝ) (hβ :
 
 #print axioms spatialBoltzmannPD
 
+/-! ## Temporal Boltzmann factor: abstract product form (U operator, Lüscher §8.11.67)
+
+The temporal Boltzmann factor `exp(-β·S_temporal)` is a product of temporal plaquette
+Boltzmann factors.  Unlike the spatial case (where the product is kept as a PD function
+defining the multiplication operator V), the temporal plaquette product is expanded
+in characters (sub-step 3 of the Lüscher decomposition) and the temporal links are
+integrated out via the Lüscher cascade, producing a kernel `Σ_s a_s · χ_s(W·V)` with
+`a_s ≥ 0`.  This lemma gives the abstract product form (pure algebra); the character
+expansion is a separate lemma.
+See `docs/transfer_matrix_positivity_design.md` §8.11.67. -/
+
+/-- **Temporal Boltzmann factor as a positive constant times the abstract temporal
+plaquette product.** The temporal Boltzmann factor `exp(-β·S_temporal)` equals a
+positive constant `C = ∏_{p ∈ temporalPlaquettes} exp(-β²)` times the abstract
+plaquette product `∏_{p ∈ temporalPlaquettes} exp((β²/N)·Re Tr(P_p))`.
+This is the temporal analogue of `spatial_boltzmann_eq_abstract_product`.
+Pure algebra — 0 sorries, 0 custom axioms. -/
+lemma temporal_boltzmann_eq_abstract_product (N T L : ℕ) (β : ℝ) [NeZero T] [NeZero L] :
+    ∃ (C : ℝ) (hC : 0 < C),
+      ∀ (U : LinkVariable (SU N) (PeriodicSite T L)),
+      Real.exp (-β * wilsonActionTemporal N T L β U) =
+        C * ∏ p ∈ temporalPlaquettes T L,
+          Real.exp ((β * β / N) * Complex.re (Matrix.trace
+            ((plaquetteProduct N U p.1 p.2.1 p.2.2 : SU N) :
+              Matrix (Fin N) (Fin N) ℂ))) := by
+  set C := ∏ p ∈ temporalPlaquettes T L, Real.exp (-(β * β))
+  refine ⟨C, ?_, fun U => ?_⟩
+  · exact Finset.prod_pos (fun p _ => plaquetteBoltzmann_tm_const_pos β)
+  · have h_exp_sum : Real.exp (-β * wilsonActionTemporal N T L β U) =
+        ∏ p ∈ temporalPlaquettes T L,
+          Real.exp (-β * plaquetteContribution N β U p.1 p.2.1 p.2.2) := by
+      show Real.exp (-β * ∑ p ∈ temporalPlaquettes T L, plaquetteContribution N β U p.1 p.2.1 p.2.2) =
+        ∏ p ∈ temporalPlaquettes T L, Real.exp (-β * plaquetteContribution N β U p.1 p.2.1 p.2.2)
+      rw [Finset.mul_sum, Real.exp_sum]
+    rw [h_exp_sum]
+    simp only [plaquetteContribution_exp_decomp_tm]
+    rw [Finset.prod_mul_distrib]
+
+#print axioms temporal_boltzmann_eq_abstract_product
+
+/-! ## Temporal plaquette link infrastructure (Lüscher §8.11.67 sub-step 3b)
+
+The temporal plaquette product needs to be expanded in characters.  This requires
+defining the temporal plaquette subtype, the temporal link subtype (links appearing
+in temporal plaquettes), the link assignment, and a partition of the temporal links
+into positive-time spatial (L_U, "W"), temporal + interface (L_0, internal), and
+negative-time spatial (L_V, "V").  This is the temporal analogue of the interface
+link infrastructure (`InterfacePlaquette`, `InterfaceLink`, `interfaceLinkAssign`).
+The temporal links (μ = 0) are internal — to be integrated out by the Lüscher cascade
+in sub-step 3c.  The spatial links (μ ≠ 0) at positive/negative time are external —
+the kernel variables W and V. -/
+
+/-- Temporal plaquettes as a subtype of `PlaquetteIndex`. -/
+abbrev TemporalPlaquette (T L : ℕ) [NeZero T] [NeZero L] : Type :=
+  {p : PlaquetteIndex T L // isTemporalPlaquette p}
+
+noncomputable instance (T L : ℕ) [NeZero T] [NeZero L] : Fintype (TemporalPlaquette T L) := by
+  classical
+  exact inferInstanceAs (Fintype {p : PlaquetteIndex T L // isTemporalPlaquette p})
+
+instance (T L : ℕ) [NeZero T] [NeZero L] : DecidableEq (TemporalPlaquette T L) :=
+  inferInstanceAs (DecidableEq {p : PlaquetteIndex T L // isTemporalPlaquette p})
+
+/-- The Finset of all links appearing in at least one temporal plaquette. -/
+noncomputable def temporalPlaqLinkFinset (T L : ℕ) [NeZero T] [NeZero L] :
+    Finset (PeriodicSite T L × Fin 4) :=
+  (Finset.univ : Finset (TemporalPlaquette T L × Fin 4)).image
+    (fun x => plaquetteLinkIdx T L x.1.val x.2)
+
+/-- The type of links appearing in temporal plaquettes (subtype).  This is the
+concrete `L` for `interface_kernel_character_expansion`: by construction, every
+link in this type appears in at least one temporal plaquette, so the
+surjectivity hypothesis `hlinks_surj` holds. -/
+abbrev TemporalLink (T L : ℕ) [NeZero T] [NeZero L] : Type :=
+  {l : PeriodicSite T L × Fin 4 // l ∈ temporalPlaqLinkFinset T L}
+
+noncomputable instance (T L : ℕ) [NeZero T] [NeZero L] : Fintype (TemporalLink T L) := by
+  classical
+  exact inferInstanceAs (Fintype {l : PeriodicSite T L × Fin 4 //
+    l ∈ temporalPlaqLinkFinset T L})
+
+instance (T L : ℕ) [NeZero T] [NeZero L] : DecidableEq (TemporalLink T L) :=
+  inferInstanceAs (DecidableEq {l : PeriodicSite T L × Fin 4 //
+    l ∈ temporalPlaqLinkFinset T L})
+
+/-- The link assignment `TemporalPlaquette → Fin 4 → TemporalLink`.  Maps each
+plaquette `p` and index `j` to the j-th link of `p`, packaged as a
+`TemporalLink` (with the proof that it appears in a temporal plaquette). -/
+def temporalLinkAssign (T L : ℕ) [NeZero T] [NeZero L]
+    (p : TemporalPlaquette T L) (j : Fin 4) : TemporalLink T L :=
+  ⟨plaquetteLinkIdx T L p.val j, by
+    simp only [temporalPlaqLinkFinset, Finset.mem_image, Finset.mem_univ, true_and,
+      Prod.exists, exists_prop]
+    exact ⟨p, j, rfl⟩⟩
+
+/-- The link assignment is surjective: every `TemporalLink` arises as some
+plaquette's j-th link.  This is the `hlinks_surj` hypothesis for
+`interface_kernel_character_expansion`. -/
+lemma temporalLinkAssign_surj (T L : ℕ) [NeZero T] [NeZero L] :
+    ∀ l : TemporalLink T L, ∃ p j, temporalLinkAssign T L p j = l := by
+  intro l
+  have hl : l.val ∈ temporalPlaqLinkFinset T L := l.prop
+  simp only [temporalPlaqLinkFinset, Finset.mem_image, Finset.mem_univ, true_and,
+    Prod.exists, exists_prop] at hl
+  obtain ⟨p, j, hj⟩ := hl
+  refine ⟨p, j, ?_⟩
+  simp only [temporalLinkAssign, Subtype.mk_eq_mk, hj]
+
+/-- Extract the link variable `U(n, μ)` from a full configuration at a
+`TemporalLink` `l = (n, μ)`. -/
+def temporalLinkVar (N T L : ℕ) [NeZero T] [NeZero L]
+    (U : LinkVariable (SU N) (PeriodicSite T L)) (l : TemporalLink T L) : SU N :=
+  U.value l.val.1 l.val.2
+
+/-- The plaquette product of a temporal plaquette equals the abstract form
+`g(links p 0)·g(links p 1)·g(links p 2)⁻¹·g(links p 3)⁻¹` where `g` extracts
+link variables via `temporalLinkVar`. -/
+lemma plaquetteProduct_temporal_eq (N T L : ℕ) [NeZero T] [NeZero L]
+    (U : LinkVariable (SU N) (PeriodicSite T L)) (p : TemporalPlaquette T L) :
+    plaquetteProduct N U p.val.1 p.val.2.1 p.val.2.2 =
+    temporalLinkVar N T L U (temporalLinkAssign T L p 0) *
+    temporalLinkVar N T L U (temporalLinkAssign T L p 1) *
+    (temporalLinkVar N T L U (temporalLinkAssign T L p 2))⁻¹ *
+    (temporalLinkVar N T L U (temporalLinkAssign T L p 3))⁻¹ := by
+  unfold temporalLinkVar temporalLinkAssign
+  exact plaquetteProduct_eq_linkIdx N T L U p.val
+
+/-- The positive-time spatial links among temporal links (L_U, "W").
+These are spatial links (μ ≠ 0) at positive signed time — the external "W"
+variables of the Lüscher kernel. -/
+noncomputable def temporalLinkPos (T L : ℕ) [NeZero T] [NeZero L] :
+    Finset (TemporalLink T L) :=
+  (Finset.univ : Finset (TemporalLink T L)).filter
+    (fun l => signedTime T l.val.1.time > 0 ∧ l.val.2 ≠ 0)
+
+/-- The temporal + interface links among temporal links (L_0, internal).
+These are temporal links (μ = 0, at any time) OR spatial links at the interface
+(signedTime = 0) — the internal links to be integrated out by the Lüscher cascade. -/
+noncomputable def temporalLinkInt (T L : ℕ) [NeZero T] [NeZero L] :
+    Finset (TemporalLink T L) :=
+  (Finset.univ : Finset (TemporalLink T L)).filter
+    (fun l => l.val.2 = 0 ∨ signedTime T l.val.1.time = 0)
+
+/-- The negative-time spatial links among temporal links (L_V, "V").
+These are spatial links (μ ≠ 0) at negative signed time — the external "V"
+variables of the Lüscher kernel. -/
+noncomputable def temporalLinkNeg (T L : ℕ) [NeZero T] [NeZero L] :
+    Finset (TemporalLink T L) :=
+  (Finset.univ : Finset (TemporalLink T L)).filter
+    (fun l => signedTime T l.val.1.time < 0 ∧ l.val.2 ≠ 0)
+
+/-- The three temporal link sets are pairwise disjoint and cover all temporal links.
+The partition separates:
+- L_U: spatial links (μ ≠ 0) at positive time (external "W")
+- L_0: temporal links (μ = 0) at any time, or spatial links at the interface (internal)
+- L_V: spatial links (μ ≠ 0) at negative time (external "V")
+Disjointness: L_U and L_0 are disjoint (L_U requires μ ≠ 0 and signedTime > 0,
+which contradicts both μ = 0 and signedTime = 0).  (L_U ∪ L_0) and L_V are disjoint
+(L_V requires signedTime < 0, contradicting L_U's signedTime > 0 and L_0's
+signedTime = 0 or μ = 0).  Cover: by signedTime trichotomy and μ = 0 / μ ≠ 0 cases. -/
+lemma temporalLinkPartition_disjoint_cover (T L : ℕ) [NeZero T] [NeZero L] :
+    Disjoint (temporalLinkPos T L) (temporalLinkInt T L) ∧
+    Disjoint (temporalLinkPos T L ∪ temporalLinkInt T L) (temporalLinkNeg T L) ∧
+    temporalLinkPos T L ∪ temporalLinkInt T L ∪ temporalLinkNeg T L = Finset.univ := by
+  refine ⟨?_, ?_, ?_⟩
+  · -- Disjoint L_U L_0
+    refine Finset.disjoint_left.mpr (fun l hl hl' => ?_)
+    rw [temporalLinkPos, Finset.mem_filter] at hl
+    rw [temporalLinkInt, Finset.mem_filter] at hl'
+    obtain ⟨_, hpos, hne⟩ := hl
+    obtain ⟨_, hint⟩ := hl'
+    rcases hint with hμ | htime
+    · exact hne hμ
+    · omega
+  · -- Disjoint (L_U ∪ L_0) L_V
+    refine Finset.disjoint_left.mpr (fun l hl hl' => ?_)
+    rw [temporalLinkNeg, Finset.mem_filter] at hl'
+    obtain ⟨_, hneg, hne⟩ := hl'
+    rcases Finset.mem_union.mp hl with h | h
+    · rw [temporalLinkPos, Finset.mem_filter] at h
+      obtain ⟨_, hpos, _⟩ := h
+      omega
+    · rw [temporalLinkInt, Finset.mem_filter] at h
+      obtain ⟨_, hint⟩ := h
+      rcases hint with hμ | htime
+      · exact hne hμ
+      · omega
+  · -- Cover
+    ext l
+    simp only [temporalLinkPos, temporalLinkInt, temporalLinkNeg, Finset.mem_union,
+      Finset.mem_filter, Finset.mem_univ, true_and]
+    refine ⟨fun _ => trivial, fun _ => ?_⟩
+    by_cases hμ : l.val.2 = 0
+    · left; right; left; exact hμ
+    · rcases signedTime_trichotomy T l.val.1.time with hpos | hzero | hneg
+      · left; left; exact ⟨hpos, hμ⟩
+      · left; right; right; exact hzero
+      · right; exact ⟨hneg, hμ⟩
+
+/-- The partition in the form required by `interface_kernel_character_expansion`:
+`hdisj : Disjoint L_U L_0 ∧ Disjoint (L_U ∪ L_0) L_V`. -/
+lemma temporalLinkPartition_hdisj (T L : ℕ) [NeZero T] [NeZero L] :
+    Disjoint (temporalLinkPos T L) (temporalLinkInt T L) ∧
+    Disjoint (temporalLinkPos T L ∪ temporalLinkInt T L) (temporalLinkNeg T L) :=
+  ⟨temporalLinkPartition_disjoint_cover T L |>.1,
+   temporalLinkPartition_disjoint_cover T L |>.2.1⟩
+
+/-- The partition in the form required by `interface_kernel_character_expansion`:
+`hcover : L_U ∪ L_0 ∪ L_V = Finset.univ`. -/
+lemma temporalLinkPartition_hcover (T L : ℕ) [NeZero T] [NeZero L] :
+    temporalLinkPos T L ∪ temporalLinkInt T L ∪ temporalLinkNeg T L = Finset.univ :=
+  temporalLinkPartition_disjoint_cover T L |>.2.2
+
+/-- **Character expansion of the temporal plaquette product.** Applying
+`interface_kernel_character_expansion` (Peter-Weyl / Clebsch-Gordan) to the temporal
+plaquettes, the temporal plaquette product
+`∏_{p ∈ TemporalPlaquette} exp((β²/N)·Re Tr(P_p))` (viewed in `ℂ`) admits the
+separable character expansion
+
+    ∏_p exp(c·Re Tr(...)) = ∑_w F(w) · Φ_w(W) · Ψ_w(internal) · conj(Φ_w(V))
+
+with `F(w) ≥ 0`, where `Φ_w(W) = ∏_{l ∈ L_U} χ_{w(l)}(U_l)` (positive-time spatial
+links, the external "W" variables), `Ψ_w(internal) = ∏_{l ∈ L_0} χ_{w(l)}(U_l)`
+(temporal + interface links, internal — to be integrated out by the Lüscher cascade
+in sub-step 3c), and the V factor uses the dual map (negative-time spatial links,
+the external "V" variables).
+This is sub-step 3b of the Lüscher decomposition (§8.11.67): the temporal plaquette
+product is expanded in characters, separating temporal links (internal) from spatial
+links (external, the kernel variables W and V).
+Uses the `peterWeyl_clebschGordan_plaquette` axiom (count 6); 0 sorries. -/
+lemma temporal_product_character_expansion (N T L : ℕ) (β : ℝ) [NeZero T] [NeZero L]
+    (hN : 1 ≤ N) :
+    ∃ (ι : Type) (hι : Fintype ι) (dims : ι → ℕ)
+      (ρ : ∀ i, SU N →* Matrix (Fin (dims i)) (Fin (dims i)) ℂ)
+      (hU : ∀ i, IsUnitaryRepresentation (ρ i))
+      (hMeas : ∀ i, Measurable (repCharacter (ρ i)))
+      (dual : ι → ι)
+      (F : (TemporalLink T L → ι) → ℝ) (hF : ∀ w, 0 ≤ F w),
+      ∀ (U : LinkVariable (SU N) (PeriodicSite T L)),
+      ∏ p : TemporalPlaquette T L,
+        (Real.exp ((β * β / N) * Complex.re (Matrix.trace
+          ((plaquetteProduct N U p.val.1 p.val.2.1 p.val.2.2 : SU N) :
+            Matrix (Fin N) (Fin N) ℂ))) : ℂ) =
+        ∑ w : TemporalLink T L → ι, (F w : ℂ) *
+          (∏ l ∈ temporalLinkPos T L, repCharacter (ρ (w l)) (temporalLinkVar N T L U l)) *
+          (∏ l ∈ temporalLinkInt T L, repCharacter (ρ (w l)) (temporalLinkVar N T L U l)) *
+          star (∏ l ∈ temporalLinkNeg T L, repCharacter (ρ (dual (w l))) (temporalLinkVar N T L U l)) := by
+  obtain ⟨ι, hι, dims, ρ, hU, hMeas, hIrr, hDims, σ_0, hσ_0_dims, hσ_0_trivial, coeff, hcoeff, cg, hcg, hcg_decomp, dual, hdual,
+      cgME, hcgME_decomp, hcgME_unitary,
+      Λ, hΛ, dimsΛ, ρΛ, hUΛ, hIrrΛ, hDimsΛ, emb, hemb, μ, hμ,
+      cgMEΛ, hcgMEΛ_support, hexp4, hL2, hSchurΛ, hcgMEΛ_parts⟩ :=
+    peterWeyl_clebschGordan_plaquette N (β * β / N) (plaquetteBoltzmann_tm_coupling_nonneg N β hN)
+  letI : Fintype ι := hι
+  classical
+  obtain ⟨F, hF, hF_decomp⟩ := interface_kernel_character_expansion
+    ρ hU coeff hcoeff cg hcg hcg_decomp dual hdual
+    (β * β / N) (plaquetteBoltzmann_tm_coupling_nonneg N β hN) hexp4
+    (TemporalPlaquette T L) (TemporalLink T L) (temporalLinkAssign T L)
+    (temporalLinkAssign_surj T L)
+    (temporalLinkPos T L) (temporalLinkInt T L) (temporalLinkNeg T L)
+    (temporalLinkPartition_hdisj T L) (temporalLinkPartition_hcover T L)
+  refine ⟨ι, hι, dims, ρ, hU, hMeas, dual, F, hF, fun U => ?_⟩
+  have h := hF_decomp (temporalLinkVar N T L U)
+  have h_eq : (∏ p : TemporalPlaquette T L,
+      (Real.exp ((β * β / N) * Complex.re (Matrix.trace
+        ((plaquetteProduct N U p.val.1 p.val.2.1 p.val.2.2 : SU N) :
+          Matrix (Fin N) (Fin N) ℂ))) : ℂ)) =
+      (∏ p : TemporalPlaquette T L,
+      (Real.exp ((β * β / N) * Complex.re (Matrix.trace
+        ((temporalLinkVar N T L U (temporalLinkAssign T L p 0) *
+          temporalLinkVar N T L U (temporalLinkAssign T L p 1) *
+          (temporalLinkVar N T L U (temporalLinkAssign T L p 2))⁻¹ *
+          (temporalLinkVar N T L U (temporalLinkAssign T L p 3))⁻¹ : SU N) :
+          Matrix (Fin N) (Fin N) ℂ))) : ℂ)) := by
+    apply Finset.prod_congr rfl
+    intro p _
+    rw [plaquetteProduct_temporal_eq N T L U p]
+  rw [h_eq]
+  exact h
+
+#print axioms temporal_product_character_expansion
+
 /-! ## Character expansion of the full plaquette product.
 
 Applying `interface_kernel_character_expansion` (Peter-Weyl / Clebsch-Gordan) to ALL

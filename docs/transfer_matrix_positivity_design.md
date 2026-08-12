@@ -6277,3 +6277,82 @@ This session completed sub-steps 1 and 2 of the Lüscher decomposition T = V^{1/
 | What axioms do the new results use? | Standard 3 + `peterWeyl_clebschGordan_plaquette` (same as `fullBoltzmannPD`) |
 | Did the axiom count change? | **NO** — still 6 |
 | What is the next sub-step? | Sub-step 3: U positive (temporal plaquette operator via Lüscher cascade + `character_kernel_integral_nonneg`) |
+
+### 8.11.69 STEP 5 SUB-STEP 3a: `temporal_boltzmann_eq_abstract_product` — temporal Boltzmann abstract product form (2026-08-12 session 91)
+
+**Build GREEN, 0 sorries, 6 axioms (unchanged). One new lemma added to `ReflectionPositivity.lean` (after `spatialBoltzmannPD`, ~line 2080).**
+
+This session began sub-step 3 of the Lüscher decomposition (§8.11.67). The first building block is the temporal analogue of `spatial_boltzmann_eq_abstract_product`:
+
+#### `temporal_boltzmann_eq_abstract_product` (line ~2080)
+
+The temporal Boltzmann factor `exp(-β·S_temporal)` equals a positive constant
+`C = ∏_{p ∈ temporalPlaquettes} exp(-β²)` times the abstract plaquette product
+`∏_{p ∈ temporalPlaquettes} exp((β²/N)·Re Tr(P_p))`. This is the temporal analogue
+of `spatial_boltzmann_eq_abstract_product` (line ~1967). Pure algebra — same proof
+pattern: `Finset.mul_sum` + `Real.exp_sum` + `plaquetteContribution_exp_decomp_tm`
++ `Finset.prod_mul_distrib`.
+
+**Axioms:** `[propext, Classical.choice, Quot.sound]` — standard 3 only, 0 custom axioms.
+
+#### Key infrastructure analysis for sub-step 3 (U positive)
+
+The session also analyzed the key infrastructure for sub-step 3:
+
+1. **`character_kernel_integral_nonneg`** (PositiveDefiniteIntegral.lean:1400) — proves
+   `0 ≤ ∫ W ∫ V f(W)·f(V⁻¹)·Σ_ν coeff_ν·χ_ν(W·V) dμ dμ` for `coeff_ν ≥ 0`. This is the
+   key non-negativity lemma for kernels of the form `Σ a_s χ_s(W·V)` with `a_s ≥ 0`.
+   **This is the right tool for sub-step 5** (NOT the general L² `integralOperator_nonneg_general`
+   from `mathlib_candidates/PositiveDefiniteKernelGeneral.lean`, which is for Mercer-PD
+   kernels `K(x,y)` with `Σ c_i conj(c_j) K(x_i, x_j) ≥ 0`; the kernel `Σ a_s χ_s(W·V)`
+   is NOT Mercer-PD in the standard sense — it's `χ_s(W·V)`, not `χ_s(W⁻¹·V)`).
+
+2. **`chainIntegral_eq`** (PositiveDefinite.lean:1612) — the general L-site Lüscher cascade.
+   For an open chain of (representation, Wilson-line) pairs, the cascade evaluates to
+   `δ_{all γ=γ₀} · (1/d_γ)^n · χ_γ(a · (∏ W) · b⁻¹)` where n is the number of interior
+   integrations. The coefficient `(1/d_γ)^n > 0` is non-negative. **This is the key tool
+   for the cascade on the full lattice** — the temporal links form a chain, and the cascade
+   integrates them out one by one.
+
+3. **`luscher_2site_cascade_integral_nonneg`** (PositiveDefiniteIntegral.lean:1479) — combines
+   the 2-site cascade with `character_kernel_integral_nonneg`. This is the 2-site version
+   of the full non-negativity result.
+
+4. **`luscher_key_identity`** (PositiveDefinite.lean:1110) — the single-link identity
+   `∫_G χ_γ(g·h)·χ_{γ'}(g⁻¹·k) dg = δ_{γγ'}·(1/d_γ)·χ_γ(h·k)`. This is the building block
+   for all cascade lemmas.
+
+#### Remaining sub-steps for sub-step 3 (U positive)
+
+- **3b**: `temporal_product_character_expansion` — apply `plaquette_product_separable_decomp`
+  (or `interface_kernel_character_expansion`) to the temporal plaquettes, producing a
+  character expansion `∏_p exp(c·Re Tr(P_p)) = Σ_w F(w) · Φ_w · Ψ_w · V_w` with `F(w) ≥ 0`.
+  The link partition separates temporal links (internal, integrated out by cascade) from
+  spatial links (external, the kernel variables W and V). **Key challenge**: identifying
+  the correct link partition for the temporal plaquettes (temporal links vs spatial links
+  at positive/negative time).
+- **3c**: Lüscher cascade on temporal links — use `chainIntegral_eq` to integrate out the
+  temporal links, producing a kernel `Σ_s a_s · χ_s(W·V)` with `a_s ≥ 0`. **Key challenge**:
+  the temporal links form a chain (or cycle for periodic BC), and the cascade needs to
+  handle all of them. The `chainIntegral_eq` lemma handles open chains; periodic chains
+  may need a variant.
+- **3d**: Apply `character_kernel_integral_nonneg` to conclude U is positive.
+
+#### Adversarial self-check (per standing rules)
+
+The Lüscher decomposition T = V^{1/2}·U·V^{1/2} is the standard approach in the literature
+(Lüscher 1977, Osterwalder-Seiler 1978). The extensive analysis in §8.11.50-67 ruled out
+several incorrect approaches (full character expansion → Â_w·Â_{w*}, per-u⁰ PD, group-PD
+of B). The Lüscher decomposition is the correct mechanism. The main risk is formalization
+difficulty (especially the cascade on the full lattice, sub-step 3c), not mathematical
+soundness. The key infrastructure (`chainIntegral_eq`, `character_kernel_integral_nonneg`,
+`luscher_key_identity`) is in place. The approach is NOT a dead end.
+
+#### Summary
+
+| Question | Answer |
+|----------|--------|
+| Is `temporal_boltzmann_eq_abstract_product` complete? | **YES** — build GREEN, 0 sorries, standard 3 axioms |
+| Is the general L² result applicable to sub-step 5? | **NO** — `character_kernel_integral_nonneg` is the right tool (kernel `Σ a_s χ_s(W·V)` is not Mercer-PD) |
+| Is `chainIntegral_eq` available for the full-lattice cascade? | **YES** — general L-site cascade, handles arbitrary chain length |
+| What is the next sub-step? | 3b: `temporal_product_character_expansion` (character expansion of temporal plaquette product) |

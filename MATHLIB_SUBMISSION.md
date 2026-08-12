@@ -6,7 +6,7 @@ checklist, not an essay. The results are pure group / measure / kernel theory
 and are unrelated to the Yang-Mills problem that motivated their
 formalization (see "Provenance" below).
 
-Two standalone, Yang-Mills-free files are provided so each result group can
+Three standalone, Yang-Mills-free files are provided so each result group can
 be evaluated independently:
 
 - `mathlib_candidates/PositiveDefiniteKernelMathlibCandidate.lean` — **priority
@@ -16,6 +16,12 @@ be evaluated independently:
   which only covers the group-theoretic case.
 - `mathlib_candidates/PositiveDefiniteMathlibCandidate.lean` —
   group-theoretic positive-definite functions on a group.
+- `mathlib_candidates/PositiveDefiniteKernelGeneral.lean` — **general L²
+  version** of the integral-operator positivity (§1c): drops the
+  compactness/continuity hypotheses of §1a in favor of a finite measure, a
+  bounded-diagonal kernel, a strongly measurable feature map, and `f ∈ L²`.
+  Standalone and self-contained (carries its own copy of the PD-kernel
+  infrastructure and RKHS construction; would be unified with §1a for a PR).
 
 ---
 
@@ -144,6 +150,66 @@ lemma PositiveDefinite.integralOperator_nonneg
 Supporting lemma: `PositiveDefinite.sum_nonneg_of_map` (and the `private`
 helper `sum_fiber`).
 
+### 1c. General L² version (no compactness, no continuity)
+
+**Plain language.** The compactness and continuity hypotheses of §1a can be
+dropped entirely. For a *finite* measure space `(X, μ)` (not necessarily
+probability, not necessarily compact or metric), a pointwise Mercer-PD kernel
+`K` with *bounded diagonal* (`∃ M, 0 ≤ M ∧ ∀ x, K(x,x) ≤ M`), a strongly
+measurable feature map into the Moore–Aronszajn RKHS, and `f ∈ L²(μ)`, the
+same integral-operator inequality holds:
+`∫∫ f(x) · conj(f(y)) · K(x,y) dμ dμ ≥ 0`.
+
+The proof is *not* a Riemann-sum approximation (that needs compactness +
+continuity). Instead it constructs the RKHS `H` from `K` via the
+Moore–Aronszajn theorem (completion of the finitely-supported pre-Hilbert
+space with inner product `⟨f,g⟩ = Σ_{x,y} conj(f x) · g y · K(x,y)`), defines
+the feature map `φ : X → H` with `⟨φ x, φ y⟩ = K(x,y)`, forms the H-valued
+Bochner integral `F = ∫ conj(f) • φ dμ` (integrable since
+`‖conj(f)•φ(x)‖ ≤ √M · ‖f(x)‖` and `f ∈ L² ⊂ L¹` for finite `μ`), and
+concludes `∫∫ f·conj(f)·K = ⟨F,F⟩_H = ‖F‖² ≥ 0`. No topology on `X`, no
+continuity of `K` or `f`, no compactness.
+
+**Lean signature.**
+
+```lean
+lemma PositiveDefiniteKernel.integralOperator_nonneg_general
+    {X : Type*} [MeasurableSpace X] (μ : Measure X) [IsFiniteMeasure μ]
+    {K : X → X → ℂ} [Fact (PositiveDefiniteKernel K)]
+    (hM : ∃ M : ℝ, 0 ≤ M ∧ ∀ x, K x x ≤ M)
+    (hφ_meas : StronglyMeasurable (featureMap K))
+    {f : X → ℂ} (hf : MemLp f 2 μ) :
+    0 ≤ ∫ x, ∫ y, f x * conj (f y) * K x y ∂μ ∂μ
+```
+
+**File:** `mathlib_candidates/PositiveDefiniteKernelGeneral.lean` (standalone,
+self-contained — carries its own copy of `PositiveDefiniteKernel`,
+`quadratic_form_nonneg`, `conj_symm`, and the RKHS construction; for a PR
+these would be unified with §1a's infrastructure).
+
+**`#print axioms`:** `[propext, Classical.choice, Quot.sound]` only — no
+`sorry`, no custom axiom.
+
+**Relation to §1a.** §1a's `integralOperator_nonneg` (compact + continuous +
+probability) is a strict special case: continuity of `K` and `f` on a compact
+space gives the bounded diagonal and the strong measurability of the feature
+map for free. This version makes those hypotheses explicit and minimal.
+
+**Open design question (flagged for reviewer input).** The hypothesis
+`StronglyMeasurable (featureMap K)` is non-standard: strong measurability
+into a user-defined RKHS completion is awkward for a caller to verify
+directly. An in-progress Mathlib draft PR (#42003, T. Heeringa,
+`mercersTheorem` branch) takes a different route for the related
+`mercerForm` / `integralOperator` scaffolding: a single integral over the
+product measure `μ.prod μ` with the hypothesis `MemLp K 2 (μ.prod μ)`, which
+yields clean Hölder (2,2) integrability and avoids the feature-map
+measurability question entirely. The bounded-diagonal hypothesis here
+implies `K ∈ L²(μ⊗μ)` for a finite measure (via the kernel Cauchy–Schwarz
+bound `|K(x,y)|² ≤ K(x,x)·K(y,y) ≤ M²`), so the two hypothesis shapes are
+compatible; a kernel-CS bridge lemma would connect them. The choice of
+convention for the eventual Mathlib statement is left open pending PR #42003's
+stabilization.
+
 ---
 
 ## 2. Provenance
@@ -169,6 +235,7 @@ Checked against the Mathlib version pinned in `lake-manifest.json`
   based (`Matrix.PosDef`, `Matrix.PosSemidef`, `PosSemidef`) and never
   touches Haar measure or the group-PD-function notion defined here.
 - `grep` for `integralOperator_nonneg`: **0 matches**.
+- `grep` for `integralOperator_nonneg_general`: **0 matches**.
 - Loogle subexpression search `0 ≤ ∫ x, ∫ y, _ * _ * _ ∂_ ∂_` over all 56
   declarations mentioning `HMul.hMul`, `LE.le`, `MeasureTheory.integral`,
   and `OfNat.ofNat`: **0 matches** for the double-integral pattern. The
@@ -228,16 +295,17 @@ convention a future Mathlib contribution might use.
 ## 4. Exact reproduction steps
 
 A fresh clean `lake build` succeeds (verified manually before the packaging
-session; not re-run during packaging to avoid the slow rebuild). The two
+session; not re-run during packaging to avoid the slow rebuild). The three
 standalone files compile standalone, reusing the already-built `.lake`
 cache, via:
 
 ```
 lake env lean mathlib_candidates/PositiveDefiniteKernelMathlibCandidate.lean
 lake env lean mathlib_candidates/PositiveDefiniteMathlibCandidate.lean
+lake env lean mathlib_candidates/PositiveDefiniteKernelGeneral.lean
 ```
 
-(Both exit 0 with no errors. Run from the repo root so the `.lake` cache is
+(All exit 0 with no errors. Run from the repo root so the `.lake` cache is
 found.)
 
 **`#print axioms` output** (from the standalone
@@ -259,18 +327,30 @@ has `#print axioms` commands at the bottom):
 'PositiveDefinite.toPositiveDefiniteKernel' depends on axioms: [propext, Classical.choice, Quot.sound]
 ```
 
-The group-theoretic file (`PositiveDefiniteMathlibCandidate.lean`) produces
-the same three-axiom result for `PositiveDefinite.integral`,
-`PositiveDefinite.integralOperator_nonneg`, and
-`PositiveDefinite.sum_nonneg_of_map` (add `#print axioms` lines to verify).
+The group-theoretic file (`PositiveDefiniteMathlibCandidate.lean`, which has
+`#print axioms` commands at the bottom) produces:
+
+```
+'PositiveDefinite.sum_nonneg_of_map' depends on axioms: [propext, Classical.choice, Quot.sound]
+'PositiveDefinite.integral' depends on axioms: [propext, Classical.choice, Quot.sound]
+'PositiveDefinite.integralOperator_nonneg' depends on axioms: [propext, Classical.choice, Quot.sound]
+```
+
+The general L² file (`PositiveDefiniteKernelGeneral.lean`, which has a
+`#print axioms` command at the bottom) produces:
+
+```
+'PositiveDefiniteKernel.integralOperator_nonneg_general' depends on axioms: [propext, Classical.choice, Quot.sound]
+```
 
 Only the three standard Lean axioms (`propext`, `Classical.choice`,
 `Quot.sound`); no custom axiom, no `sorry`.
 
 **File paths:**
 
-- `mathlib_candidates/PositiveDefiniteKernelMathlibCandidate.lean` — Mercer kernel.
+- `mathlib_candidates/PositiveDefiniteKernelMathlibCandidate.lean` — Mercer kernel (compact/continuous).
 - `mathlib_candidates/PositiveDefiniteMathlibCandidate.lean` — group-theoretic PD.
+- `mathlib_candidates/PositiveDefiniteKernelGeneral.lean` — general L² version (no compactness/continuity).
 - Original source: `src/lean/YangMills/Proofs/PositiveDefiniteIntegral.lean`
   (and `src/lean/YangMills/Proofs/PositiveDefinite.lean` for the group-PD
   definition and `sum_nonneg_of_map`).
@@ -287,11 +367,69 @@ Only the three standard Lean axioms (`propext`, `Classical.choice`,
   full-text `grep` of the pinned Mathlib tree plus Loogle searches; it is
   not a proof that no equivalent result exists under some other name or
   formulation. A reviewer may find a reformulation this search missed.
-- **No claim that these results are difficult or deep.** They are
-  standard analysis (Riemann-sum approximation + uniform continuity). The
-  claim is only that they appear correct, non-vacuous, and currently absent
+- **No claim that these results are difficult or deep.** The compact/continuous
+  versions (§1a, §1b) are standard analysis (Riemann-sum approximation +
+  uniform continuity). The general L² version (§1c) uses the
+  Moore–Aronszajn RKHS construction and a Bochner integral, also standard.
+  The claim is only that they appear correct, non-vacuous, and currently absent
   from Mathlib, and that they may be useful infrastructure.
 - **No claim of "strictly more general."** Only the one-directional
   reduction group-PD ⟹ Mercer-PD is proved
   (`PositiveDefinite.toPositiveDefiniteKernel`); the Mercer notion is stated
   to *generalize* the group notion, not to *strictly* contain it.
+
+---
+
+## 6. Recommendation and known issues (for reviewer)
+
+**Which version to submit.** The general L² version (§1c,
+`integralOperator_nonneg_general`) strictly subsumes the compact/continuous
+version (§1a, `integralOperator_nonneg`): continuity of `K` and `f` on a
+compact space gives the bounded diagonal and the strong measurability of the
+feature map for free. For a Mathlib PR, the recommendation is to submit **§1c
+as the main result** and derive §1a as a corollary (one-line reduction:
+continuity on compact ⟹ bounded diagonal + strongly measurable feature map).
+The compact version's Riemann-sum proof is more elementary but yields a weaker
+result; it can be kept as an alternative proof if reviewers prefer accessibility,
+or dropped in favor of the single stronger statement.
+
+**Known issue: duplicated infrastructure.** The general file
+(`PositiveDefiniteKernelGeneral.lean`) currently carries its own copy of
+`PositiveDefiniteKernel`, `quadratic_form_nonneg`, and `conj_symm` (duplicated
+from `PositiveDefiniteKernelMathlibCandidate.lean`). For a PR these must be
+unified into a single definition file. This is a packaging task, not a
+mathematical issue — the definitions are identical.
+
+**Known issue: `StronglyMeasurable (featureMap K)` hypothesis.** The general
+version's `hφ_meas : StronglyMeasurable (featureMap K)` is non-standard: strong
+measurability into a user-defined RKHS completion is awkward for a caller to
+verify. An in-progress Mathlib draft PR (#42003) uses `MemLp K 2 (μ.prod μ)`
+instead, which yields clean Hölder integrability and avoids the feature-map
+measurability question. The bounded-diagonal hypothesis here implies
+`K ∈ L²(μ⊗μ)` for a finite measure (via kernel Cauchy–Schwarz), so the two
+conventions are compatible. Resolving this (either by proving the kernel-CS
+bridge lemma or by restating in the product-measure convention) is the main
+open task before a PR is ready. See `docs/mathlib_candidates.md` §8 for the
+full comparison.
+
+**Known issue: `Fact` vs explicit hypothesis.** The general file uses
+`[Fact (PositiveDefiniteKernel K)]` (instance), while the compact file uses
+`(hK : PositiveDefiniteKernel K)` (explicit hypothesis). For a PR these should
+be made consistent. The explicit-hypothesis style is more standard in Mathlib
+analysis lemmas.
+
+**Why not use `RKHS.OfKernel` from `Reproducing.lean`?** The general file
+constructs its own RKHS (completion of finitely-supported functions with the
+kernel inner product) rather than using Mathlib's `RKHS.OfKernel`. The reason
+is a type mismatch: `RKHS.OfKernel` works with `Matrix X X (V →L[𝕜] V)`
+(matrix-valued kernels), while our kernel is scalar `X → X → ℂ`. Bridging
+this (via `ℂ ≃+* (ℂ →L[ℂ] ℂ)`) is possible but adds complexity without
+simplifying the proof. For a PR, either the scalar RKHS construction should be
+kept (with a note explaining the choice) or `RKHS.OfKernel` should be
+generalized to scalar kernels.
+
+**Other candidates not in this submission.** The full catalog of candidates
+(including ones not ready for submission) is in `docs/mathlib_candidates.md`.
+Notable: `character_kernel_integral_nonneg` (§4 of that doc) is a strong
+candidate with std 3 axioms and no custom dependencies, but is not yet
+extracted into a standalone file — it is the natural next packaging target.

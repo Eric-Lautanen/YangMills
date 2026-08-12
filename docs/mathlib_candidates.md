@@ -9,9 +9,10 @@ classified as **standard-but-unformalized** (known in the literature, just not
 in Lean) or **possibly-novel formulation** (the specific packaging / statement
 does not appear to be in the literature or in any checked Lean repo).
 
-The two already-packaged standalone files in the repo root
+The three already-packaged standalone files in the repo root
 (`PositiveDefiniteKernelMathlibCandidate.lean`,
-`PositiveDefiniteMathlibCandidate.lean`) and the companion `MATHLIB_SUBMISSION.md`
+`PositiveDefiniteMathlibCandidate.lean`,
+`PositiveDefiniteKernelGeneral.lean`) and the companion `MATHLIB_SUBMISSION.md`
 are the **priority** candidates. This document extends that list with everything
 else discovered along the way, and is the place to record new candidates as they
 are found.
@@ -253,6 +254,7 @@ Mathlib candidate, but a candidate for a short expository note.
 | 5 | `addVectorPeriodic` whnf workaround | technique | — | Document for reuse |
 | 6 | Schur orthogonality (GOT) | standard, currently AXIOM | — | **High-impact target** (not proved here) |
 | 7 | §8.11.67 RP obstruction clarification | expository | — | Write-up candidate |
+| 8 | General L² integralOperator_nonneg (bounded diag) | possibly-novel formulation | std 3 | **Packaged** — `PositiveDefiniteKernelGeneral.lean`, VERIFIED, no sorry |
 
 **Honest bottom line.** The genuinely *novel* contribution (in formulation, not
 depth) is #1 (Mercer-type kernels). Items #2–#4 are standard mathematics that
@@ -266,38 +268,270 @@ of the attempt.
 
 ## Generalization investigation: `integralOperator_nonneg` (2026-08-11)
 
-The current `PositiveDefiniteKernel.integralOperator_nonneg` hypotheses are:
-`PseudoMetricSpace X`, `CompactSpace X`, `BorelSpace X`,
-`SecondCountableTopology X`, `IsProbabilityMeasure μ`,
-`Continuous (Function.uncurry K)`, `Continuous f`.
+### The question (from Mathlib review, Yaël Dillies)
 
-Possible generalizations (investigated, not yet implemented):
+Does `PositiveDefiniteKernel.integralOperator_nonneg` generalize beyond compact `X`
+and continuous `K`/`f` to an arbitrary measure space with merely integrable `K` and
+`f`, via simple-function approximation plus monotone/dominated convergence?
 
-1. **`IsProbabilityMeasure` → `IsFiniteMeasure`** (straightforward). The
-   proof uses `μ.real univ = 1` in the Riemann-sum bound (the partition
-   measures sum to 1). For a finite measure, they sum to `μ.real univ < ∞`,
-   and the error bound becomes `ε · μ.real univ` instead of `ε`. The
-   non-negativity conclusion is unchanged. This is a clean, low-risk
-   generalization — the result holds for any finite measure, not just
-   probability measures.
+### Answer: the generalization IS true, but NOT via simple-function approximation
 
-2. **`PseudoMetricSpace` → `UniformSpace`** (clean). The Heine–Cantor
-   uniform-continuity argument works in any compact uniform space, not just
-   metric spaces. Mathlib has `CompactSpace.uniformContinuous_of_continuous`
-   for uniform spaces. This would broaden the applicability without changing
-   the proof structure.
+The result generalizes to: **a finite measure space `(X, μ)`, a pointwise PD kernel
+`K` with `K ∈ L²(μ⊗μ)` and `K(x,x)` measurable, and `f ∈ L²(μ)`**, giving
+`∫∫ f(x)·conj(f(y))·K(x,y) dμ dμ ≥ 0`. But the proof uses a completely different
+technique (truncation + Moore–Aronszajn feature map + Bochner integral), not
+simple-function approximation.
 
-3. **`Continuous f` → `Integrable f`** (substantial). The Riemann-sum
-   approximation requires continuity. Extending to merely integrable `f`
-   would require approximating `f` by continuous functions (density of
-   `C_c(X)` in `L¹(μ)` for Radon measures on locally compact spaces) and
-   passing to the limit. More machinery, but a standard technique.
+### Why simple-function + MCT/DCT does NOT work
 
-4. **`CompactSpace` → locally compact + bounded support** (substantial).
-   Without compactness, one needs `K` uniformly continuous and bounded on
-   the support of `μ`, or works with `C_c(X)`. This would require
-   partition-of-unity or tightness arguments.
+The current proof approximates `∫∫ f(x)·conj(f(y))·K(x,y) dμ dμ` by Riemann sums
+`Σ_{i,j} c_i·conj(c_j)·K(x_i, x_j)` (with `c_i = f(x_i)·μ(A_i)`), each non-negative
+by `sum_nonneg_of_map` (the pointwise PD condition). Continuity of `K` bridges the
+gap: `K` is nearly constant on small sets, so the Riemann sum (point evaluations)
+approximates the integral (averages).
 
-**Recommendation:** generalizations 1 and 2 are low-risk and worth doing
-before submission. Generalizations 3 and 4 are substantial and better left
-for a follow-up PR.
+Without continuity, this bridge breaks. The simple-function approach replaces `f` by
+`f_n = Σ a_i·1_{A_i}`, giving:
+
+```
+∫∫ f_n(x)·conj(f_n(y))·K(x,y) dμ dμ = Σ_{i,j} a_i·conj(a_j)·∫_{A_i×A_j} K d(μ⊗μ)
+```
+
+This is a quadratic form in the **averaged** matrix `M_{ij} = ∫_{A_i×A_j} K d(μ⊗μ)`,
+NOT in the point-evaluation matrix `K(x_i, x_j)`. The pointwise PD condition
+(`Σ c_i·conj(c_j)·K(x_i,x_j) ≥ 0` for all finite point sets) controls point
+evaluations, not averages. Without continuity, `K(x_i, x_j)` tells you nothing about
+`∫_{A_i×A_j} K`. So the simple-function quadratic form is not directly non-negative
+from pointwise PD, and MCT/DCT cannot be applied to pass to the limit.
+
+**The fundamental obstacle:** pointwise PD is a condition on **discrete measures**
+(`Σ c_i δ_{x_i}`), while the integral is a quadratic form for **absolutely
+continuous measures** (`f·dμ`). On a non-atomic measure space, discrete measures
+and a.c. measures live in different worlds — delta functions are not in `L²(μ)`, so
+the pointwise PD condition gives no direct information about the `L²` quadratic form.
+Continuity is the bridge that connects them (by making point values approximate
+averages); without it, the simple-function route is blocked.
+
+### Why the generalization IS true (different proof)
+
+**Generalized statement.** Let `(X, μ)` be a finite measure space, `K : X → X → ℂ`
+pointwise PD (every finite submatrix PSD) with `K ∈ L²(μ⊗μ)` and `x ↦ K(x,x)`
+μ-measurable, and `f ∈ L²(μ)`. Then `∫∫ f(x)·conj(f(y))·K(x,y) dμ dμ ≥ 0`.
+
+**Proof sketch (truncation + Moore–Aronszajn + Bochner integral).**
+
+1. **Truncate.** For `M > 0`, define `X_M = {x : K(x,x) ≤ M}` (measurable by
+   hypothesis) and `K_M(x,y) = K(x,y)·1_{X_M}(x)·1_{X_M}(y)`. Then:
+   - `K_M` is PD: for any finite set `S` and coefficients `c`,
+     `Σ c_i·conj(c_j)·K_M(x_i,x_j) = Σ c'_i·conj(c'_j)·K(x_i,x_j) ≥ 0` where
+     `c'_i = c_i·1_{X_M}(x_i)` (PD holds for any coefficients, including `c'`).
+   - `K_M(x,x) ≤ M`, so `K_M(x,x) ∈ L^∞(μ) ⊂ L¹(μ)` (since `μ` is finite).
+
+2. **Bounded-diagonal case (Moore–Aronszajn).** By the Moore–Aronszajn theorem,
+   `K_M(x,y) = ⟨φ_M(x), φ_M(y)⟩_H` for some Hilbert space `H` and feature map
+   `φ_M : X → H` with `‖φ_M(x)‖² = K_M(x,x) ≤ M`. Since `f ∈ L²(μ) ⊂ L¹(μ)`
+   (finite measure), the Bochner integral `F_M = ∫ φ_M(x)·f(x) dμ(x) ∈ H` exists:
+   `∫ |f(x)|·‖φ_M(x)‖ dμ ≤ √M·‖f‖_{L¹} < ∞`. Then:
+   ```
+   ∫∫ K_M(x,y)·f(x)·conj(f(y)) dμ dμ
+     = ∫∫ ⟨φ_M(x), φ_M(y)⟩·f(x)·conj(f(y)) dμ dμ
+     = ⟨∫ φ_M·f dμ, ∫ φ_M·f dμ⟩_H    (inner product of Bochner integrals)
+     = ‖F_M‖²_H ≥ 0.
+   ```
+   The interchange `∫∫ ⟨u(x),v(y)⟩ a(x) b(y) = ⟨∫ a·u, ∫ b·v⟩` is justified by
+   Fubini + sesquilinearity of the inner product (Bochner integrability established
+   above).
+
+3. **Pass to the limit.** `K_M → K` in `L²(μ⊗μ)` as `M → ∞`:
+   - `K - K_M = K·(1 - 1_{X_M×X_M})`, supported on `(X∖X_M)×X ∪ X_M×(X∖X_M)`.
+   - `X∖X_M = {x : K(x,x) > M} ↓ ∅` as `M → ∞` (since `K(x,x) < ∞` pointwise).
+   - By dominated convergence (dominating function `|K|² ∈ L¹(μ⊗μ)`),
+     `‖K - K_M‖_{L²} → 0`.
+   - By Cauchy–Schwarz on `L²(μ⊗μ)`:
+     `|∫∫ (K-K_M)·f·conj(f)| ≤ ‖K-K_M‖_{L²}·‖f⊗conj(f)‖_{L²} = ‖K-K_M‖_{L²}·‖f‖²_{L²} → 0`.
+   - So `∫∫ K·f·conj(f) = lim_M ∫∫ K_M·f·conj(f) ≥ 0`. ∎
+
+### Why the compact/continuous hypotheses are load-bearing for the CURRENT proof
+
+The current Riemann-sum proof uses compactness and continuity in three essential
+places, none of which can be dropped while keeping the same proof structure:
+
+1. **`finite_cover_balls_of_compact`** (compactness of `X`): produces a finite
+   partition of `X` into small balls, giving a finite Riemann sum. Without
+   compactness, `X` may not admit a finite cover by small balls.
+
+2. **`CompactSpace.uniformContinuous_of_continuous`** (compactness + continuity of
+   `F = f·conj(f)·K`): gives uniform continuity, so `F` varies by at most `ε` on each
+   ball. This is the error bound `‖I - S‖ ≤ ε` that makes the Riemann sum approximate
+   the integral. Without continuity, `F` can be arbitrarily wild, and the Riemann sum
+   (point evaluations) need not approximate the integral (averages).
+
+3. **Boundedness of `F`** (compactness of the range, from continuity + compactness):
+   gives integrability of `F` via `Integrable.of_bound`. Without compactness,
+   continuity alone doesn't give boundedness.
+
+These are load-bearing for the **proof technique** (Riemann sums), not for the
+**result**. The generalized proof above uses a completely different technique
+(truncation + feature map) that needs none of these.
+
+### Lean proof difficulty assessment
+
+**Mathlib infrastructure available:**
+- `RKHS.OfKernel` + `kernel_ofKernel` in
+  `Mathlib.Analysis.InnerProductSpace.Reproducing` — this IS the Moore–Aronszajn
+  theorem (constructs an RKHS from a PSD matrix, shows the kernel equals the
+  original matrix). Authored by Hampus Nyberg & Yaël Dillies (2026).
+- `integral_inner` in `Mathlib.MeasureTheory.Function.L2Space` —
+  `∫ ⟨c, f x⟩ dμ = ⟨c, ∫ f dμ⟩` (pulls inner product out of integral).
+- `integral_integral_swap` in `Mathlib.MeasureTheory.Integral.Prod` — Fubini for
+  Bochner integrals.
+- Standard dominated convergence / `L²` convergence machinery.
+
+**Estimated difficulty: moderate, comparable to the current proof (~150–200 lines).**
+The main work:
+- Type plumbing: converting `PositiveDefiniteKernel K` (scalar `X → X → ℂ`) to
+  `Matrix.PosSemidef` on `Matrix X X (ℂ →L[ℂ] ℂ)` for `RKHS.OfKernel`.
+- Proving the Bochner integral identity
+  `∫∫ ⟨φ(x),φ(y)⟩ f(x) conj(f(y)) = ‖∫ φ·f dμ‖²` — should follow from
+  `integral_inner` + Fubini, but needs careful setup of the vector-valued integral.
+- The truncation `K_M` and `L²` convergence — straightforward (dominated
+  convergence).
+
+**Not harder than the current proof — just different.** The current proof is
+analysis (Riemann sums, uniform continuity, compactness); the generalized proof is
+functional analysis (RKHS, Bochner integrals, `L²` convergence). Neither is
+conceptually deeper; the generalized proof trades compactness/continuity hypotheses
+for a more abstract proof technique.
+
+### Caveats and limitations
+
+1. **Finite measure required.** The truncation argument needs `μ` finite (so
+   `L^∞ ⊂ L¹` and `L² ⊂ L¹`). For an infinite measure, `K_M(x,x) ≤ M` does not
+   imply `K_M(x,x) ∈ L¹(μ)`, and `f ∈ L²` does not imply `f ∈ L¹`. The
+   generalization to σ-finite or infinite measures would need additional work
+   (e.g., restricting to `f ∈ L¹ ∩ L²` and `K` bounded, or using a different
+   truncation).
+
+2. **Measurability of the diagonal.** The truncation `X_M = {x : K(x,x) ≤ M}`
+   requires `x ↦ K(x,x)` to be μ-measurable. This holds automatically when `X` is a
+   Borel space and `K` is Borel-measurable (the diagonal map is Borel), but may fail
+   for an arbitrary measure space. This is a mild additional hypothesis.
+
+3. **`K ∈ L²(μ⊗μ)`, not merely `L¹`.** The convergence argument uses Cauchy–Schwarz
+   on `L²(μ⊗μ)`, requiring `K ∈ L²`. For `K ∈ L¹(μ⊗μ)` only (not `L²`), the
+   integral `∫∫ f·conj(f)·K` may not exist for `f ∈ L²` (the product
+   `f⊗conj(f)·K` may not be `L¹`), and a different approach would be needed.
+
+4. **The `IsProbabilityMeasure → IsFiniteMeasure` generalization** (item 1 in the
+   earlier list) is subsumed by this analysis — the generalized proof works for any
+   finite measure, not just probability measures. The `μ.real univ = 1` in the
+   current proof becomes `μ.real univ < ∞` (the Riemann-sum error bound becomes
+   `ε·μ.real univ` instead of `ε·1`), but the generalized proof sidesteps this
+   entirely.
+
+5. **The `PseudoMetricSpace → UniformSpace` generalization** (item 2) is also
+   subsumed — the generalized proof uses no topology on `X` at all (no metric, no
+   uniform structure). The only structure needed is the measure space and the
+   measurability of the diagonal.
+
+### Recommendation
+
+The generalization is mathematically sound and feasible in Lean using Mathlib's
+existing `RKHS.OfKernel` and Bochner integral infrastructure. It should be pursued
+as a follow-up to the current submission, NOT as a modification of the current
+proof. The current proof (Riemann sums) is more elementary and self-contained; the
+generalized proof (RKHS + Bochner) is more abstract but yields a strictly stronger
+result with fewer hypotheses. Both are worth having: the current proof for
+accessibility, the generalized proof for generality.
+
+---
+
+## 8. General L² integral-operator positivity — VERIFIED (2026-08-12)
+
+**Status:** Packaged. `mathlib_candidates/PositiveDefiniteKernelGeneral.lean` +
+§1c of `MATHLIB_SUBMISSION.md`.
+**VERIFIED** — compiles with `#print axioms` = `[propext, Classical.choice,
+Quot.sound]` (NO `sorryAx`). Ready to package.
+
+**Statement.** `PositiveDefiniteKernel.integralOperator_nonneg_general`:
+For a finite measure space `(X, μ)`, a pointwise PD kernel `K` with bounded
+diagonal (`∃ M, 0 ≤ M ∧ ∀ x, K(x,x) ≤ M`), a strongly measurable feature map
+`φ : X → H` (the Moore–Aronszajn RKHS feature map), and `f ∈ L²(μ)`:
+`∫∫ f(x) · conj(f(y)) · K(x,y) dμ dμ ≥ 0`.
+
+This is the **bounded-diagonal** special case of the general result analyzed in
+§above (the full `K ∈ L²(μ⊗μ)` version would add a truncation + dominated-
+convergence limit; the bounded-diagonal case is the core RKHS/Bochner argument
+and is what is currently formalized).
+
+**Why possibly-novel.** Same novelty as §1 (the continuous/measure-theoretic
+integral-operator positivity from a pointwise PD kernel), but with **no topology
+on `X`, no continuity of `K` or `f`, and no compactness** — only the measure
+structure, pointwise PD, and a bounded-diagonal hypothesis. Mathlib's
+`RKHS.OfKernel` (Reproducing.lean) constructs the RKHS from a *finite-matrix* PSD
+kernel; this file does the scalar `X → X → ℂ` case and proves the integral-
+operator positivity. The combination (RKHS feature map + Bochner integral +
+`‖F‖² ≥ 0`) is not present in Mathlib.
+
+**Proof technique.** Moore–Aronszajn feature map `φ : X → H` into the RKHS `H`
+(completion of the finitely-supported pre-Hilbert space `H₀ K` with inner product
+`⟨f,g⟩ = Σ_{x,y} conj(f x) · g y · K(x,y)`). Define `F = ∫ conj(f) • φ dμ`
+(Bochner integral in `H`, integrable by `‖conj(f)•φ(x)‖ ≤ √M·‖f(x)‖` and
+`f ∈ L² ⊂ L¹`). Then:
+- `inner ℂ (φ x) F = ∫ y, conj(f y) · K(x,y) dμ` (via `integral_inner` +
+  `inner_smul_right` + `inner_featureMap`).
+- `inner ℂ F F = conj(∫∫ f(x)·conj(f(y))·K(x,y) dμ dμ)` (via `integral_inner` +
+  `inner_conj_symm` + `integral_conj` + the Hermitian symmetry `K(x,y)=conj(K(y,x))`).
+- `inner ℂ F F` is self-conjugate (`inner_conj_symm`), so the goal equals
+  `inner ℂ F F = ‖F‖² ≥ 0` (via `inner_self_eq_norm_sq_to_K`).
+
+**Key formalization hurdles overcome (this session):**
+1. **`smul_left` of `PreInnerProductSpace.Core`** — the recurring `conj` vs `star`
+   defeq issue. Fix: match the `Reproducing.lean` pattern *exactly* —
+   `rw [Finsupp.sum_smul_index] <;> simp [Finsupp.mul_sum, ← mul_assoc]` with NO
+   intervening `show` (the `show` with explicit `conj z * w * K x y` caused the
+   `•` instance to elaborate differently and break `sum_smul_index` matching).
+2. **`InnerProductSpace ℂ (H K)` stuck** — `H K = UniformSpace.Completion (H₀ K)`
+   needed an explicit instance declaration
+   `instance : InnerProductSpace ℂ (H K) := UniformSpace.Completion.innerProductSpace`
+   to resolve (the anonymous completion instance wasn't firing through the `abbrev`).
+3. **`conj`/`star` defeq in `rw`/`simp`** — `simp only [star_mul', Complex.conj_conj]`
+   "made no progress" because `conj = starRingEnd ℂ` is not syntactically `star`.
+   Fix: bridge with `show star (...) = ...` then `rw [star_mul', star_star, hK]`
+   where `hK : star (K x y) = K y x` is proved from `conj_symm`.
+
+**Axioms.** `propext, Classical.choice, Quot.sound` only — **no `sorryAx`**.
+
+**Submittability.** Strong candidate — strictly stronger than §1 (drops
+compactness, continuity of `K`/`f`, and the metric on `X`), clean statement,
+pure measure theory + RKHS. The bounded-diagonal hypothesis is the natural
+"first" version; the full `K ∈ L²` version (with truncation) is a follow-up.
+
+**Comparison with in-progress Mathlib PR #42003 (TJHeeringa, `mercersTheorem`
+branch, `Mathlib/Analysis/InnerProductSpace/Reproducing.lean`, draft/unmerged
+2026-08-12) — informs future API alignment, not a code dependency.**
+- `mercerForm` is a *single* integral over `μ.prod μ` with the one hypothesis
+  `MemLp (fun p : X×X => K p.1 p.2) 2 (μ.prod μ)` (K itself L² on the product
+  space). Integrand measurability is product-space `AEStronglyMeasurable`,
+  assembled from `hK.aestronglyMeasurable` + `Lp.aestronglyMeasurable` pulled
+  back via `comp_fst`/`comp_snd`; integrability is a clean Hölder (2,2) bound
+  (`lintegral_norm_inner_le`), no dominated-construction needed.
+- It **sidesteps the feature map entirely** in the Mercer section: no `φ : X → H`,
+  no `StronglyMeasurable (featureMap K)` hypothesis, no H-valued Bochner integral
+  of `conj(f) • φ`. `integralOperator` is built from `mercerForm` via the Riesz
+  representer (`InnerProductSpace.toDual`); `isSelfAdjoint_integralOperator`
+  follows from `mercerForm_conj_symm`.
+- It does **not** prove `0 ≤ mercerForm f f` (positivity of the form) — it stops at
+  the bilinear/self-adjoint scaffolding. Our `integralOperator_nonneg_general`
+  supplies exactly that missing positivity (`⟨F,F⟩ = ‖F‖² ≥ 0`); the two are
+  complementary, not redundant.
+**Takeaway.** Our proof is complete and verified (0 sorries, 3 axioms) — no
+refactor is needed to unstick anything. For an eventual Mathlib submission, the
+PR's `MemLp K 2 (μ.prod μ)` convention is more standard than our
+`StronglyMeasurable (featureMap K)` (the latter is non-standard API: strong
+measurability into a user-defined completion is hard for a caller to verify).
+Our bounded diagonal `∃ M, K(x,x) ≤ M` plus the kernel Cauchy–Schwarz bound
+`|K(x,y)|² ≤ K(x,x)·K(y,y) ≤ M²` would *imply* `K ∈ L²(μ⊗μ)` for a finite measure
+(via a kernel-CS lemma we do not currently prove). Recommendation: keep the
+verified proof as-is; revisit restating in the product-measure/Lp convention
+only after PR #42003 merges and stabilizes.
