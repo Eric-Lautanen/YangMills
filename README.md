@@ -19,6 +19,7 @@ for the detailed proof-state tracking.
 |---|---|
 | `GOALS.md` | Project goals and honest current status (start here) |
 | `docs/STATUS.md` | Detailed proof-state tracking: axiom table, what's proved, what's incomplete |
+| `docs/path_forward.md` | Path forward to close `transferMatrixPositivity_axiom` (6→5 axioms) |
 | `docs/honest_frontier_audit.md` | Honest audit: has "6 → 5" actually reduced anything? What would it take to attack the open axioms? |
 | `docs/axiom_growth_audit.md` | Chronological reconstruction of every strengthening of `peterWeyl_clebschGordan_plaquette` |
 | `docs/transfer_matrix_positivity_design.md` | Design doc for the Lüscher decomposition plan to close `transferMatrixPositivity_axiom` |
@@ -26,7 +27,9 @@ for the detailed proof-state tracking.
 | `MATHLIB_SUBMISSION.md` | Packaging of Mathlib candidates for upstream review |
 | `docs/gap_analysis.md` | Analysis of obstructions to closing the transfer-matrix positivity axiom |
 | `docs/strategy.md` | Overall strategy |
+| `docs/plan.md` | High-level project plan |
 | `literature/survey.md` | Literature survey |
+| `docs/archive/` | Historical/resolved documents (hadd issue, periodic BC plan, found issues, old setup) |
 
 ---
 
