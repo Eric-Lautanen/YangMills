@@ -82,12 +82,17 @@ YangMills/
 │           ├── GaugeInvariance.lean
 │           ├── JacobiIdentity.lean
 │           ├── LatticeMeasure.lean
-│           ├── PeterWeyl.lean             # Peter–Weyl axiom, plaquetteBoltzmannPD
-│           ├── PositiveDefinite.lean      # PD function algebra, Schur orthogonality axiom
-│           ├── PositiveDefiniteIntegral.lean  # PD.integral, integralOperator_nonneg, Mercer-PD
+│           ├── PeterWeyl.lean             # re-export → PeterWeyl/ (7 sub-files)
+│           ├── PeterWeyl/                 # Peter–Weyl axiom, plaquetteBoltzmannPD
+│           ├── PositiveDefinite.lean      # re-export → PositiveDefinite/ (7 sub-files)
+│           ├── PositiveDefinite/          # PD function algebra, Schur orthogonality axiom
+│           ├── PositiveDefiniteIntegral.lean  # re-export → PositiveDefiniteIntegral/ (4 sub-files)
+│           ├── PositiveDefiniteIntegral/  # PD.integral, integralOperator_nonneg, Mercer-PD
 │           ├── BoltzmannFactor.lean       # boltzmannFactorPD, fullBoltzmannPD
-│           ├── ReflectionPositivity.lean # transferMatrixPositivity_axiom, osG_thetaG_factorization
-│           ├── TransferMatrix.lean       # transferMatrixCorrect, integral_G_thetaG_eq_inner_g_Tg
+│           ├── ReflectionPositivity.lean  # re-export → ReflectionPositivity/ (7 sub-files)
+│           ├── ReflectionPositivity/      # transferMatrixPositivity_axiom, osG_thetaG_factorization
+│           ├── TransferMatrix.lean        # re-export → TransferMatrix/ (10 sub-files)
+│           ├── TransferMatrix/            # transferMatrixCorrect, integral_G_thetaG_eq_inner_g_Tg
 │           └── MassGapProof.lean
 ├── mathlib_candidates/             # standalone Mathlib candidate files
 ├── docs/                          # working documents (status, audits, design)

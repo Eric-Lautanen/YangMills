@@ -18,12 +18,12 @@ The formalization rests on **six** axioms:
 
 | Axiom | Declared in | What it stands in for | Status / concern |
 |---|---|---|---|
-| `peterWeyl_clebschGordan_plaquette` | `PeterWeyl.lean` | Peter–Weyl theorem + Clebsch–Gordan decomposition for the plaquette Boltzmann factor **and** for products of characters of the same group element (across-plaquette CG) **and** dual (contragredient) representations **and** L² completeness (Peter–Weyl basis) **and** matrix-element Clebsch–Gordan coefficients (unitary change-of-basis for `ρ_s ⊗ ρ_t → ⊕_ν ρ_ν`) | Not in Mathlib. Defensible as cited external theorems *if* correctly applied. **Strengthened seven times** — see `docs/axiom_growth_audit.md` for the full audit. Four strengthenings (char-level CG, L² completeness, matrix-element CG, Schur for `Λ` + CG for `ι×Λ`) directly followed a session that concluded the target could NOT be closed with current axioms. |
-| `transferMatrixPositivity_axiom` | `ReflectionPositivity.lean` | Positivity of `∫ G(U)·G(θU) dμ₀` for the periodic-lattice transfer matrix | The closeable axiom. The Lüscher decomposition `T = V^{1/2}·U·V^{1/2}` is in progress (sub-steps 1–2 done, 3–6 remaining). Even if closed, the "6 → 5" headline is partially misleading per the axiom-growth audit. |
+| `peterWeyl_clebschGordan_plaquette` | `PeterWeyl/Axiom.lean` | Peter–Weyl theorem + Clebsch–Gordan decomposition for the plaquette Boltzmann factor **and** for products of characters of the same group element (across-plaquette CG) **and** dual (contragredient) representations **and** L² completeness (Peter–Weyl basis) **and** matrix-element Clebsch–Gordan coefficients (unitary change-of-basis for `ρ_s ⊗ ρ_t → ⊕_ν ρ_ν`) | Not in Mathlib. Defensible as cited external theorems *if* correctly applied. **Strengthened seven times** — see `docs/axiom_growth_audit.md` for the full audit. Four strengthenings (char-level CG, L² completeness, matrix-element CG, Schur for `Λ` + CG for `ι×Λ`) directly followed a session that concluded the target could NOT be closed with current axioms. |
+| `transferMatrixPositivity_axiom` | `ReflectionPositivity/GaugeInvariance.lean` | Positivity of `∫ G(U)·G(θU) dμ₀` for the periodic-lattice transfer matrix | The closeable axiom. The Lüscher decomposition `T = V^{1/2}·U·V^{1/2}` is in progress (sub-steps 1–2 done, 3–6 remaining). Even if closed, the "6 → 5" headline is partially misleading per the axiom-growth audit. |
 | `os_reconstruction_theorem` | `OSAxioms.lean` | Osterwalder–Schrader reconstruction (OS axioms ⇒ Wightman QFT) | Established published math, not in Mathlib. Only sound to invoke on objects that actually satisfy the OS axioms — depends on the continuum limit existing. |
 | `continuum_limit_exists` | `ContinuumLimit.lean` | Existence of the lattice a→0 continuum limit (Balaban RG / stochastic quantization) | **This axiom *is* the open mathematical core of the problem.** Not a placeholder for something routine — it's the thing nobody has proved. |
 | `mass_gap_axiom` | `MassGap.lean` | Positivity of the continuum mass gap | **This is the conjecture itself.** `yang_mills_existence_and_mass_gap` pulls the gap directly from this axiom without deriving anything from the lattice work — circular. Must not be used in any theorem claimed as a "proof." |
-| `characterOrthogonality` | `PositiveDefinite.lean` | Schur orthogonality of **matrix elements** of irreducible unitary representations of a compact group (Great Orthogonality Theorem) | Not in Mathlib. Defensible as a cited external theorem. The (weaker) character-orthogonality statement is derived as `character_orthogonality_from_schur` (0 sorries). |
+| `characterOrthogonality` | `PositiveDefinite/CharacterOrthogonality.lean` | Schur orthogonality of **matrix elements** of irreducible unitary representations of a compact group (Great Orthogonality Theorem) | Not in Mathlib. Defensible as a cited external theorem. The (weaker) character-orthogonality statement is derived as `character_orthogonality_from_schur` (0 sorries). |
 
 ### Axiom growth audit
 
@@ -177,7 +177,7 @@ See `docs/transfer_matrix_positivity_design.md` §8.11.67 for the full design.
   axioms.
 - `integral_G_thetaG_eq_inner_g_Tg` — key identity linking reflected Gibbs
   expectation to transfer-matrix inner product. 0 sorries, standard axioms.
-- `measure_factorization'` in `TransferMatrix.lean` — 0 sorries, standard
+- `measure_factorization'` in `TransferMatrix/` — 0 sorries, standard
   axioms.
 
 ---
