@@ -7943,3 +7943,115 @@ the half-weight expansion can be obtained by taking square roots of the coeffici
 coefficients, and the square root of a PD function with non-negative coefficient sum
 is also PD). The next session should investigate whether this can be formalized using
 the existing `peterWeyl_clebschGordan_plaquette` axiom (Part 1).
+
+---
+
+## §8.11.86 — Session 117 analysis (2026-08-15): Step A infrastructure already in place
+
+Session 117 was an analysis session (no code changes). It verified the
+current state of STEP 6 and found that **two of the three "Step A"
+sub-tasks from the session-116 handoff are already done**:
+
+### Already done
+
+1. **Step A.1 (V positive):** `spatialBoltzmannPD`
+   (`ReflectionPositivity/FullBoltzmannPD.lean:258`) proves the spatial
+   Boltzmann factor `exp(-β·S_spatial)` is positive-definite on the link
+   group, via the Schur product theorem (`PositiveDefinite.finprod`).
+
+2. **Step A.2 (group-PD → operator positivity):**
+   `PositiveDefinite.integralOperator_nonneg`
+   (`PositiveDefiniteIntegral/IntegralOperator.lean:140`) proves: for a
+   compact group `G` with probability measure `μ`, a continuous PD function
+   `φ`, and continuous `f`,
+   `∫∫ f(x)·conj(f(y))·φ(x⁻¹·y) dμ dμ ≥ 0`. This is the continuous analogue
+   of the `PositiveDefinite` definition — exactly the connection from
+   group-PD to positive integral operator. **No new lemma needed.**
+
+3. **Abstract positivity scaffold:** `character_expansion_positivity`,
+   `character_expansion_nonneg`, `character_expansion_nonneg_shared`
+   (`PositiveDefiniteIntegral/CharacterExpansionPositivity.lean:44,181,231`)
+   prove: if a kernel `K(x,y) = Σ_i a_i·Φ_i(x)·conj(Φ_i(θy))` with `a_i ≥ 0`
+   and `θ` measure-preserving, then `∫∫ f(x)·f(θy)·K(x,y) ≥ 0`. The
+   shared-variable variant handles the transfer-matrix structure where a
+   spatial interface variable `z` is shared between the `x` and `y`
+   integrals.
+
+4. **2-site cascade end-to-end:** `shared_cascade_factorization_nonneg_conj`
+   (`PositiveDefiniteIntegral/CascadeNonneg.lean:717`) +
+   `cascade_shared_kernel_form` (line 785) connect the 2-site Lüscher
+   cascade to the conjugated kernel form `Σ_s c_s·conj(χ_s(z·x))·χ_s(z·y)`
+   with `c_s ≥ 0`, and prove the integral is non-negative. **The 1D
+   (2-site) case is fully done end-to-end.**
+
+5. **1D L-site cascade:** `chainIntegral_eq`, `bipartiteChainIntegral_eq`
+   (`PositiveDefinite/LuscherCascade.lean:61,212`) generalize the 2-site
+   cascade to arbitrary chain length via induction + `luscher_key_identity`.
+
+6. **3D single-site integral:** `single_site_3D_luscher_integral`
+   (`PeterWeyl/Site3DIntegral.lean:484`) integrates ONE temporal link in 3
+   plaquettes (3 spatial directions), producing a sum of CG-coefficient
+   products times `(1/dims α)`.
+
+7. **3D diagonal non-negativity:** `cg_unitarity_nonneg`
+   (`PeterWeyl/Site3DIntegral.lean:725`) proves the DIAGONAL case (barred
+   indices = unbarred indices) gives `Σ_{α,p,q} (1/dims α)·|C(α,p,q)|² ≥ 0`.
+
+### The crux (NOT done): 3D off-diagonal cascade
+
+The off-diagonal case of `single_site_3D_luscher_integral` (where the
+barred indices differ from the unbarred indices, as happens in the
+multi-site transfer matrix) gives a product of two DIFFERENT CG sums:
+`Σ U(ν,r,s,α,p,q) · (1/dims α) · Σ B(ν',r',s',α,p,q)`, which is NOT
+`|C|²` and is not obviously non-negative locally.
+
+The non-negativity comes from the GLOBAL cascade (integrating out ALL
+temporal links site by site): the product of CG sums across sites
+collapses to `Σ_s a_s · χ_s(W-product) · χ_s(V-product)` with `a_s ≥ 0`,
+and the reflection maps `χ_s(W-product) = conj(χ_s(V-product))`, giving
+`|χ_s|²` (the `|E_s|²` argument, §8.11.75). This global cascade is NOT
+formalized.
+
+### Remaining work for STEP 6
+
+- **Step A.4 (T = V^{1/2}·U·V^{1/2} factorization):** Split the OS-positive
+  action `S⁺ = S_spatial + S_temporal⁺/2` and show the transfer matrix
+  kernel factors. This is concrete algebra but non-trivial (requires
+  identifying which plaquettes contribute to V vs U).
+
+- **Step A.5 (ABA ≥ 0):** In the concrete setting, this reduces to a
+  change of variables `h = √v · g` (where `v = exp(-β·S_spatial)`), so
+  `∫ g·Tg = ∫ h·U(h) ≥ 0` if U is positive. This is built into the
+  factorization, not a separate lemma.
+
+- **Step B (3D global cascade — THE CRUX):** Formalize the global cascade
+  that integrates out ALL temporal links, producing
+  `Σ_s a_s · χ_s(W) · conj(χ_s(V))` with `a_s ≥ 0`. This requires:
+  (a) identifying the lattice structure (which temporal links appear in
+  which plaquettes), (b) ordering the cascade (which links to integrate
+  out first), (c) showing the CG coefficient products collapse to the
+  `|E_s|²` form. The off-diagonal CG unitarity is the key ingredient.
+
+- **Step C (conclude):** Apply `shared_cascade_factorization_nonneg_conj`
+  to the global cascade result, then use
+  `integral_G_thetaG_eq_inner_g_Tg` to convert `⟨g, Tg⟩ ≥ 0` to
+  `∫ G·G(θU) ≥ 0`, replacing the axiom.
+
+### Adversarial self-check (session 117)
+
+Steelmanning the dead-end case: (1) The character expansion approach
+(w* idempotent) is a documented dead end — the enormous infrastructure
+built for it (Bridge.lean, FullReflect.lean) may not directly contribute
+via the Lüscher route. (2) The 3D cascade is genuinely hard and may be a
+multi-session effort. (3) The "6→5" headline is misleading per
+`honest_frontier_audit.md` — `peterWeyl_clebschGordan_plaquette` has
+absorbed ~3 substantial prerequisites comparably hard to the target. (4)
+The Lüscher decomposition requires connecting the abstract cascade
+(LuscherCascade.lean) to the concrete transfer matrix
+(transferMatrixCorrect), which requires the 3D lattice structure.
+
+**Honest verdict:** The infrastructure is substantially in place. The
+remaining work is the 3D global cascade (Step B), which is the genuine
+crux. This is "known but unformalized" math (Lüscher's approach is
+standard in the literature), not genuinely open math. No axiom
+strengthening is needed — the obstacle is formalization effort.
