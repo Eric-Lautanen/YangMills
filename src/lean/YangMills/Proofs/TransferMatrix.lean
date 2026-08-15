@@ -13,6 +13,8 @@ The actual content is split across the sub-files:
 - `ThetaInvariance.lean`: Lemma 3 invariance lemmas under θ
 - `FullReflect.lean`: Full reflection reindexing (fullReflectReindex)
 - `FullLattice.lean`: Full-lattice character factor lemmas
+- `LuscherDecomposition.lean`: Spatial/temporal split of OS action (Step A.4 of Lüscher decomposition)
 -/
 
 import YangMills.Proofs.TransferMatrix.FullLattice
+import YangMills.Proofs.TransferMatrix.LuscherDecomposition
