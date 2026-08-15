@@ -1671,7 +1671,128 @@ lemma interface_product_character_expansion (N T L : ℕ) (β : ℝ) [NeZero T] 
 
 #print axioms interface_product_character_expansion
 
-/-- **Combined character expansion of the interface Boltzmann factor.** Composing
+/-- **Plaquette-level character expansion of the interface plaquette product.**
+
+Applying `plaquette_product_single_char_decomp` (product-of-sums) to the
+concrete interface plaquettes, the abstract interface plaquette product
+`∏_{p ∈ InterfacePlaquette} exp((β²/N)·Re Tr(g₀g₁g₂⁻¹g₃⁻¹))` (viewed in `ℂ`)
+admits the **plaquette-level** character expansion
+
+    ∏_p exp(c·Re Tr(gP p)) = ∑_{w : InterfacePlaquette → ι} F(w) · ∏_p χ_{w(p)}(gP p)
+
+with `F(w) = ∏_p coeff_{w(p)} ≥ 0`, where `gP p` is the plaquette product
+`g₀·g₁·g₂⁻¹·g₃⁻¹` expressed via the concrete interface links
+(`interfaceLinkVar`, `interfaceLinkAssign`).
+
+This is the **plaquette-level** analogue of `interface_product_character_expansion`
+(which is link-level: one character per LINK).  Here there is one character per
+PLAQUETTE — exactly the form the Lüscher cascade needs: at the plaquette level,
+each temporal interface link appears in TWO plaquette characters, so the cascade
+(integrating out the temporal link via Schur orthogonality) forces MATCHING
+(`w(p₁) = w(p₂)`), not triviality, propagating the constraint across the lattice
+and producing constant non-negative coefficients.  See
+`docs/transfer_matrix_positivity_design.md` §8.11.81.
+
+Uses `plaquette_boltzmann_character_expansion_single` (uniform `∀ g` single-char
+expansion, providing the `hexp1` hypothesis) + `plaquette_product_single_char_decomp`
+(product-of-sums).  Both depend only on `peterWeyl_clebschGordan_plaquette`
+(axiom count 6, unchanged); 0 sorries. -/
+lemma interface_product_plaquette_char_expansion (N T L : ℕ) (β : ℝ) [NeZero T] [NeZero L]
+    (hN : 1 ≤ N) :
+    ∃ (ι : Type) (hι : Fintype ι) (dims : ι → ℕ)
+      (ρ : ∀ i, SU N →* Matrix (Fin (dims i)) (Fin (dims i)) ℂ)
+      (hU : ∀ i, IsUnitaryRepresentation (ρ i))
+      (hMeas : ∀ i, Measurable (repCharacter (ρ i)))
+      (hIrr : ∀ i, IsIrreducible (ρ i))
+      (hDims : ∀ i, 0 < dims i)
+      (coeff : ι → ℝ) (hcoeff : ∀ s, 0 ≤ coeff s)
+      (F : (InterfacePlaquette T L → ι) → ℝ) (hF : ∀ w, 0 ≤ F w),
+      ∀ (U : LinkVariable (SU N) (PeriodicSite T L)),
+      ∏ p : InterfacePlaquette T L,
+        (Real.exp ((β * β / N) * Complex.re (Matrix.trace
+          ((interfaceLinkVar N T L U (interfaceLinkAssign T L p 0) *
+            interfaceLinkVar N T L U (interfaceLinkAssign T L p 1) *
+            (interfaceLinkVar N T L U (interfaceLinkAssign T L p 2))⁻¹ *
+            (interfaceLinkVar N T L U (interfaceLinkAssign T L p 3))⁻¹ : SU N) :
+            Matrix (Fin N) (Fin N) ℂ))) : ℂ) =
+        ∑ w : InterfacePlaquette T L → ι, (F w : ℂ) *
+          ∏ p : InterfacePlaquette T L,
+            repCharacter (ρ (w p))
+              (interfaceLinkVar N T L U (interfaceLinkAssign T L p 0) *
+               interfaceLinkVar N T L U (interfaceLinkAssign T L p 1) *
+               (interfaceLinkVar N T L U (interfaceLinkAssign T L p 2))⁻¹ *
+               (interfaceLinkVar N T L U (interfaceLinkAssign T L p 3))⁻¹) := by
+  obtain ⟨ι, hι, dims, ρ, hU, hMeas, hIrr, hDims, coeff, hcoeff, hexp1⟩ :=
+    plaquette_boltzmann_character_expansion_single N (β * β / N)
+      (plaquetteBoltzmann_tm_coupling_nonneg N β hN)
+  letI : Fintype ι := hι
+  classical
+  refine ⟨ι, hι, dims, ρ, hU, hMeas, hIrr, hDims, coeff, hcoeff,
+      (fun w => ∏ p, coeff (w p)), fun w => Finset.prod_nonneg (fun p _ => hcoeff (w p)),
+      fun U => ?_⟩
+  rw [Finset.prod_congr rfl (fun p _ => hexp1
+      (interfaceLinkVar N T L U (interfaceLinkAssign T L p 0) *
+        interfaceLinkVar N T L U (interfaceLinkAssign T L p 1) *
+        (interfaceLinkVar N T L U (interfaceLinkAssign T L p 2))⁻¹ *
+        (interfaceLinkVar N T L U (interfaceLinkAssign T L p 3))⁻¹))]
+  rw [Fintype.prod_sum (fun p s => (coeff s : ℂ) * repCharacter (ρ s)
+      (interfaceLinkVar N T L U (interfaceLinkAssign T L p 0) *
+        interfaceLinkVar N T L U (interfaceLinkAssign T L p 1) *
+        (interfaceLinkVar N T L U (interfaceLinkAssign T L p 2))⁻¹ *
+        (interfaceLinkVar N T L U (interfaceLinkAssign T L p 3))⁻¹))]
+  refine Finset.sum_congr rfl (fun w _ => ?_)
+  rw [Finset.prod_mul_distrib]
+  simp only [Complex.ofReal_prod]
+
+#print axioms interface_product_plaquette_char_expansion
+
+/-- **Combined plaquette-level character expansion of the interface Boltzmann factor.**
+Composing `interface_boltzmann_eq_abstract_product` (exp(-β·S_int) = C · ∏_p exp(c·Re Tr(...)))
+with `interface_product_plaquette_char_expansion` (∏_p exp(c·Re Tr(...)) = ∑_w F(w)·∏_p χ_{w(p)}(...)),
+the interface Boltzmann factor admits the **plaquette-level** character expansion (viewed in ℂ)
+
+    (exp(-β·S_int(U)) : ℂ) = (C : ℂ) · ∑_{w : InterfacePlaquette → ι} F(w) · ∏_p χ_{w(p)}(gP p)
+
+with `C > 0` and `F(w) = ∏_p coeff_{w(p)} ≥ 0`.  This is the plaquette-level analogue of
+`interface_boltzmann_character_expansion` (which is link-level).  It is the form the Lüscher
+cascade operates on: one character per plaquette, so each temporal link (shared between two
+plaquettes) is integrated out via Schur orthogonality forcing matching, not triviality.
+Uses `peterWeyl_clebschGordan_plaquette` (axiom count 6, unchanged); 0 sorries. -/
+lemma interface_boltzmann_plaquette_char_expansion (N T L : ℕ) (β : ℝ) [NeZero T] [NeZero L]
+    (hN : 1 ≤ N) :
+    ∃ (C : ℝ) (hC : 0 < C)
+      (ι : Type) (hι : Fintype ι) (dims : ι → ℕ)
+      (ρ : ∀ i, SU N →* Matrix (Fin (dims i)) (Fin (dims i)) ℂ)
+      (hU : ∀ i, IsUnitaryRepresentation (ρ i))
+      (hMeas : ∀ i, Measurable (repCharacter (ρ i)))
+      (hIrr : ∀ i, IsIrreducible (ρ i))
+      (hDims : ∀ i, 0 < dims i)
+      (coeff : ι → ℝ) (hcoeff : ∀ s, 0 ≤ coeff s)
+      (F : (InterfacePlaquette T L → ι) → ℝ) (hF : ∀ w, 0 ≤ F w),
+      ∀ (U : LinkVariable (SU N) (PeriodicSite T L)),
+      (Real.exp (-β * wilsonActionOSInterface N T L β U) : ℂ) =
+        (C : ℂ) * ∑ w : InterfacePlaquette T L → ι, (F w : ℂ) *
+          ∏ p : InterfacePlaquette T L,
+            repCharacter (ρ (w p))
+              (interfaceLinkVar N T L U (interfaceLinkAssign T L p 0) *
+               interfaceLinkVar N T L U (interfaceLinkAssign T L p 1) *
+               (interfaceLinkVar N T L U (interfaceLinkAssign T L p 2))⁻¹ *
+               (interfaceLinkVar N T L U (interfaceLinkAssign T L p 3))⁻¹) := by
+  obtain ⟨C, hC, hC_eq_all⟩ := interface_boltzmann_eq_abstract_product N T L β
+  obtain ⟨ι, hι, dims, ρ, hU, hMeas, hIrr, hDims, coeff, hcoeff, F, hF, hF_decomp⟩ :=
+    interface_product_plaquette_char_expansion N T L β hN
+  letI : Fintype ι := hι
+  classical
+  refine ⟨C, hC, ι, hι, dims, ρ, hU, hMeas, hIrr, hDims, coeff, hcoeff, F, hF, fun U => ?_⟩
+  rw [hC_eq_all U]
+  have h := hF_decomp U
+  norm_cast at h
+  rw [Complex.ofReal_mul, h]
+
+#print axioms interface_boltzmann_plaquette_char_expansion
+
+
+/-! **Combined character expansion of the interface Boltzmann factor.** Composing
 `interface_boltzmann_eq_abstract_product` (exp(-β·S_int) = C · ∏_p exp(c·Re Tr(...)))
 with `interface_product_character_expansion` (∏_p exp(c·Re Tr(...)) = ∑_w F(w)·Φ_w·Ψ_w·V_w),
 the interface Boltzmann factor admits the character expansion (viewed in ℂ)

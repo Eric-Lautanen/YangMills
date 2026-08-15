@@ -6356,3 +6356,1590 @@ soundness. The key infrastructure (`chainIntegral_eq`, `character_kernel_integra
 | Is the general L² result applicable to sub-step 5? | **NO** — `character_kernel_integral_nonneg` is the right tool (kernel `Σ a_s χ_s(W·V)` is not Mercer-PD) |
 | Is `chainIntegral_eq` available for the full-lattice cascade? | **YES** — general L-site cascade, handles arbitrary chain length |
 | What is the next sub-step? | 3b: `temporal_product_character_expansion` (character expansion of temporal plaquette product) |
+
+### 8.11.70 STEP 5 SUB-STEP 3b: `temporal_product_character_expansion` — temporal plaquette product character expansion (2026-08-12 session 92)
+
+**Build GREEN, 0 sorries, 6 axioms (unchanged). One new lemma + supporting infrastructure added to `ReflectionPositivity.lean` (after `temporal_boltzmann_eq_abstract_product`, ~line 2120).**
+
+This session completed sub-step 3b of the Lüscher decomposition (§8.11.67): the temporal plaquette product is expanded in characters, separating temporal links (internal, to be integrated out by the Lüscher cascade in sub-step 3c) from spatial links (external, the kernel variables W and V).
+
+#### New infrastructure (temporal link analogue of interface link infrastructure)
+
+Following the pattern of `InterfacePlaquette` / `InterfaceLink` / `interfaceLinkAssign` (lines 1108-1269), the temporal analogue was defined:
+
+- **`TemporalPlaquette (T L)`** — subtype `{p : PlaquetteIndex T L // isTemporalPlaquette p}` (plaquettes with at least one direction = 0). Fintype + DecidableEq instances provided.
+- **`temporalPlaqLinkFinset (T L)`** — Finset of all links appearing in at least one temporal plaquette (image of `plaquetteLinkIdx` over `TemporalPlaquette × Fin 4`).
+- **`TemporalLink (T L)`** — subtype `{l : PeriodicSite T L × Fin 4 // l ∈ temporalPlaqLinkFinset T L}`. Fintype + DecidableEq instances provided.
+- **`temporalLinkAssign (T L)`** — link assignment `TemporalPlaquette → Fin 4 → TemporalLink` (maps each plaquette `p` and index `j` to the j-th link of `p`).
+- **`temporalLinkAssign_surj (T L)`** — surjectivity: every `TemporalLink` arises as some plaquette's j-th link. This is the `hlinks_surj` hypothesis for `interface_kernel_character_expansion`.
+- **`temporalLinkVar (N T L U)`** — extract link variable `U.value l.val.1 l.val.2` at a `TemporalLink`.
+- **`plaquetteProduct_temporal_eq`** — `plaquetteProduct N U p.val... = temporalLinkVar U (assign p 0) · ... · temporalLinkVar U (assign p 3)⁻¹` (connects concrete plaquette product to abstract link form).
+
+#### The temporal link partition (L_U / L_0 / L_V)
+
+The key design decision for sub-step 3b is the partition of temporal links into three sets, matching the `interface_kernel_character_expansion` signature (L_U, L_0, L_V):
+
+- **`temporalLinkPos` (L_U, "W")**: spatial links (μ ≠ 0) at **positive** signed time. These are the external "W" variables of the Lüscher kernel.
+- **`temporalLinkInt` (L_0, internal)**: temporal links (μ = 0, at **any** time) OR spatial links at the **interface** (signedTime = 0). These are the internal links to be integrated out by the Lüscher cascade in sub-step 3c.
+- **`temporalLinkNeg` (L_V, "V")**: spatial links (μ ≠ 0) at **negative** signed time. These are the external "V" variables of the Lüscher kernel.
+
+**Why this partition?** The temporal plaquettes (at least one direction = 0) involve two types of links:
+1. **Temporal links** (μ = 0): these connect adjacent time slices and are internal to the transfer matrix. They must be integrated out by the Lüscher cascade (sub-step 3c). Placing them in L_0 (internal) ensures they appear in the `Ψ_w(internal)` factor, which is consumed by the cascade.
+2. **Spatial links** (μ ≠ 0): these lie within a single time slice and are external. The positive-time ones are "W" (L_U), the negative-time ones are "V" (L_V). The interface spatial links (signedTime = 0) are also internal (L_0) because they sit at the time-slice boundary.
+
+**Disjointness + cover** (`temporalLinkPartition_disjoint_cover`):
+- Disjoint L_U L_0: L_U requires μ ≠ 0 and signedTime > 0, contradicting both μ = 0 and signedTime = 0.
+- Disjoint (L_U ∪ L_0) L_V: L_V requires signedTime < 0, contradicting L_U's signedTime > 0 and L_0's signedTime = 0 or μ = 0.
+- Cover: by signedTime trichotomy (> 0, = 0, < 0) and μ = 0 / μ ≠ 0 cases, every temporal link falls into exactly one set.
+
+The `hdisj` and `hcover` lemmas (`temporalLinkPartition_hdisj`, `temporalLinkPartition_hcover`) package this in the form required by `interface_kernel_character_expansion`.
+
+#### `temporal_product_character_expansion` (line ~2295)
+
+The temporal plaquette product `∏_{p ∈ TemporalPlaquette} exp((β²/N)·Re Tr(P_p))` (viewed in ℂ) admits the separable character expansion:
+
+```
+∏_p exp(c·Re Tr(...)) = ∑_w F(w) · Φ_w(W) · Ψ_w(internal) · conj(Φ_w(V))
+```
+
+with `F(w) ≥ 0`, where:
+- `Φ_w(W) = ∏_{l ∈ L_U} χ_{w(l)}(U_l)` (positive-time spatial links, external "W")
+- `Ψ_w(internal) = ∏_{l ∈ L_0} χ_{w(l)}(U_l)` (temporal + interface links, internal)
+- `conj(Φ_w(V)) = star(∏_{l ∈ L_V} χ_{dual(w(l))}(U_l))` (negative-time spatial links, external "V")
+
+**Proof:** Apply `interface_kernel_character_expansion` with:
+- P = `TemporalPlaquette T L`, L = `TemporalLink T L`
+- links = `temporalLinkAssign T L`, hlinks_surj = `temporalLinkAssign_surj T L`
+- L_U = `temporalLinkPos`, L_0 = `temporalLinkInt`, L_V = `temporalLinkNeg`
+- hdisj = `temporalLinkPartition_hdisj`, hcover = `temporalLinkPartition_hcover`
+
+Then rewrite the goal's `plaquetteProduct` to the linkIdx form via `plaquetteProduct_temporal_eq` (using `Finset.prod_congr`). The `hF_decomp (temporalLinkVar N T L U)` gives the expansion directly.
+
+**Axioms:** `[propext, Classical.choice, Quot.sound, peterWeyl_clebschGordan_plaquette]` — same as `full_product_character_expansion` and `interface_product_character_expansion` (4 axioms, no new axioms, NO sorryAx).
+
+#### Remaining sub-steps for sub-step 3 (U positive)
+
+- **3c**: Lüscher cascade on temporal links — use `chainIntegral_eq` to integrate out the temporal links (the L_0 / internal links), producing a kernel `Σ_s a_s · χ_s(W·V)` with `a_s ≥ 0`. **Key challenge**: the temporal links form a chain (or cycle for periodic BC), and the cascade needs to handle all of them. The `chainIntegral_eq` lemma handles open chains; periodic chains may need a variant. The L_0 set includes both temporal links (μ = 0) and interface spatial links (signedTime = 0); the cascade integrates out the temporal links, while the interface spatial links are handled by character orthogonality (δ_{w|int, trivial}).
+- **3d**: Apply `character_kernel_integral_nonneg` to conclude U is positive.
+
+#### CRITICAL ANALYSIS for sub-step 3c (2026-08-12 session 92, continued)
+
+**The separable expansion from sub-step 3b is NOT directly useful for the Lüscher cascade.** Deep analysis of the cascade mechanism reveals a key distinction:
+
+1. **Separable (multi-link) expansion** (from `temporal_product_character_expansion` / `interface_kernel_character_expansion`): Each link l gets a SINGLE character `χ_{w(l)}(g_l)` of the INDIVIDUAL link variable g_l. This is the result of the Clebsch-Gordan (CG) decomposition, which combines characters from multiple plaquettes sharing a link into a single character of that link variable. After integrating out internal links, this gives `K(W,V) = Σ_{w: w|int=trivial} F(w) · Φ_w(W) · conj(Φ_w(V))` — the `Â_w · Â_{w*}` form (NOT non-negative, per §8.11.67).
+
+2. **Single-character expansion** (what the Lüscher cascade needs): Each plaquette factor is expanded as `exp(c·Re Tr(P_p)) = Σ_γ a_γ · χ_γ(P_p)` where `P_p = g₁·g₂·g₃⁻¹·g₄⁻¹` is the PLAQUETTE PRODUCT (a product of 4 link variables). The character `χ_γ(P_p)` is a character of the PRODUCT, not of individual links. The cascade integrates out temporal links using `luscher_key_identity`: `∫ χ_γ(g·h)·χ_{γ'}(g⁻¹·k) dg = δ_{γγ'}·(1/d_γ)·χ_γ(h·k)`, which produces a character of the PRODUCT of the remaining links — specifically `χ_s(W·V)`, the form needed for `character_kernel_integral_nonneg`.
+
+**Key distinction**: The CG decomposition combines characters of the SAME group element (`χ_γ(g)·χ_{γ'}(g) = Σ_s cg(γ,γ',s)·χ_s(g)`). The Lüscher cascade integrates out a variable appearing in characters of DIFFERENT group elements (`χ_γ(g·h)·χ_{γ'}(g⁻¹·k)`). These are fundamentally different mechanisms. The separable expansion uses CG; the cascade uses Schur orthogonality on products. The separable expansion DESTROYS the product structure that the cascade needs.
+
+**Deriving the single-character expansion from `hexp4`**: Setting g₂=g₃=g₄=1 in `hexp4` gives `exp(c·Re Tr(g)) = Σ_s a_s · χ_s(g)` where `a_s = Σ_{r,t,u,v} coeff(r,s,t,u,v)·dims_t·dims_u·dims_v ≥ 0`. This is the Peter-Weyl expansion of `f(g) = exp(c·Re Tr(g))` on SU(N), with non-negative coefficients (because f is PD). This expansion is NOT yet formalized as a standalone lemma — it needs to be derived from `hexp4`.
+
+**Cascade structure on the full lattice**: The temporal links form a BIPARTITE GRAPH between adjacent time slices (not a simple 1D chain). Each temporal link U(x,t,0) appears in multiple plaquettes (one for each spatial direction ν), connecting to different temporal links at the adjacent time slice. The `chainIntegral_eq` lemma handles open 1D chains; the bipartite graph structure requires a generalization. The `luscher_2site_cascade_integral_nonneg` handles 2 temporal links with 2 characters; the full lattice has many temporal links, each appearing in multiple characters of products.
+
+**Formalization plan for 3c**:
+1. Derive the single-character expansion `exp(c·Re Tr(g)) = Σ_γ a_γ · χ_γ(g)` with `a_γ ≥ 0` from `hexp4` (set g₂=g₃=g₄=1).
+2. Apply to each temporal plaquette: `exp(c·Re Tr(P_p)) = Σ_γ a_γ · χ_γ(P_p)`.
+3. Take the product over all temporal plaquettes.
+4. Integrate out temporal links using Schur orthogonality (`luscher_key_identity`), producing `Σ_s a_s · χ_s(W·V)` with `a_s ≥ 0`.
+5. Apply `character_kernel_integral_nonneg`.
+
+Step 4 is the hardest — the bipartite graph structure of temporal links requires an inductive or decompositional argument. Starting with the simplest case (L=1, single spatial site, 2 temporal links) and using `luscher_2site_cascade_integral_nonneg` directly may be the most tractable first step.
+
+Sub-steps 4-6 (factorization T = V^{1/2}·U·V^{1/2}, ∫g·Tg≥0, conclude I≥0) follow after U is proven positive.
+
+#### Summary
+
+| Question | Answer |
+|----------|--------|
+| Is `temporal_product_character_expansion` complete? | **YES** — build GREEN, 0 sorries, 4 axioms (standard 3 + peterWeyl) |
+| What is the temporal link partition? | L_U = spatial (μ≠0) at positive time, L_0 = temporal (μ=0) at any time OR spatial at interface, L_V = spatial (μ≠0) at negative time |
+| Why are temporal links in L_0 (internal)? | They connect adjacent time slices and must be integrated out by the Lüscher cascade (sub-step 3c) |
+| What is the next sub-step? | 3c: Lüscher cascade on temporal links via `chainIntegral_eq` |
+
+### 8.11.71 CRITICAL ANALYSIS: Steps 1-3 of 3c plan ALREADY DONE; cascade produces REVERSAL (not cyclic shift) obstruction for L≥3; group-PD + partial trace gives non-negativity for K(W⁻¹·V) but NOT K(W,V) (2026-08-12 session 93)
+
+**Build GREEN (unchanged), 0 sorries, 6 axioms. No code changes this session — pure analysis.**
+
+This session performed a detailed analysis of sub-step 3c (Lüscher cascade on temporal links) and discovered three key findings:
+
+#### Finding 1: Steps 1-3 of the 3c formalization plan are ALREADY DONE
+
+The §8.11.70 critical analysis stated that the single-character expansion `exp(c·Re Tr(g)) = Σ_γ a_γ · χ_γ(g)` with `a_γ ≥ 0` was "NOT yet formalized as a standalone lemma — it needs to be derived from `hexp4`." This is INCORRECT. The expansion IS already formalized:
+
+- **`plaquette_boltzmann_single_char_expansion`** (PeterWeyl.lean:1231): derives `exp(c·Re Tr(g₁·g₂·g₃⁻¹·g₄⁻¹)) = Σ_s (c' s : ℂ) · χ_s(g₁·g₂·g₃⁻¹·g₄⁻¹)` with `c' s ≥ 0` from `hexp4` by setting g₂=g₃=g₄=1. The coefficient is `c' s = Σ_{r,t,u,v} coeff(r,s,t,u,v)·dims_t·dims_u·dims_v ≥ 0`. **This is step 1 of the 3c plan, already done.**
+
+- **`plaquette_product_single_char_decomp`** (PeterWeyl.lean:1307): produces `∏_p exp(c·Re Tr(gP p)) = Σ_{w : P → ι} F(w) · ∏_p χ_{w(p)}(gP p)` with `F(w) = ∏_p c'_{w(p)} ≥ 0`. This is the product-of-sums identity applied to the single-index expansion. **This is steps 2-3 of the 3c plan, already done.**
+
+Both lemmas are verified (build GREEN, `#print axioms` checked). The single-character expansion uses characters of the PLAQUETTE PRODUCT (not individual links), which is exactly the form the Lüscher cascade needs.
+
+**Implication:** Sub-step 3c can skip directly to step 4 (the cascade itself). The prerequisite infrastructure is in place.
+
+#### Finding 2: The cascade produces a SEPARABLE kernel with a REVERSAL obstruction for L≥3
+
+Detailed calculation of the Lüscher cascade on the full lattice reveals the precise form of the obstruction. For L spatial sites, 1 spatial direction, 1 time step, periodic BC:
+
+The temporal plaquettes form a cycle: P_i = g_i · V_i · g_{i+1}⁻¹ · W_i⁻¹ (indices mod L). The single-character expansion gives `Σ_{w} F(w) · ∏_i χ_{w(i)}(g_i · V_i · g_{i+1}⁻¹ · W_i⁻¹)`. Integrating out the temporal links g₀, g₁, ..., g_{L-1} in sequence (using `luscher_key_identity` for the first integration and the "conjugation integral" `∫ χ_s(A·g⁻¹·M·g·B) = (1/d_s)·χ_s(M)·χ_s(A·B)` for subsequent integrations) produces:
+
+```
+K(W, V) = Σ_s c_s · χ_s(W-product) · χ_s(V-product)
+```
+
+where:
+- `c_s = a_s^L · (1/d_s)^L ≥ 0` (non-negative)
+- `W-product = W_{L-1}⁻¹ · W_{L-2}⁻¹ · ... · W_0⁻¹` (ordered product of W-inverses)
+- `V-product = V_{L-1} · V_{L-2} · ... · V_0` (ordered product of V's)
+
+The reflection positivity integral (after change of variables V → V⁻¹ and renaming) becomes:
+```
+I = Σ_s c_s · [∫ f(W) · conj(χ_s(W-product)) dW] · [∫ f(V) · conj(χ_s(V-product-reversed)) dV]
+```
+
+where `V-product-reversed` is the REVERSAL of `W-product` (the products accumulate in OPPOSITE directions around the cycle).
+
+**For L=2:** `W-product = W₁⁻¹·W₀⁻¹ = (W₀·W₁)⁻¹`, `V-product-reversed = V₁·V₀`. After reflection V→W: `W₁·W₀`. Since `χ_s(W₀·W₁) = χ_s(W₁·W₀)` (cyclicity of trace for 2-element products), the two integrals are the SAME, giving `I = Σ_s c_s · |∫ f · conj(χ_s(W₁·W₀))|² ≥ 0`. **L=2 works.** ✓
+
+**For L≥3:** `W-product` and `V-product-reversed` are related by REVERSAL (not cyclic shift). `χ_s(g₁·g₂·...·g_L) ≠ χ_s(g_L·...·g₂·g₁)` in general (characters are NOT invariant under reversal for non-abelian groups). The two integrals are DIFFERENT, and the product is NOT `|...|²`. **L≥3 does NOT work via this mechanism.** ✗
+
+> **§8.11.75 CORRECTION (session 95, 2026-08-13):** The above L≥3 obstruction analysis is **WRONG**. The reversal is NOT an obstruction to positivity. See §8.11.75 below for the corrected analysis. The error was analyzing the wrong question: asking "does the cascade produce χ_s(W·V)?" (which requires reversal = cyclic) instead of "is the separable kernel positive?" (which it is, regardless of reversal, by the |Fourier coefficient|² argument from the conj in the inner product).
+
+This is a more precise characterization of the §8.11.49 Finding 6 obstruction. The §8.11.49 analysis called it a "cyclic shift" (`⟨B, σ(B)⟩`), but the actual mechanism is REVERSAL: the W-product and V-product accumulate in opposite directions around the temporal link cycle, producing reversed orderings.
+
+**Note:** The §8.11.67 analysis claims the cascade produces `Σ_s a_s · χ_s(W·V)` (a single character of the product W·V). This is an OVERSIMPLIFICATION — it's only true for L=2 (where reversal = cyclic by trace cyclicity). For L≥3, the cascade produces a SEPARABLE kernel `Σ_s c_s · χ_s(W-product) · χ_s(V-product)`, NOT a single character `χ_s(W·V)`.
+
+#### Finding 3: Group-PD + partial trace gives non-negativity for K(W⁻¹·V) but NOT K(W,V)
+
+An alternative approach was analyzed: use the group-PD of the temporal Boltzmann factor + partial trace (integrating out temporal links) to get a PD kernel K on the spatial link group, then use the general L² `integralOperator_nonneg` lemma.
+
+The temporal Boltzmann factor B_temporal is PD on the full link group G (product of PD plaquette factors by Schur product). The partial trace K(g) = ∫ B_temporal(g, temporal) dμ(temporal) is PD on the spatial link group G' (by `PositiveDefinite.integral`).
+
+The group-PD of K gives:
+```
+∫∫ f(W) · f(V) · K(W⁻¹·V) dW dV = Σ_γ c_γ · Σ_{a,b} |∫ f · Φ_γ|² ≥ 0
+```
+where `Φ_γ(W) = ∏_l conj((ρ_{γ_l}(W_l))_{b_l a_l})` and `c_γ ≥ 0`. This IS non-negative (sum of |Fourier coefficient|² with non-negative weights).
+
+**BUT** the reflection positivity integral has the form `∫∫ f(W) · f(θV) · K(W, V) dW dV`, where K(W, V) is the kernel evaluated at TWO arguments (not the group product W⁻¹·V). The group-PD gives non-negativity for `K(W⁻¹·V)` (a function of ONE group element), NOT for `K(W, V)` (a function of TWO group elements).
+
+The mismatch: `K(W, V) ≠ K(W⁻¹·V)` in general. The partial trace K is a function of the FULL spatial configuration (all spatial links at all times), and `K(W, V)` separates this into positive-time (W) and negative-time (V) parts. The group product `W⁻¹·V` is the COMPONENTWISE product, which is NOT how the temporal plaquettes couple W and V (they couple through the ordered plaquette product, not componentwise).
+
+**Conclusion:** The group-PD + partial trace approach does NOT directly resolve the obstruction. The non-negativity of `∫∫ f·f·K(W⁻¹·V)` does NOT imply the non-negativity of `∫∫ f·f(θV)·K(W,V)`.
+
+#### Finding 4: The star topology adds another layer (temporal links shared across spatial directions)
+
+For d spatial directions, each temporal link U_0(x,t) appears in d plaquettes (one per spatial direction ν). The temporal plaquettes in different directions SHARE the temporal links, forming a STAR topology (not independent chains).
+
+The cascade for the star topology requires integrating out a variable g that appears in d characters: `∫ g ∏_ν χ_{γ_ν}(g · h_ν) dg`. This is a MULTI-MATRIX-ELEMENT integral, requiring the CG decomposition for matrix elements (`cgME` from the axiom) to combine the d matrix elements of g into a sum of single matrix elements, then Schur orthogonality.
+
+This is the "triple product integral" mechanism from §8.11.55-56. The axiom was extended (Parts 3-4) to provide the CG decomposition for this purpose. So the star topology CAN be handled with existing infrastructure, but it adds significant complexity.
+
+#### Summary and implications
+
+| Question | Answer |
+|----------|--------|
+| Are steps 1-3 of the 3c plan done? | **YES** — `plaquette_boltzmann_single_char_expansion` + `plaquette_product_single_char_decomp` already exist |
+| Does the cascade produce `χ_s(W·V)` for L≥3? | **NO** — it produces `χ_s(W-product)·χ_s(V-product)` (separable, with reversal) |
+| Does the cascade work for L=2? | **YES** — reversal = cyclic for 2-element products (trace cyclicity) |
+| Does group-PD + partial trace resolve the obstruction? | **NO** — gives non-negativity for K(W⁻¹·V), not K(W,V) |
+| What is the precise obstruction? | **REVERSAL**: W-product and V-product accumulate in opposite directions around the temporal link cycle |
+| Can the star topology be handled? | **YES** — via CG decomposition for matrix elements (cgME), but adds complexity |
+| Is the approach a dead end? | **UNCLEAR** — the reversal obstruction for L≥3 is real, but the Osterwalder-Seiler theorem IS true, so a resolution mechanism must exist |
+
+#### Possible resolution mechanisms (for future investigation)
+
+1. **The V^{1/2} factor compensates.** The Lüscher decomposition T = V^{1/2}·U·V^{1/2} might resolve the reversal through the spatial plaquette structure. The V^{1/2} factor involves spatial plaquettes (which couple different spatial directions), and might introduce character factors that compensate for the reversal. This requires further analysis.
+
+2. **Plaquette-by-plaquette induction.** Instead of the cascade, use the PD of each temporal plaquette factor and the Schur product theorem to show the temporal Boltzmann is PD, then use reflection positivity directly. This avoids the cascade entirely but requires a different non-negativity mechanism.
+
+3. **A generalized non-negativity lemma for separable kernels.** The cascade produces `Σ_s c_s · χ_s(W-product) · χ_s(V-product)`. A lemma showing `∫∫ f(W)·f(V⁻¹)·Σ_s c_s·χ_s(W-product)·χ_s(V-product) ≥ 0` for specific product structures (where W-product and V-product are related by reflection) might exist but is NOT currently formalized.
+
+4. **The 1-direction, L=2 case as a first step.** Formalizing the cascade for L=2, 1 spatial direction (where the reversal obstruction doesn't appear) would be a concrete step forward, demonstrating the mechanism works in the simplest non-degenerate case.
+
+#### Recommended next action
+
+Start with option 4: formalize the L=2, 1-direction cascade using `luscher_2site_cascade_integral_nonneg` directly. This is the simplest case where the cascade works (reversal = cyclic for 2 elements). The 2 temporal links form a 2-cycle (chain), matching the 2-site cascade structure. The result would be a proved non-negativity lemma for the L=2 temporal plaquette operator, which can then be extended to more complex cases.
+
+
+## §8.11.72 — conjugation_integral lemma VERIFIED (session 94, 2026-08-12)
+
+**Status: VERIFIED.** Builds clean (exit 0), no sorries, `#print axioms` = `[propext, Classical.choice, Quot.sound, characterOrthogonality]` (same as all other lemmas in the file; no `sorryAx`).
+
+**Lemma:** `conjugation_integral`
+```
+∫ g, repCharacter (ρ γ) (g⁻¹ * M * g * N) ∂μ =
+  (1 / dims γ : ℂ) * repCharacter (ρ γ) M * repCharacter (ρ γ) N
+```
+
+**Proof structure** (follows `luscher_key_identity` pattern):
+1. Regroup `g⁻¹ * M * g * N = (g⁻¹ * M) * (g * N)` via `mul_assoc` + `MonoidHom.map_mul`.
+2. Expand `χ_γ(g⁻¹*M*g*N) = Tr(ρ(g⁻¹*M) * ρ(g*N)) = Σ a b, (ρ(g⁻¹*M))_{ab} * (ρ(g*N))_{ba}` via `htrace_mul`.
+3. Expand matrix elements: `(ρ(g⁻¹*M))_{ab} = Σ c, conj((ρ g)_{ca}) * (ρ M)_{cb}` (using `Matrix.mul_apply` + `h_unitary_elem`), and `(ρ(g*N))_{ba} = Σ d, (ρ g)_{bd} * (ρ N)_{da}` (using `Matrix.mul_apply`).
+4. Combine via `Fintype.sum_mul_sum` into 4-index sum: `Σ a b c d, conj((ρ g)_{ca}) * (ρ M)_{cb} * (ρ g)_{bd} * (ρ N)_{da}`.
+5. Exchange sums with integral (4 levels, using `integrable_finsetSum` + `hInt` from `characterOrthogonality`).
+6. Factor constants out of each integral: `(ρ M)_{cb} * (ρ N)_{da} * ∫ g, (ρ g)_{bd} * conj((ρ g)_{ca}) dg`.
+7. Apply Schur orthogonality (`hSchur_diag`): `∫ g, (ρ g)_{bd} * conj((ρ g)_{ca}) dg = if b=c ∧ d=a then 1/d_γ else 0`.
+8. Collapse Kronecker deltas: `d`-sum picks `d=a`, `c`-sum picks `c=b`.
+9. Factor `1/d_γ` and recognize traces: `(1/d_γ) * Tr(ρ M) * Tr(ρ N) = (1/d_γ) * χ_γ(M) * χ_γ(N)`.
+
+**Key fixes from the previous attempt (session 93):**
+- Used explicit `have` helpers (`hmap`, `hchar`, `hME1`, `hME2`, `hchar4`) instead of `simp only` for the matrix element expansion.
+- `hME1` incorporates unitarity directly (replaces `(ρ g⁻¹)_{ac}` with `conj((ρ g)_{ca})` during the expansion).
+- For the `hd` collapse: used `and_true` instead of `true_and` (condition is `b = c ∧ True`, not `True ∧ b = c`).
+- For the `hc` collapse: used `fun h => hcb h.symm` to convert `c ≠ b` to `¬(b = c)`.
+- For Step 12 (factoring): used `Finset.sum_mul` at each level + `Fintype.sum_mul_sum` for the double-sum factoring, avoiding `ring` on sums.
+
+**Significance:** This is the key building block for the L=2 Lüscher cascade formalization (sub-step 3c). The identity `∫ χ_γ(g⁻¹ M g N) = (1/d_γ) χ_γ(M) χ_γ(N)` is the standard "conjugation integral" / "twisted convolution" identity in representation theory. The coefficient `1/d_γ > 0` is strictly positive, and `χ_γ` is positive-definite — this is the mechanism that gives non-negativity in the L=2 cascade.
+
+
+## §8.11.73 — luscher_2site_cascade_separable lemma VERIFIED (session 95, 2026-08-13)
+
+**Status: VERIFIED.** Builds clean (exit 0), no sorries, `#print axioms` = `[propext, Classical.choice, Quot.sound, characterOrthogonality]` (no `sorryAx`). Located at `PositiveDefinite.lean:2857`, inside `end UnitaryRepresentation`.
+
+**Lemma:** `luscher_2site_cascade_separable`
+```
+∫ g₀, ∫ g₁,
+  ∑ s, ∑ t, (F s t : ℂ) *
+    (repCharacter (ρ s) (g₀ * V₀ * g₁⁻¹ * W₀⁻¹) *
+     repCharacter (ρ t) (g₁ * V₁ * g₀⁻¹ * W₁⁻¹)) ∂μ ∂μ =
+∑ s, (F s s : ℂ) * ((1 / dims s : ℂ)^2 *
+  repCharacter (ρ s) (W₁⁻¹ * W₀⁻¹) * repCharacter (ρ s) (V₀ * V₁))
+```
+
+for irreducible unitary representations `ρ` of a compact group with normalized Haar measure `μ`, and non-negative coefficients `F : ι → ι → ℝ` with `F s t ≥ 0`.
+
+**This is the L=2 cascade formalization (sub-step 3c).** The 2-site temporal cascade with two temporal plaquettes (each split into W and V parts) evaluates to a **separable kernel**:
+```
+K(W,V) = Σ_s (F(s,s) · (1/d_s)²) · χ_s(W₁⁻¹·W₀⁻¹) · χ_s(V₀·V₁)
+```
+with non-negative coefficients `F(s,s)·(1/d_s)² ≥ 0` (since `F(s,s) ≥ 0` and `(1/d_s)² > 0`). This matches the `character_kernel_integral_nonneg` form (step 3d).
+
+**Proof structure** (follows `luscher_2site_cascade_coeff` pattern):
+1. **Helpers:**
+   - `hmul_comm : χ_i(a*b) = χ_i(b*a)` via `Matrix.trace_mul_comm`.
+   - `hcyc₁ : χ_s(g₀·V₀·g₁⁻¹·W₀⁻¹) = χ_s(g₁⁻¹·(W₀⁻¹·g₀·V₀))` via `repCharacter_cyclic` + `mul_assoc`.
+   - `hcyc₂ : χ_s((V₁·g₀⁻¹·W₁⁻¹)·(W₀⁻¹·g₀·V₀)) = χ_s(g₀⁻¹·(W₁⁻¹·W₀⁻¹)·g₀·(V₀·V₁))` via two `hmul_comm` + `mul_assoc`.
+   - `hInt_char_conj : Integrable (fun g => χ_s(g⁻¹·M·g·N)) μ` — follows the `conjugation_integral` integrability pattern (~60 lines).
+2. **Integrability of each (s,t) term w.r.t. g₁** (`hInt_char`): uses `char_product_integrable` with `A = W₀⁻¹·g₀·V₀`, `B = V₁·g₀⁻¹·W₁⁻¹`, then `h.congr` to match the integrand. The congruence rewrites the first factor via `heq = (hmul_comm s (W₀⁻¹·g₀·V₀) g₁⁻¹).trans (hcyc₁ s g₀ g₁).symm` and normalizes the second factor's associativity via `mul_assoc`.
+3. **Inner integral via `luscher_key_identity`** (`hInner`): rewrite the first factor to `χ_s(g₁⁻¹·(W₀⁻¹·g₀·V₀))` form (via `hcyc₁`), reorder factors (via `ring`), then apply `luscher_key_identity` with `t, s` and `A = V₁·g₀⁻¹·W₁⁻¹`, `B = W₀⁻¹·g₀·V₀`. Schur orthogonality forces `t = s`, giving `(1/d_s)·χ_s((V₁·g₀⁻¹·W₁⁻¹)·(W₀⁻¹·g₀·V₀))`.
+4. **Collapse the if** via `Finset.sum_eq_single`: the `t`-sum picks `t = s`.
+5. **Rewrite character via `hcyc₂`**: `χ_s((V₁·g₀⁻¹·W₁⁻¹)·(W₀⁻¹·g₀·V₀)) = χ_s(g₀⁻¹·(W₁⁻¹·W₀⁻¹)·g₀·(V₀·V₁))`.
+6. **Integrability for g₀ integral** (`hInt_g0`): uses `hInt_char_conj` with `M = W₁⁻¹·W₀⁻¹`, `N = V₀·V₁`.
+7. **Apply `conjugation_integral`** to each term: `∫ χ_s(g₀⁻¹·(W₁⁻¹·W₀⁻¹)·g₀·(V₀·V₁)) = (1/d_s)·χ_s(W₁⁻¹·W₀⁻¹)·χ_s(V₀·V₁)`.
+8. **Final simplification** via `push_cast; ring`: the combined coefficient is `(1/d_s)²`.
+
+**Key fix this session (the build error):** The `hInt_char` congruence originally used `simp only [heq, mul_assoc]` in a single step. This FAILED because `simp` applies `mul_assoc` (which normalizes to right-nested form `(a*b)*c → a*(b*c)`) BEFORE `heq` could match — `heq`'s LHS pattern `χ_s((W₀⁻¹·g₀·V₀)·g₁⁻¹)` is in left-nested form and no longer matches after `mul_assoc` rewrites it to `χ_s(W₀⁻¹·(g₀·(V₀·g₁⁻¹)))`. The fix was to split into two steps: `simp only [heq]` first (which beta-reduces the `(fun g => ...) g₁` redex AND applies `heq` before `mul_assoc` can interfere), then `simp only [mul_assoc]` (which normalizes the second factor's associativity, closing the goal). The lesson: when combining a specific rewrite (`heq`) with a normalizing simp lemma (`mul_assoc`), apply the specific rewrite FIRST so the normalizer doesn't destroy the match.
+
+**Significance:** This completes sub-step 3c (the L=2 cascade itself). The separable kernel `K(W,V) = Σ_s c_s · χ_s(W-product) · χ_s(V-product)` with `c_s = F(s,s)·(1/d_s)² ≥ 0` is the form needed for step 3d (`character_kernel_integral_nonneg`), which will show `∫∫ f(W)·f(V⁻¹)·K(W,V) ≥ 0`. The non-negativity comes from the non-negative coefficients `c_s ≥ 0` and the positive-definiteness of characters `χ_s`. This is the L=2 case where the reversal obstruction (§8.11.71 Finding 2) does NOT appear (reversal = cyclic for 2-element products by trace cyclicity).
+
+
+## §8.11.74 — separable_character_kernel_integral_nonneg lemma VERIFIED (session 95, 2026-08-13)
+
+**Status: VERIFIED.** Builds clean (exit 0), no sorries, `#print axioms` = `[propext, Classical.choice, Quot.sound]` (no `sorryAx`, no `characterOrthogonality` — this is a general PD-kernel result that only depends on `character_expansion_nonneg`). Located at `PositiveDefiniteIntegral.lean:1540`.
+
+**Lemma:** `separable_character_kernel_integral_nonneg`
+```
+0 ≤ ∫ W, ∫ V, (f W : ℂ) * (f V⁻¹ : ℂ) *
+  ∑ s, (coeff s : ℂ) * repCharacter (ρ s) W * repCharacter (ρ s) V ∂μ ∂μ
+```
+for unitary representations `ρ` of a compact group with normalized Haar measure `μ`, non-negative coefficients `coeff : ι → ℝ` with `coeff s ≥ 0`, and `θ = inv` measure-preserving.
+
+**This is sub-step 3d (the separable kernel non-negativity).** The kernel `K(W,V) = Σ_s coeff_s · χ_s(W) · χ_s(V)` is shown to give a non-negative integral `∫∫ f(W)·f(V⁻¹)·K(W,V) ≥ 0`.
+
+**Proof structure:**
+1. Define `K(W,V) = Σ_s coeff_s · χ_s(W) · χ_s(V)`.
+2. Rewrite `K` via `repCharacter_inv` (`χ_s(V) = conj(χ_s(V⁻¹))` for unitary reps): `K(W,V) = Σ_s coeff_s · χ_s(W) · conj(χ_s(V⁻¹))`. This is the Mercer-PD form `Σ_s a_s · Φ_s(W) · conj(Φ_s(θ V))` with `Φ_s = χ_s`, `θ = inv`, `a_s = coeff_s ≥ 0`.
+3. Apply `character_expansion_nonneg` with `Φ_s = repCharacter (ρ s)`, `θ = Inv.inv`, `a_s = coeff_s`.
+
+**Hypotheses:** Takes `hχ_meas` (AEStronglyMeasurable of each character) and `hfχ_int` (Integrable of `f · χ_s`) as explicit hypotheses, rather than deriving them from matrix-element measurability/integrability. This is a higher-level interface than `character_kernel_integral_nonneg` (which takes `hρ_meas`/`hfρ_int` for individual matrix elements and internally expands the trace). The character-level hypotheses are natural for the separable kernel setting.
+
+**Significance:** This completes sub-step 3d. Combined with `luscher_2site_cascade_separable` (sub-step 3c), the L=2 cascade + separable kernel non-negativity gives: the 2-site temporal cascade produces a separable kernel with non-negative coefficients, and the integral of `f(W)·f(V⁻¹)` against this kernel is non-negative. The remaining work is step 4 (factorization): connecting the cascade output (a function of W₀, W₁, V₀, V₁ — four individual link variables) to the separable kernel lemma (a function of single W, V — the products W₁⁻¹·W₀⁻¹ and V₀·V₁). This requires either a change of variables (integrating over the product) or a generalization of the separable kernel lemma to handle product arguments.
+
+
+## §8.11.75 — ADVERSARIAL SELF-CHECK: The §8.11.71 "reversal obstruction" is WRONG; the L=2 approach extends to ALL L (session 95, 2026-08-13)
+
+**Status: ANALYSIS (no code changes). This corrects a significant error in the §8.11.71 Finding 2 analysis.**
+
+### The error in §8.11.71
+
+The §8.11.71 analysis (Finding 2) claimed that for L≥3, the cascade produces a separable kernel `K(W,V) = Σ_s c_s · χ_s(W-product) · χ_s(V-product)` where W-product and V-product are related by REVERSAL, and that this reversal is an obstruction to positivity because `χ_s(g₁·...·g_L) ≠ χ_s(g_L·...·g₁)` for non-abelian groups.
+
+**This analysis was asking the wrong question.** It asked "does the cascade produce `χ_s(W·V)` (a single character of the product)?" — which requires reversal = cyclic. But the right question is "is the separable kernel `χ_s(W-product) · χ_s(V-product)` positive?" — which it is, **regardless of reversal**, by the argument below.
+
+### The corrected argument: the conj in the inner product gives |Fourier coefficient|²
+
+The transfer matrix positivity is `⟨g, Ug⟩ ≥ 0` where the inner product is:
+```
+⟨g, Ug⟩ = ∫∫ g(W) · conj(g(V)) · K(W,V) dW dV
+```
+Note the **conj(g(V))** — this is the standard L² inner product, NOT the reflection positivity form `f(W)·f(θV)`.
+
+The cascade produces:
+```
+K(W,V) = Σ_s c_s · χ_s(W-product) · χ_s(V-product)
+```
+where the W-product = W_{L-1}⁻¹·...·W_0⁻¹ = (W_0·...·W_{L-1})⁻¹ (INVERTED product), and V-product = V_0·...·V_{L-1} (non-inverted product).
+
+The key: `χ_s(W-product) = χ_s((W_0·...·W_{L-1})⁻¹) = conj(χ_s(W_0·...·W_{L-1}))` by `repCharacter_inv`. So the kernel is:
+```
+K(W,V) = Σ_s c_s · conj(χ_s(W_0·...·W_{L-1})) · χ_s(V_0·...·V_{L-1})
+```
+
+For real-valued g:
+```
+⟨g, Ug⟩ = Σ_s c_s · [∫ g(W) · conj(χ_s(W_0·...·W_{L-1})) dW] · [∫ conj(g(V)) · χ_s(V_0·...·V_{L-1}) dV]
+         = Σ_s c_s · conj(E_s) · E_s
+         = Σ_s c_s · |E_s|² ≥ 0
+```
+where `E_s = ∫ g(V) · χ_s(V_0·...·V_{L-1}) dV` (using g real so conj(g) = g, and conj of the first integral = integral of conj).
+
+**This works for ALL L, regardless of reversal.** The conj on the W-part (from the ⁻¹ in the plaquette orientation) combined with the conj(g(V)) in the inner product gives conj(E_s) · E_s = |E_s|². The reversal of the V-product relative to the W-product is irrelevant — the two factors are already conjugates of each other by the ⁻¹ structure, not by the product ordering.
+
+### Why the §8.11.71 analysis went wrong
+
+The §8.11.71 analysis computed the reflection positivity integral as:
+```
+I = Σ_s c_s · [∫ f(W) · conj(χ_s(W-product)) dW] · [∫ f(V) · conj(χ_s(V-product-reversed)) dV]
+```
+and noted that for L≥3, `χ_s(W-product) ≠ χ_s(V-product-reversed)` (reversal ≠ cyclic), so the two integrals are different and the product is NOT `|...|²`.
+
+The error: the second factor should NOT have `conj(χ_s(V-product-reversed))`. The V-product in the kernel is `χ_s(V_0·...·V_{L-1})` (NO conj — the V-links appear as-is in the plaquette, not inverted). The conj comes from the inner product `conj(g(V))`, not from the kernel. So the second factor is `∫ conj(g(V)) · χ_s(V_0·...·V_{L-1}) dV = E_s` (for real g), and the first factor is `conj(E_s)`. The product is `|E_s|²`, not `A_s · B_s` with different A, B.
+
+### Implications
+
+1. **The L=2 approach extends to ALL L.** The separable kernel `χ_s(W-product) · χ_s(V-product)` is positive for any L, by the |E_s|² argument. The reversal obstruction was a red herring.
+
+2. **The `separable_character_kernel_integral_nonneg` lemma (§8.11.74) does NOT directly apply to the cascade kernel.** That lemma uses the reflection positivity form `∫∫ f(W)·f(V⁻¹)·Σ c_s·χ_s(W)·χ_s(V)` (θ = inv). But the cascade kernel `conj(χ_s(W-product))·χ_s(V-product)` has the conj on the W-part (wrong side for θ = inv). The RIGHT approach uses the **inner product form** with `conj(K)`: the transfer matrix positivity is `⟨g, Tg⟩ = ∫∫ g(W)·conj(g(V))·conj(K(W,V)) dW dV`, and `conj(K(W,V)) = Σ_s c_s · χ_s(W-product) · conj(χ_s(V-product))` (the conj moves from W to V). This is the `character_expansion_nonneg` form with **θ = id** (not inv), `Φ_s = χ_s(product)`. The result: `Σ_s c_s · |E_s|² ≥ 0` where `E_s = ∫ g · χ_s(W-product) dW`. The formalization requires applying `character_expansion_nonneg` with `θ = id` on the product group `G^L`, with `Φ_s(W₀,...,W_{L-1}) = χ_s(W₀·...·W_{L-1})`.
+
+3. **The factorization step (step 4) is doable.** Expand `χ_s(W-product) = Σ_{a,b,...} ∏ (ρ_s(W_i))_{...}` and `χ_s(V-product) = Σ_{c,d,...} ∏ (ρ_s(V_i))_{...}` in matrix elements. The integral becomes `Σ_s c_s · Σ_{indices} conj(D) · D = Σ_s c_s · |Σ_{indices} D|² = Σ_s c_s · |∫ g · χ_s(product)|² ≥ 0`. This is exactly the `character_expansion_nonneg` mechanism on the product group with θ = id.
+
+4. **Remaining challenges:** (a) the star topology (temporal links shared across spatial directions, requiring CG decomposition — Finding 4), (b) the V^{1/2} positivity (spatial plaquettes, by Schur product), (c) the algebraic fact ABA ≥ 0 for A self-adjoint, B positive, (d) the formalization must use the **inner product form** (θ = id, conj(K)), NOT the reflection positivity form (θ = inv) — the `separable_character_kernel_integral_nonneg` lemma (θ = inv) is valid but does NOT match the cascade kernel. These are separate from the reversal issue, which is now resolved.
+
+### Assessment
+
+**The current approach is NOT a dead end.** It is more viable than the §8.11.71 analysis suggested. The reversal obstruction was the main identified obstacle, and it turns out to be non-existent. The remaining challenges (star topology, V^{1/2} positivity, factorization formalization) are substantial but do not appear to be fundamental mathematical obstructions.
+
+
+## §8.11.76 — Step 4 (factorization) VERIFIED: luscher_2site_factorization_nonneg (session 96, 2026-08-13)
+
+**Status: VERIFIED.** Builds clean (exit 0), no sorries, `#print axioms` = `[propext, Classical.choice, Quot.sound]` (no `sorryAx`, no `characterOrthogonality` — this is a general PD-kernel result that only depends on `character_expansion_nonneg`). Located at `PositiveDefiniteIntegral.lean:1608`.
+
+**Lemma:** `luscher_2site_factorization_nonneg`
+```
+0 ≤ ∫ W, ∫ V, (f W : ℂ) * (f V : ℂ) *
+  ∑ s, (F s s : ℂ) * ((1 / dims s : ℂ)^2 *
+    repCharacter (ρ s) (W.1 * W.2) * conj (repCharacter (ρ s) (V.1 * V.2)))
+  ∂(μ.prod μ) ∂(μ.prod μ)
+```
+
+for a compact group `G` with normalized Haar measure `μ`, representations `ρ`, non-negative coefficients `F : ι → ι → ℝ` with `F s t ≥ 0`, and a real-valued test function `f : G × G → ℝ`.
+
+**This is step 4 (factorization).** The 2-site cascade produces the separable kernel `K(W,V) = Σ_s c_s · χ_s(W₁⁻¹·W₀⁻¹) · χ_s(V₀·V₁)` with `c_s = F(s,s)·(1/d_s)² ≥ 0` (from `luscher_2site_cascade_separable`). By `repCharacter_inv`, `χ_s(W₁⁻¹·W₀⁻¹) = conj(χ_s(W₀·W₁))`, so `conj(K(W,V)) = Σ_s c_s · χ_s(W₀·W₁) · conj(χ_s(V₀·V₁))`. This is the `character_expansion_nonneg` form with **θ = id** (not inv), `Φ_s(W₀,W₁) = χ_s(W₀·W₁)`, `a_s = c_s ≥ 0`, on the product group `G² = G × G` with product measure `μ × μ`.
+
+**Proof structure:**
+1. Define the coefficient `a_s = F s s * (1 / (dims s : ℝ))^2` and show `0 ≤ a_s` (from `hF` and `sq_nonneg`).
+2. Apply `character_expansion_nonneg` with:
+   - `μ = ν = μ.prod μ` (product measure on `G²`)
+   - `θ = id`, `hθ = MeasurePreserving.id`
+   - `a = fun s => F s s * (1 / (dims s : ℝ))^2`
+   - `Φ = fun s W => repCharacter (ρ s) (W.1 * W.2)`
+   - `K = fun W V => [explicit sum from the statement]` (definitionally equal to the goal)
+   - `hK = fun W V => by apply Finset.sum_congr; intro s _; push_cast; simp only [id]; ring` (shows `K W V = Σ_s (a_s : ℂ) * (Φ_s W * conj(Φ_s V))`)
+3. The conclusion of `character_expansion_nonneg` has `K W V`, which beta-reduces to the explicit sum in the statement, matching the goal.
+
+**Key fix:** The `hK` congruence required `simp only [id]` before `ring` to simplify `(id V).1 * (id V).2` to `V.1 * V.2` (the `id` from `Φ_s(θ V) = Φ_s(id V)` doesn't reduce automatically inside `ring`).
+
+**Hypotheses:** Takes `hΦ_meas` (AEStronglyMeasurable of `χ_s(W₀·W₁)` on `G²`), `hf_meas` (AEStronglyMeasurable of `f` on `G²`), and `hfΦ_int` (Integrable of `f · χ_s(W₀·W₁)` on `G²`) as explicit hypotheses. These are character-level hypotheses on the product group, analogous to `separable_character_kernel_integral_nonneg` (which takes character-level hypotheses on `G`). The derivation of these from matrix-element measurability (expanding `χ_s(W₀·W₁) = Σ_{a,b} (ρ_s W₀)_{ab} · (ρ_s W₁)_{ba}` and using `AEStronglyMeasurable.comp_quasiMeasurePreserving` with `quasiMeasurePreserving_fst`/`quasiMeasurePreserving_snd`) is deferred to a helper lemma.
+
+**Significance:** This completes step 4 (factorization). The conj(K) form of the cascade kernel is a positive-definite kernel on the product group `G²`, and the integral `∫∫ f(W)·f(V)·conj(K(W,V)) d(μ×μ) d(μ×μ) = Σ_s c_s · |E_s|² ≥ 0` where `E_s = ∫ f(W)·χ_s(W₀·W₁) d(μ×μ)`. This is the **inner-product form** (θ = id, conj(K)), NOT the reflection-positivity form (θ = inv) — the `separable_character_kernel_integral_nonneg` lemma (θ = inv) is valid but does NOT match the cascade kernel (see §8.11.75).
+
+**Remaining work:**
+- **Helper lemma:** Derive `hΦ_meas` from `hρ_meas` (individual matrix-element measurability) via the trace expansion + product-measure lifting. This requires `hρ_meas : ∀ s (a b : Fin (dims s)), AEStronglyMeasurable (fun g => (ρ s g) a b) μ` as a new hypothesis (not directly available from `characterOrthogonality`, which gives integrability of products, not individual elements — see §8.11.76 analysis below).
+- **Step 5:** Connect the factorization to the transfer matrix inner product `⟨g, Tg⟩ = ∫∫ g(W)·conj(g(V))·conj(K(W,V)) dW dV`. For real-valued `g`, `conj(g(V)) = g(V)`, so this matches the factorization integral.
+- **Step 6:** Conclude `I ≥ 0` and replace `transferMatrixPositivity_axiom` with the proved lemma (axioms 6→5).
+
+**Note on measurability:** The `characterOrthogonality` axiom provides `hInt : Integrable (fun g => (ρ r g) i j * conj ((ρ s g) k l)) μ` for all matrix-element products. This gives `AEStronglyMeasurable` of products, but NOT of individual matrix elements (counter-example: `f = e^{iθ}` with non-measurable `θ` has `|f|² = 1` measurable but `f` not measurable). So `hρ_meas` (individual matrix-element measurability) must be taken as a separate hypothesis. In the Peter-Weyl setting, matrix elements of continuous representations are continuous, hence Borel measurable — this is a natural hypothesis.
+
+## §8.11.77 — Helper lemmas VERIFIED: hΦ_meas and hfΦ_int from hρ_meas (session 97, 2026-08-13)
+
+**Status: VERIFIED.** Three helper lemmas build clean (exit 0), no sorries, `#print axioms` = `[propext, Classical.choice, Quot.sound]` for all three (no `sorryAx`, no `characterOrthogonality`). Located in `PositiveDefiniteIntegral.lean` lines 1586–1680.
+
+### Lemma 1: `repCharacter_trace_expand_prod` (line 1586)
+```
+repCharacter ρ (W₀ * W₁) = ∑ a : Fin n, ∑ b : Fin n, (ρ W₀) a b * (ρ W₁) b a
+```
+Plain trace expansion (no unitarity/inversion), via `MonoidHom.map_mul` + `Matrix.trace` + `Matrix.mul_apply`. This is the non-unitary version of `repCharacter_trace_expand` (which uses `V⁻¹` and unitarity to get `conj`).
+
+### Lemma 2: `repCharacter_product_aestronglyMeasurable` (line 1606)
+```
+hρ_meas : ∀ s (a b : Fin (dims s)), AEStronglyMeasurable (fun g => (ρ s g) a b) μ
+⊢ AEStronglyMeasurable (fun W => repCharacter (ρ s) (W.1 * W.2)) (μ.prod μ)
+```
+Derives `hΦ_meas` from `hρ_meas`. Proof:
+1. Lift each matrix element to `G × G` via `AEStronglyMeasurable.comp_quasiMeasurePreserving` with `Measure.quasiMeasurePreserving_fst` (for `W.1`) and `Measure.quasiMeasurePreserving_snd` (for `W.2`).
+2. Products via `AEStronglyMeasurable.mul`.
+3. Finite sums via `Finset.aestronglyMeasurable_fun_sum` (the `@[to_additive]` of `Finset.aestronglyMeasurable_fun_prod`).
+4. Rewrite to character form via `AEStronglyMeasurable.congr` + `repCharacter_trace_expand_prod`.
+
+**Key Mathlib API:** `Measure.quasiMeasurePreserving_fst` / `Measure.quasiMeasurePreserving_snd` (in `MeasureTheory.Measure` namespace, NOT `quasiMeasurePreserving_fst` directly — `MeasureTheory` is opened but `Measure` is not). `Finset.aestronglyMeasurable_fun_sum` (much faster than `Finset.sum_induction` which caused `whnf` timeouts).
+
+### Lemma 3: `repCharacter_product_integrable` (line 1651)
+```
+hU : ∀ i, IsUnitaryRepresentation (ρ i)
+hf_int : Integrable (fun W => (f W : ℂ)) (μ.prod μ)
+⊢ Integrable (fun W => (f W : ℂ) * repCharacter (ρ s) (W.1 * W.2)) (μ.prod μ)
+```
+Derives `hfΦ_int` from `hf_int` + unitarity. Proof:
+1. Measurability: `hf_int.aestronglyMeasurable.mul hΦ_meas` (using Lemma 2).
+2. Dominating function: `(Integrable.norm hf_int).const_mul (dims s : ℝ)` gives `Integrable (fun W => (dims s : ℝ) * ‖(f W : ℂ)‖) (μ.prod μ)`.
+3. Norm bound: `‖f · χ_s‖ ≤ ‖f‖ · ‖χ_s‖ ≤ ‖f‖ · dims s = dims s · ‖f‖` via `norm_mul_le` + `repCharacter_norm_le_dim` (existing lemma in `PositiveDefinite.lean:812`).
+4. Conclude via `Integrable.mono'`.
+
+**Significance:** These three lemmas close the "helper lemma" item from §8.11.76. The character-level hypotheses `hΦ_meas` and `hfΦ_int` of `luscher_2site_factorization_nonneg` can now be derived from the more primitive `hρ_meas` (matrix-element measurability) + `hU` (unitarity) + `hf_int` (integrability of `f`). The `hρ_meas` hypothesis is natural in the Peter-Weyl setting (continuous reps → Borel measurable matrix elements) and is NOT derivable from `characterOrthogonality` (which gives product integrability, not individual-element measurability — see §8.11.76).
+
+**Remaining work:**
+- **Step 5:** Connect the factorization to the transfer matrix inner product `⟨g, Tg⟩ = ∫∫ g(W)·conj(g(V))·conj(K(W,V)) dW dV`. For real-valued `g`, `conj(g(V)) = g(V)`, so this matches the factorization integral.
+- **Step 6:** Conclude `I ≥ 0` and replace `transferMatrixPositivity_axiom` with the proved lemma (axioms 6→5).
+
+## §8.11.78 — STEP 5 deep analysis: connecting the cascade to the transfer matrix (session 98, 2026-08-13)
+
+**Status: ANALYSIS (no code changes). This section documents a thorough investigation of the STEP 5 connection and identifies the key formalization challenges.**
+
+### Adversarial self-check (session 98)
+
+Per the standing instruction to periodically steelman the dead-end case, this session examined whether the STEP 5/6 approach (cascade factorization → transfer matrix positivity → axiom removal) could be a dead end.
+
+**Concern 1: The 2-site cascade only handles L=2, T=3.** The `luscher_2site_cascade_separable` integrates out 2 temporal links at 2 spatial positions — exactly the transfer matrix for T=3 (one negative time slice), L=2. For general odd T, the transfer matrix integrates over (T-1)/2 negative time slices, and for general L, over L spatial positions. The 2-site cascade is a building block, not the full transfer matrix.
+
+**Assessment:** The §8.11.75 analysis confirms the |E_s|² argument works for ALL L (the reversal obstruction was a red herring). The L-generalization requires applying `character_expansion_nonneg` with `X = G^L` and `Φ_s(W₀,...,W_{L-1}) = χ_s(W₀·...·W_{L-1})` — the same mechanism, on a larger product group. The T-generalization requires iterating the cascade over (T-1)/2 time steps; each step multiplies the coefficient by `F(s,s)·(1/d_s)² ≥ 0`, preserving non-negativity. These are substantial generalizations but NOT fundamental obstructions.
+
+**Concern 2: The shared-variable structure.** The transfer matrix `T` has a shared interface: `(Tg)(u) = ∫_{V⁺} g(reflectToPosInterface(V⁺, u⁰)) · exp(-β·(...)) dμ⁺(V⁺)`. The interface links `u⁰` are part of `u` and also appear in `reflectToPosInterface(V⁺, u⁰)`. This shared structure means `luscher_2site_factorization_nonneg` (which uses the non-shared `character_expansion_nonneg` on `G × G`) does NOT directly apply — the W and V configs share the interface links.
+
+**Assessment:** This is the most significant formalization challenge. Two approaches:
+- **(a) Cascade approach:** Integrate out ALL temporal links (including temporal interface links u⁰_t), collapsing the temporal part of `Ψ_w` to trivial via Schur orthogonality. The spatial interface links u⁰_s remain shared. The cascade kernel `Σ_s c_s · conj(χ_s(W-product)) · χ_s(V-product)` involves the product of ALL spatial links (including u⁰_s), so the shared structure is absorbed into the product. The `character_expansion_nonneg` then applies on the full spatial link group `G = SU(N)^{spatial}` with `Φ_s(W) = χ_s(W-product)`. The key: the "product" `W₀·...·W_{L-1}` includes the spatial interface links, so they're part of the character argument, not a separate shared variable.
+- **(b) Shared-variable approach:** Use `character_expansion_nonneg_shared` directly. But this requires `a(u⁰, w) = F(w) · Ψ_w(u⁰) ≥ 0`, which FAILS because `Ψ_w(u⁰)` is a product of characters (complex in general). So this approach requires the triple product expansion (CG decomposition) to resolve the spatial interface links — Path B of §8.11.53.
+
+**Concern 3: The Lüscher decomposition T = V^{1/2}·U·V^{1/2}.** The transfer matrix kernel involves `exp(-β·(S_pos(u)/2 + S_neg(U⁻)/2 + S_int(u, U⁻)))`. The Lüscher decomposition factors this into:
+- `V^{1/2}(u) = exp(-β·S_spatial(u)/2)` (spatial plaquette Boltzmann, the "hopping" operator)
+- `U(u, v)` = temporal evolution (the cascade kernel, after integrating out temporal links)
+
+The `V^{1/2}` factors are absorbed into the test function: `f(u) = g(u)·V^{1/2}(u)`. Then `⟨g, Tg⟩ = ∫∫ f(u)·f(v)·U(u,v) dμ dμ`, and `U` is the cascade kernel.
+
+**Assessment:** The Lüscher decomposition is NOT yet formalized. It requires:
+1. Factoring the Boltzmann factor into spatial plaquette factors (V^{1/2}) and temporal plaquette factors (U).
+2. The spatial factors are PD (`fullBoltzmannPD` proves the full Boltzmann is PD; the spatial part is PD by Schur product).
+3. The temporal factors, after integrating out temporal links, give the cascade kernel.
+4. The algebraic fact: `⟨g, V^{1/2}·U·V^{1/2}·g⟩ = ⟨V^{1/2}g, U·V^{1/2}g⟩ = ∫∫ f·f·U ≥ 0` when `U` is a PD kernel.
+
+This is a significant formalization effort but uses existing infrastructure (`fullBoltzmannPD`, `luscher_key_identity`, `plaquetteBoltzmannPD_inv`).
+
+### The key mathematical identity
+
+The transfer matrix positivity reduces to:
+```
+⟨g, Tg⟩ = ∫∫ f(W)·f(V)·conj(K_cascade(W,V)) dW dV = Σ_s c_s · |E_s|² ≥ 0
+```
+where:
+- `f(W) = g(W)·V^{1/2}(W)` (test function with spatial Boltzmann absorbed)
+- `K_cascade(W,V) = Σ_s c_s · conj(χ_s(W-product)) · χ_s(V-product)` (cascade kernel)
+- `conj(K_cascade(W,V)) = Σ_s c_s · χ_s(W-product) · conj(χ_s(V-product))` (the form in `luscher_2site_factorization_nonneg`)
+- `c_s = F(s,s)·(1/d_s)² ≥ 0` (cascade coefficient, from Schur orthogonality)
+- `E_s = ∫ f(W)·χ_s(W-product) dW` (Fourier coefficient)
+
+The `luscher_2site_factorization_nonneg` lemma proves exactly `0 ≤ ∫∫ f·f·conj(K_cascade)` for the 2-site case (L=2, T=3). The general case requires:
+1. The L-site cascade (generalizing `luscher_2site_cascade_separable` to L spatial sites).
+2. The multi-step cascade (iterating over (T-1)/2 time steps).
+3. The Lüscher decomposition (factoring V^{1/2} from the transfer matrix kernel).
+4. Applying `character_expansion_nonneg` on the full spatial link group.
+
+### Existing infrastructure for STEP 5
+
+| Lemma | File:Line | Role |
+|-------|----------|------|
+| `luscher_key_identity` | PositiveDefinite.lean:1037 | Single-link Schur orthogonality (cascade building block) |
+| `luscher_2site_cascade_separable` | PositiveDefinite.lean:2857 | 2-site cascade (L=2, T=3) |
+| `luscher_2site_factorization_nonneg` | PositiveDefiniteIntegral.lean:1707 | Non-negativity of 2-site cascade integral |
+| `character_expansion_nonneg` | PositiveDefiniteIntegral.lean:1147 | General non-negativity (θ=id, separable kernel) |
+| `character_expansion_nonneg_shared` | PositiveDefiniteIntegral.lean:1197 | Shared-variable non-negativity |
+| `interface_kernel_character_expansion` | PeterWeyl.lean:1636 | Interface kernel separable expansion (same weight, conj V⁺) |
+| `interface_boltzmann_character_expansion` | ReflectionPositivity.lean:1687 | Interface Boltzmann expansion (fullReflect form) |
+| `osG_thetaG_eq_char_expansion_pointwise` | ReflectionPositivity.lean:3817 | Pointwise expansion of osG·osG(θU) (Step 2, DONE) |
+| `integral_G_thetaG_eq_inner_g_Tg` | TransferMatrix.lean:5149 | ∫G·G(θU) = ⟨g,Tg⟩ (key identity) |
+| `transfer_matrix_fubini_integrated_pull_fullReflect` | TransferMatrix.lean:6005 | Character expansion of ⟨g,Tg⟩ (fullReflect form — WRONG form per §8.11.75) |
+| `fullBoltzmannPD` | ReflectionPositivity.lean:1768 | Full Boltzmann factor is PD |
+| `plaquetteBoltzmannPD_inv` | PeterWeyl.lean | Single plaquette Boltzmann is PD |
+| `repCharacter_product_aestronglyMeasurable` | PositiveDefiniteIntegral.lean:1606 | hΦ_meas from hρ_meas (helper, DONE) |
+| `repCharacter_product_integrable` | PositiveDefiniteIntegral.lean:1651 | hfΦ_int from hf_int + hU (helper, DONE) |
+
+### Formalization path for STEP 5
+
+**Approach A (cascade, recommended by §8.11.75):**
+1. **L-site cascade lemma:** Generalize `luscher_2site_cascade_separable` to L spatial sites. The cascade integrates out L temporal links (one per spatial position) and produces `Σ_s c_s · conj(χ_s(W₀·...·W_{L-1})) · χ_s(V₀·...·V_{L-1})` with `c_s ≥ 0`. This is an iteration of `luscher_key_identity` across L sites (Fubini + Schur orthogonality).
+2. **Multi-step cascade:** For T > 3, iterate the single-step cascade over (T-1)/2 time steps. Each step multiplies the coefficient by `F(s,s)·(1/d_s)² ≥ 0`.
+3. **Lüscher decomposition:** Factor the transfer matrix kernel `exp(-β·(S_pos/2 + S_neg/2 + S_int))` into `V^{1/2}(W) · U(W,V) · V^{1/2}(V)` where `U` is the cascade kernel and `V^{1/2}` is the spatial Boltzmann factor. Absorb `V^{1/2}` into `f = g·V^{1/2}`.
+4. **Apply non-negativity:** Use `character_expansion_nonneg` on the full spatial link group `G = SU(N)^{spatial}` with `Φ_s(W) = χ_s(W₀·...·W_{L-1})` and `a_s = c_s ≥ 0`. The helper lemmas (`repCharacter_product_aestronglyMeasurable`, `repCharacter_product_integrable`) generalize from G² to G^L.
+5. **Conclude:** `⟨g, Tg⟩ = ∫∫ f·f·conj(K_cascade) = Σ_s c_s · |E_s|² ≥ 0`.
+
+**Approach B (triple product, Path B of §8.11.53):**
+1. Connect `interface_kernel_character_expansion` to the lattice plaquettes (Step 1 of Path B).
+2. Substitute into the integral, getting `C · Σ_w F(w) · ∫_{u⁰} Ψ_w(u⁰) · |A_w(u⁰)|² dμ⁰`.
+3. Integrate out temporal interface links u⁰_t (collapse Ψ_w to trivial on temporal).
+4. Resolve spatial interface triple product via `triple_product_character_matrix_integral` (CG decomposition).
+5. Apply `reflection_positivity_reorganization` to conclude ≥ 0.
+
+**Assessment:** Approach A is mathematically cleaner (the |E_s|² argument is direct) but requires the L-site cascade and the Lüscher decomposition. Approach B uses existing infrastructure but requires the triple product expansion (more complex). The §8.11.75 analysis recommends Approach A.
+
+### Key challenge RESOLVED: the shared interface links and `character_expansion_nonneg_shared`
+
+The transfer matrix has a shared interface structure: the spatial interface links `u⁰_s` appear in both the `u` (positive+interface) and `v` (reflected negative = positive+interface) configs. This means `luscher_2site_factorization_nonneg` (which uses the non-shared `character_expansion_nonneg` on `G × G` with independent W, V) does NOT directly apply.
+
+**Resolution:** The `character_expansion_nonneg_shared` lemma (PositiveDefiniteIntegral.lean:1197) IS the right lemma. It handles the shared structure:
+```
+0 ≤ ∫ z, ∫ x, ∫ y, (g x z : ℂ) * (g y z : ℂ) * K x y z ∂μ ∂μ ∂ν
+```
+where `K x y z = Σ_i (a z i : ℂ) * (Φ i z x * conj (Φ i z y))` with `a z i ≥ 0`.
+
+The key insight: after the cascade (integrating out temporal links), the transfer matrix kernel has the form:
+```
+K(U⁺, V⁺, u⁰_s) = Σ_s c_s · χ_s(u⁰_s-product · U⁺-product) · conj(χ_s(u⁰_s-product · V⁺-product))
+```
+where:
+- `c_s = F(s,s) · (1/d_s)² ≥ 0` is a **CONSTANT** (from Schur orthogonality, independent of the spatial links)
+- `Φ_s(u⁰_s, U⁺) = χ_s(u⁰_s-product · U⁺-product)` depends on the shared variable `u⁰_s`
+
+Matching to `character_expansion_nonneg_shared`:
+- `z = u⁰_s` (spatial interface links, shared), `ν = μ⁰_s` (interface measure)
+- `x = U⁺` (positive spatial links), `y = V⁺` (reflected negative spatial links), `μ = μ⁺` (positive measure)
+- `g(x, z) = g(U⁺, u⁰_s)` (test function)
+- `Φ_s(z, x) = χ_s(z-product · x-product)` (character of the product, depends on z)
+- `a(z, s) = c_s ≥ 0` (CONSTANT, so `∀ z i, 0 ≤ a z i` is satisfied!)
+
+The crucial point: the cascade coefficient `c_s` is a constant (from Schur orthogonality `δ_{st} · (1/d_s)`), NOT depending on the shared variable `u⁰_s`. So `a(z, s) = c_s ≥ 0` is satisfied, and `character_expansion_nonneg_shared` applies directly.
+
+This resolves the shared-variable concern from the adversarial self-check. The `luscher_2site_factorization_nonneg` (non-shared) is a building block that demonstrates the |E_s|² mechanism, but the actual transfer matrix application needs `character_expansion_nonneg_shared` (shared). The temporal interface links `u⁰_t` are integrated out by the cascade (collapsing to trivial via Schur orthogonality), leaving only the spatial interface links `u⁰_s` as the shared variable.
+
+### Revised formalization path for STEP 5
+
+1. **Cascade the temporal links:** Integrate out ALL temporal links (temporal bulk + temporal interface) via Schur orthogonality (`luscher_key_identity`). This produces the cascade kernel `Σ_s c_s · conj(χ_s(W-product)) · χ_s(V-product)` with `c_s ≥ 0` constant, where `W-product` and `V-product` include ALL spatial links (positive, negative reflected, and spatial interface).
+2. **Identify the shared structure:** The spatial interface links `u⁰_s` are shared between W and V. Decompose `W = (U⁺, u⁰_s)` and `V = (V⁺, u⁰_s)` with shared `u⁰_s`.
+3. **Apply `character_expansion_nonneg_shared`:** With `z = u⁰_s`, `x = U⁺`, `y = V⁺`, `Φ_s(z, x) = χ_s(z-product · x-product)`, `a(z, s) = c_s ≥ 0`. The helper lemmas (`repCharacter_product_aestronglyMeasurable`, `repCharacter_product_integrable`) need to be generalized to handle the `Φ_s(z, x) = χ_s(z-product · x-product)` form (product of two group elements, one shared).
+4. **Conclude:** `⟨g, Tg⟩ = ∫_{u⁰_s} ∫_{U⁺} ∫_{V⁺} g·g·K ≥ 0` by `character_expansion_nonneg_shared`.
+
+### Conclusion
+
+The STEP 5 approach is NOT a dead end. The math is correct (the |E_s|² argument works for all L and T, even with shared spatial interface links, because the cascade coefficient is constant). The key lemma is `character_expansion_nonneg_shared` (not `luscher_2site_factorization_nonneg`). The key missing lemmas are:
+1. **Cascade for the transfer matrix kernel** (integrating out temporal links to get the separable form with constant coefficients).
+2. **Lüscher decomposition** (factoring V^{1/2} from the transfer matrix kernel, absorbing into the test function).
+3. **Measurability/integrability helpers** for `Φ_s(z, x) = χ_s(z-product · x-product)` (generalizing the existing helpers to the shared-variable form).
+
+The next session should start with the cascade for the transfer matrix kernel (step 1), as it's the most direct application of existing infrastructure (`luscher_key_identity`, `interface_boltzmann_character_expansion`).
+
+## §8.11.79 — STEP 5 progress: shared-variable helpers + non-negativity lemma (session 99, 2026-08-13)
+
+**Status: VERIFIED. Five new lemmas compiled, `#print axioms` = [propext, Classical.choice, Quot.sound] (no sorryAx). Build GREEN.**
+
+> **Update (session 100, 2026-08-13):** The connecting lemma `cascade_shared_kernel_form`
+> (item 5 below) was BROKEN in session 99 — it used `rw [mul_inv]`, but Mathlib's `mul_inv`
+> lives in a commutative context and does not apply to a general `Group G`. The correct
+> identity in a non-abelian group is `mul_inv_rev : (a * b)⁻¹ = b⁻¹ * a⁻¹`, so
+> `x⁻¹ * z⁻¹ = (z * x)⁻¹` holds via `(mul_inv_rev z x).symm`. Fixed; now VERIFIED with
+> `#print axioms` = [propext, Classical.choice, Quot.sound] (no sorryAx).
+
+### What was done
+
+Session 99 implemented the **measurability/integrability helpers** (step 3 of the revised formalization path in §8.11.78) and the **shared-variable non-negativity lemma** (step 4), which is the pure group-theoretic core of STEP 5.
+
+The three new lemmas, all in `PositiveDefiniteIntegral.lean` (after `luscher_2site_factorization_nonneg`, before `end YangMills`):
+
+1. **`repCharacter_leftmul_aestronglyMeasurable`** (line ~1770): For fixed `z ∈ G`, `fun x => χ_s(z * x)` is `AEStronglyMeasurable` w.r.t. `μ`. Proof: expand `χ_s(z * x) = ∑_{a,b} (ρ_s z)_{ab} · (ρ_s x)_{ba}` via `repCharacter_trace_expand_prod`. Each `(ρ_s z)_{ab}` is a constant (z fixed), so `AEStronglyMeasurable.const_mul` lifts it; `(ρ_s x)_{ba}` is AESM from `hρ_meas`. Finite sums via `Finset.aestronglyMeasurable_fun_sum`. Rewrite to character form via `.congr`.
+
+2. **`repCharacter_leftmul_integrable`** (line ~1810): For fixed `z ∈ G`, if `g(·, z)` is integrable, then `g(·, z) · χ_s(z · ·)` is integrable. Proof: `‖χ_s(z * x)‖ ≤ dims s` (unitarity, `repCharacter_norm_le_dim`), so `‖g · χ_s‖ ≤ dims s · ‖g‖`, apply `Integrable.mono'`.
+
+3. **`shared_cascade_factorization_nonneg`** (line ~1850): The main lemma. Given non-negative constant coefficients `c_s ≥ 0` and a real-valued test function `g : G → G → ℝ` (where `g x z` depends on positive links `x` and shared interface links `z`):
+   ```
+   0 ≤ ∫_z ∫_x ∫_y g(x,z) · g(y,z) · Σ_s c_s · χ_s(z·x) · conj(χ_s(z·y)) dμ dμ dμ
+   ```
+   Proof: direct application of `character_expansion_nonneg_shared` with `a(z, s) = c_s` (constant, so `∀ z i, 0 ≤ a z i` is satisfied) and `Φ_s(z, x) = χ_s(z * x)`. The measurability and integrability hypotheses are discharged by the two helper lemmas above.
+
+4. **`shared_cascade_factorization_nonneg_conj`** (line ~1930): The conjugated-form variant. The cascade `luscher_2site_cascade_separable` produces `Σ_s c_s · χ_s(W₁⁻¹·W₀⁻¹) · χ_s(V₀·V₁)`. When the shared interface link appears in both W and V (W₀ = V₀ = z), this becomes `Σ_s c_s · conj(χ_s(z·x)) · χ_s(z·y)` (using `χ_s(x⁻¹·z⁻¹) = conj(χ_s(z·x))`). This is the CONJUGATED form. The proof uses `character_expansion_nonneg_shared` with `Φ_s(z, x) = conj(χ_s(z·x))` (measurability via `AEStronglyMeasurable.star`, integrability via `‖conj(χ_s(g))‖ = ‖χ_s(g)‖ ≤ dims s` by `Complex.norm_conj`). The `hK` proof requires `Complex.conj_conj` to simplify `conj(conj(χ_s(z·y))) = χ_s(z·y)`.
+
+5. **`cascade_shared_kernel_form`** (line ~2002): The connecting lemma showing the 2-site cascade result `Σ_s F(s,s)·(1/d_s)² · χ_s(x⁻¹·z⁻¹) · χ_s(z·y)` equals the conj-form `Σ_s (F(s,s)·(1/d_s)²) · conj(χ_s(z·x)) · χ_s(z·y)`. The key step is `χ_s(x⁻¹·z⁻¹) = χ_s((z·x)⁻¹) = conj(χ_s(z·x))`, using `mul_inv_rev` (NOT `mul_inv`, which is commutative-only) for `x⁻¹·z⁻¹ = (z·x)⁻¹`, then `repCharacter_inv`. VERIFIED (session 100 fix).
+
+### Key design decisions
+
+- **`const_mul` instead of `comp_quasiMeasurePreserving`**: The existing `repCharacter_product_aestronglyMeasurable` lifts both factors of `χ_s(W.1 * W.2)` from the product group `G × G` via `comp_quasiMeasurePreserving` (fst/snd projections). The shared-variable form `χ_s(z * x)` has `z` fixed, so the first factor `(ρ_s z)_{ab}` is a constant — lifted via `AEStronglyMeasurable.const_mul` instead. This is the key structural difference.
+
+- **Constant coefficient `a(z, s) = c_s`**: The `character_expansion_nonneg_shared` hypothesis is `∀ z i, 0 ≤ a z i`. By making `a` constant in `z` (i.e., `a z s = c s`), this reduces to `∀ s, 0 ≤ c s`, which is the natural hypothesis from the cascade (Schur orthogonality gives `c_s = F(s,s) · (1/d_s)² ≥ 0`). This is the crucial insight from §8.11.78: the cascade coefficient is constant, NOT depending on the shared variable.
+
+- **`rfl` for `hK`**: The kernel `K` in the statement IS the expansion `Σ_s c_s · χ_s(z·x) · conj(χ_s(z·y))`, so `hK` (which says `K = Σ_i a(z,i) · Φ_i(z,x) · conj(Φ_i(z,y))`) is provable by `rfl` after beta-reduction. No `push_cast` or `ring` needed.
+
+### What remains for STEP 5
+
+The pure group-theoretic non-negativity is now DONE (`shared_cascade_factorization_nonneg`). The remaining work connects this to the actual lattice transfer matrix:
+
+1. **Cascade the temporal links** (step 1 of §8.11.78): Integrate out ALL temporal links via Schur orthogonality (`luscher_key_identity`, `integral_repCharacter_trivial`). This produces the cascade kernel `Σ_s c_s · χ_s(z-product · x-product) · conj(χ_s(z-product · y-product))` with `c_s ≥ 0` constant. The temporal interface links `u⁰_t` collapse to trivial (via `integral_repCharacter_trivial`), leaving only spatial interface links `u⁰_s` as the shared variable `z`.
+
+2. **Lüscher decomposition** (step 2 of §8.11.78): Factor the transfer matrix kernel `exp(-β·(S_pos/2 + S_neg/2 + S_int))` into `V^{1/2}(x) · U(x,y,z) · V^{1/2}(y)` where `U` is the cascade kernel and `V^{1/2}` is the spatial Boltzmann factor. Absorb `V^{1/2}` into `f = g · V^{1/2}`.
+
+3. **Connect to the lattice**: Match the lattice Boltzmann factor (product of plaquette contributions) to the cascade structure. This requires understanding the specific plaquette orientations and link structure of the transfer matrix.
+
+4. **Apply `shared_cascade_factorization_nonneg`**: With `z = u⁰_s`, `x = U⁺`, `y = V⁺`, `c_s` = cascade coefficient, `g(x, z) = f(x, z)` (test function with V^{1/2} absorbed). Conclude `⟨g, Tg⟩ ≥ 0`.
+
+### STEP 6 (after STEP 5)
+
+Use `integral_G_thetaG_eq_inner_g_Tg` to convert `⟨g, Tg⟩ ≥ 0` to `∫ G·G(θU) ≥ 0`, then replace `transferMatrixPositivity_axiom` with the proved lemma (axioms 6→5).
+
+### No new mathlib candidates this session
+
+The three new lemmas are specific to the representation theory / character expansion setting (they use `repCharacter`, `IsUnitaryRepresentation`, etc.). The general lemma `character_expansion_nonneg_shared` (which `shared_cascade_factorization_nonneg` applies) was already identified as a mathlib candidate in a previous session.
+
+## §8.11.80 — Adversarial self-check + key obstruction: link-level vs plaquette-level expansion (session 101, 2026-08-13)
+
+**Status: ANALYSIS ONLY. No new verified lemmas this session. Codebase GREEN (unchanged from session 100).**
+
+### Adversarial self-check (steelmanning the dead-end case)
+
+At the start of this session, before resuming STEP 5, I steelmanned the case that the current scaffolding strategy (cascade → `shared_cascade_factorization_nonneg`) might NOT lead to transfer matrix positivity. The strongest objection:
+
+> The existing `interface_boltzmann_character_expansion` (ReflectionPositivity.lean:1687) and `transfer_matrix_fubini_character_expansion` (TransferMatrix.lean:2922) expand the interface Boltzmann factor at the **link level** — each interface link `l` gets its own character `χ_{w(l)}(interfaceLinkVar U l)`, with a multi-index `w : InterfaceLink T L → ι`. The cascade (`luscher_key_identity`) integrates out a temporal link `g` shared between TWO plaquettes, forcing the two representations to MATCH (giving `δ_{st} · (1/d_s) · χ_s(h·k)`). But at the LINK level, each temporal link appears in only ONE plaquette's character product (the plaquette product `g₁·g₂·g₃⁻¹·g₄⁻¹` is a single group element, and the link-level expansion assigns one character per LINK, not per plaquette). So the link-level cascade would integrate out a link that appears in only one character, giving TRIVIALITY (`∫ χ_s(g) dg = δ_{s,σ_0} · dims(s)`, the trivial rep), NOT matching. This produces a coefficient `a(z, w)` that is a product of `dims` factors — a COMPLEX number, not a non-negative real — violating the `a(z,i) ≥ 0` hypothesis of `character_expansion_nonneg_shared`.
+
+This objection is **valid for the link-level expansion** and would be a genuine dead end.
+
+### The resolution: plaquette-level expansion
+
+The obstruction is real but the conclusion is wrong: the fix is to expand at the **plaquette level**, not the link level. The plaquette Boltzmann factor `exp(c · Re Tr(g₁·g₂·g₃⁻¹·g₄⁻¹))` is a class function of the single group element `g = g₁·g₂·g₃⁻¹·g₄⁻¹` (the plaquette product). As a class function, it admits a **single-character expansion**:
+
+```
+exp(c · Re Tr(g)) = Σ_s coeff_s · χ_s(g)     with coeff_s ≥ 0
+```
+
+This is derived from `peterWeyl_clebschGordan_plaquette` Part 1 (the link-level expansion `exp(c·Re Tr(g₁g₂g₃g₄)) = Σ_{r,s,t,u,v} coeff(r,s,t,u,v) · χ_s(g₁)·χ_t(g₂)·χ_u(g₃)·χ_v(g₄)`) by setting `g₂ = g₃ = g₄ = 1` (the identity), using `χ_i(1) = dims(i)`. The plaquette-level coefficient is:
+
+```
+coeff_s = Σ_{r,t,u,v} coeff(r,s,t,u,v) · dims(t) · dims(u) · dims(v) ≥ 0
+```
+
+(non-negative because `coeff(r,s,t,u,v) ≥ 0` and `dims ≥ 0`).
+
+### Why plaquette-level fixes the cascade
+
+At the plaquette level, each temporal interface link `g` appears in the plaquette product `g = g₁·g₂·g₃⁻¹·g₄⁻¹` of EXACTLY TWO interface plaquettes (the two plaquettes that share the link, one on each side along the spatial direction). The cascade integrates out `g` via `luscher_key_identity`, which forces the two plaquette-level representations to MATCH (giving `δ_{st} · (1/d_s) · χ_s(h·k)`), producing a CONSTANT non-negative coefficient `(1/d_s) · coeff_s ≥ 0`. This is exactly the `a(z, i) = c_i ≥ 0` (constant) structure required by `character_expansion_nonneg_shared`.
+
+The spatial interface links `u⁰_s` remain as the shared variable `z` (they appear in the plaquette products but are NOT integrated out). The temporal interface links `u⁰_t` are integrated out by the cascade. Since `f` satisfies `dependsOnlyOnPosSpatialInterface` (depends only on positive + SPATIAL interface links, NOT temporal interface links), the test function `g` does not depend on `u⁰_t`, so the `u⁰_t` integration acts only on the character products.
+
+### Formalization plan (for the next session)
+
+1. **`plaquette_boltzmann_character_expansion_single`** (PeterWeyl.lean): Prove `exp(c · Re Tr(g)) = Σ_s coeff_s · χ_s(g)` with `coeff_s ≥ 0` from `peterWeyl_clebschGordan_plaquette` Part 1 by setting `g₂=g₃=g₄=1`. **A scaffold was written this session but reverted** (the sum-factoring `rw [← Finset.mul_sum]` failed to match the nested 4-fold sum pattern). The next session should re-implement it cleanly — the key step is factoring `χ_s(g)` out of the 4-fold sum `Σ_{r,t,u,v} (coeff : ℂ) * (χ_s(g) * dims_t * dims_u * dims_v)` to get `χ_s(g) * Σ_{r,t,u,v} (coeff : ℂ) * dims_t * dims_u * dims_v`, then `push_cast` to match `coeff_single s`. Suggested approach: rearrange summand to put `χ_s(g)` on the RIGHT via `ring`, then factor with `← Finset.sum_mul` (4 levels, inside-out), then `push_cast` + `mul_comm`.
+
+2. **Plaquette-level interface expansion**: Re-derive `interface_boltzmann_character_expansion` at the plaquette level (each interface plaquette gets ONE character `χ_{w(p)}(plaquetteProduct U p)`, not four link-level characters). This gives `exp(-β·S_int) = C · Σ_w F(w) · ∏_p χ_{w(p)}(plaquetteProduct U p)` with `F(w) ≥ 0`.
+
+3. **Cascade the temporal links**: Apply `luscher_key_identity` to integrate out each temporal interface link `g` (shared between two plaquette characters), forcing matching and producing constant coefficients. The spatial interface links remain as shared variable `z`.
+
+4. **Apply `shared_cascade_factorization_nonneg`** (or `_conj`): With `z = u⁰_s`, `x = U⁺`, `y = V⁺`, `Φ_w(z, x) = ∏_p χ_{w(p)}(z-product · x-product)`, `a(z, w) = c_w ≥ 0` constant. Conclude `⟨g, Tg⟩ ≥ 0`.
+
+### Key design notes
+
+- The lattice is 4D: `PeriodicSite T L` has `time : ZMod T` and `x, y, z : ZMod L` (3 spatial dimensions). The interface (t=0) plaquettes form a 3D spatial array. The temporal links at the interface couple adjacent plaquettes along each spatial direction. The cascade is NOT a simple 1D chain — it's a 3D structure. However, the `|Φ|²` positivity argument works regardless of dimensionality (each temporal link integration produces a matching + constant coefficient). The `chainIntegral_eq` (1D) is a building block; the full 3D cascade needs a more general formulation OR a per-direction factorization argument.
+
+- `plaquetteBoltzmannPD` (PeterWeyl.lean:368) proves the plaquette factor is positive-definite at the LINK level (4 characters). The plaquette-level single-character expansion is a DIFFERENT (stronger, in a sense) result — it's the class-function expansion. Both are derivable from the same `peterWeyl_clebschGordan_plaquette` axiom.
+
+- The `fullBoltzmannPD` (ReflectionPositivity.lean:1768) proves the FULL Boltzmann factor is PD (via Schur product theorem at the link level). This is the building block for the Lüscher `V^{1/2}` factor (spatial hopping operator). The plaquette-level expansion is needed for the `U` (transfer) part of the Lüscher decomposition `T = V^{1/2} · U · V^{1/2}`.
+
+### No new mathlib candidates this session
+
+The plaquette-level expansion is specific to the SU(N) representation theory setting.
+
+## §8.11.81 — CORRECTION: §8.11.80 briefing was stale; uniform plaquette expansion VERIFIED (session 102, 2026-08-13)
+
+**Status: VERIFIED. One new lemma compiled, `#print axioms` = [propext, Classical.choice, Quot.sound, peterWeyl_clebschGordan_plaquette] (no sorryAx). Build GREEN.**
+
+### The §8.11.80 briefing was stale
+
+The §8.11.80 "formalization plan" listed as its **step 1** the implementation of
+`plaquette_boltzmann_character_expansion_single`, claiming "a scaffold was written
+this session but reverted." This was based on **stale information**:
+
+- The **parametric** single-character expansion `plaquette_boltzmann_single_char_expansion`
+  (PeterWeyl.lean:1232) was already VERIFIED in session 56 (§8.11.45, 2026-08-08). It
+  takes the Peter-Weyl package as hypotheses and concludes `∃ c', exp(c·Re Tr(g₁·g₂·g₃⁻¹·g₄⁻¹)) = Σ_s c'_s · χ_s(g₁·g₂·g₃⁻¹·g₄⁻¹)` for a specific plaquette product.
+- The §8.11.71 analysis (session 93) explicitly documented that "steps 1-3 of the 3c
+  plan are ALREADY DONE" (line 6539 of this doc), citing
+  `plaquette_boltzmann_single_char_expansion` + `plaquette_product_single_char_decomp`.
+- Session 101 apparently did not realize this and attempted to re-create the lemma
+  under a different name, failed on the sum-factoring step (using the WRONG lemma name
+  `Finset.mul_sum` instead of `Finset.sum_mul`), reverted, and left a stale briefing.
+
+### What was actually missing: the UNIFORM (`∀ g`) version with the full package
+
+The existing `plaquette_boltzmann_single_char_expansion` is **parametric** (takes the
+package as hypotheses, concludes for a specific plaquette product). What STEP 5 step 2
+(plaquette-level interface expansion) actually needs is the **uniform** version that
+provides `hexp1 : ∀ g, exp(c·Re Tr(g)) = Σ_s coeff_s · χ_s(g)` with a FIXED `coeff`
+(independent of `g`) and the FULL Peter-Weyl package existentially quantified — exactly
+the `hexp1` hypothesis of `plaquette_product_single_char_decomp`.
+
+### New lemma: `plaquette_boltzmann_character_expansion_single` (PeterWeyl.lean:~1294)
+
+```
+∃ (ι : Type) (hι : Fintype ι) (dims : ι → ℕ)
+  (ρ : ∀ i, SU N →* Matrix (Fin (dims i)) (Fin (dims i)) ℂ)
+  (hU : ∀ i, IsUnitaryRepresentation (ρ i))
+  (hMeas : ∀ i, Measurable (repCharacter (ρ i)))
+  (hIrr : ∀ i, IsIrreducible (ρ i))
+  (hDims : ∀ i, 0 < dims i)
+  (coeff : ι → ℝ) (hcoeff : ∀ s, 0 ≤ coeff s),
+  ∀ (g : SU N),
+  (Real.exp (c * (Matrix.trace ((g : SU N) : Matrix (Fin N) (Fin N) ℂ)).re) : ℂ) =
+    ∑ s : ι, (coeff s : ℂ) * repCharacter (ρ s) g
+```
+
+**Proof** (reuses the technique from the parametric `plaquette_boltzmann_single_char_expansion`):
+1. `obtain` the full package from `peterWeyl_clebschGordan_plaquette N c hc`.
+2. `hchar_one : ∀ i, repCharacter (ρ i) 1 = (dims i : ℂ)` via `MonoidHom.map_one, Matrix.trace_one, Fintype.card_fin`.
+3. `coeff s = Σ_{r,t,u,v} coeff4(r,s,t,u,v) · dims(t) · dims(u) · dims(v)` (independent of `g`).
+4. `hcoeff : ∀ s, 0 ≤ coeff s` by `Finset.sum_nonneg` (each term ≥ 0).
+5. Expansion: `hexp4 g 1 1 1`, `simp only [mul_one]` (g·1·1·1 = g), `simp only [hchar_one]`
+   (χ_t(1) = dims t), `rw [h, Finset.sum_comm]` (exchange r/s sums), rearrange summand
+   via `ring` + `push_cast`, factor `χ_s(g)` out via `simp only [← Finset.sum_mul]`,
+   match coefficient via `simp only [Complex.ofReal_sum]`.
+
+**Key:** the factoring uses `Finset.sum_mul` (NOT `Finset.mul_sum` — the §8.11.80 failure
+was using the wrong lemma name). `simp only [← Finset.sum_mul]` handles all 4 nesting
+levels at once.
+
+**Axioms:** [propext, Classical.choice, Quot.sound, peterWeyl_clebschGordan_plaquette] —
+the standard 3 plus the project's Peter-Weyl axiom. No `sorryAx`.
+
+### What this enables
+
+This lemma provides the `hexp1` hypothesis for `plaquette_product_single_char_decomp`,
+enabling the **plaquette-level interface expansion** (STEP 5 step 2 of §8.11.80):
+`∏_p exp(c·Re Tr(gP p)) = Σ_{w : P → ι} F(w) · ∏_p χ_{w(p)}(gP p)` with `F(w) ≥ 0` —
+one character per PLAQUETTE (not per link). This is the form the Lüscher cascade needs:
+at the plaquette level, each temporal link appears in two plaquette characters, so the
+cascade forces matching (not triviality), producing constant non-negative coefficients.
+
+### Actual remaining work for STEP 5 (corrected)
+
+The §8.11.80 plan's 4 steps, with corrected status:
+1. ✅ **`plaquette_boltzmann_character_expansion_single`** — DONE this session (uniform `∀ g` version, full package).
+2. ⬜ **Plaquette-level interface expansion** — apply `plaquette_product_single_char_decomp` to the interface plaquettes with `gP p = plaquetteProduct U p`, giving `exp(-β·S_int) = C · Σ_{w : InterfacePlaquette → ι} F(w) · ∏_p χ_{w(p)}(plaquetteProduct U p)` with `F(w) ≥ 0`.
+3. ⬜ **Cascade the temporal links** — apply `luscher_key_identity` to integrate out each temporal interface link (shared between two plaquette characters), forcing matching, producing constant coefficients. Spatial interface links remain as shared variable `z`.
+4. ⬜ **Apply `shared_cascade_factorization_nonneg`** (or `_conj`) — conclude `⟨g, Tg⟩ ≥ 0`.
+
+Then STEP 6: use `integral_G_thetaG_eq_inner_g_Tg` to convert to `∫ G·G(θU) ≥ 0`, replace `transferMatrixPositivity_axiom` (axioms 6→5).
+
+### No new mathlib candidates this session
+
+The uniform plaquette expansion is specific to the SU(N) representation theory setting.
+
+### Attempted (and reverted): plaquette-level interface expansion
+
+Session 102 also attempted STEP 5 step 2 — a plaquette-level interface expansion
+`interface_product_plaquette_char_expansion` in ReflectionPositivity.lean (applying
+`plaquette_product_single_char_decomp` to the interface plaquettes with
+`gP p = plaquetteProduct U p`). The lemma was written but **REVERTED** because the proof
+left an unsolved goal (sorryAx). The issue: after `set gP := fun p => plaquetteProduct`,
+the `rw [Finset.prod_congr rfl (fun p _ => hexp1 (gP p))]` step (Step 1) did not match —
+the goal's LHS uses `Complex.re (Matrix.trace ...)` while `hexp1`'s LHS (from
+`plaquette_boltzmann_character_expansion_single`) uses `(Matrix.trace ...).re`. Changing
+the statement to `.re` did not fully resolve it (the unsolved goal persisted, likely in
+Step 3's `simp only [Complex.ofReal_prod]` not beta-reducing `F w` or a `DecidableEq`/
+`Fintype.prod_sum` instance issue). The codebase is GREEN (the broken lemma was removed;
+ReflectionPositivity.lean builds clean). The next session should re-attempt this lemma,
+diagnosing the exact unsolved goal (add `sorry` after each step to localize), and consider
+applying `plaquette_product_single_char_decomp` directly (extracting its `F` and showing
+it equals the explicit `F = fun w => ∏ p, coeff (w p)`) rather than inlining the
+product-of-sums proof.
+
+## §8.11.82 — Plaquette-level interface expansion VERIFIED (session 103, 2026-08-14)
+
+**Status: VERIFIED. `interface_product_plaquette_char_expansion` compiled,
+`#print axioms` = [propext, Classical.choice, Quot.sound, peterWeyl_clebschGordan_plaquette]
+(no sorryAx). Build GREEN.**
+
+### Adversarial self-check (start of session)
+
+Before resuming, the case that the cascade → transfer-matrix-positivity approach is a
+dead end was steelmanned:
+
+1. **Is the plaquette-level expansion genuinely necessary?** The existing LINK-level
+   `interface_product_character_expansion` (ReflectionPositivity.lean:1633) was already
+   verified. At the link level, each link gets ONE character index `w(l)`; integrating out a
+   temporal link `l_t` (which carries a single character `χ_{w(l_t)}`) via Schur orthogonality
+   forces `w(l_t) = trivial` — TRIVIALITY, killing the temporal structure entirely. This is
+   wrong. At the PLAQUETTE level, each temporal link appears in TWO plaquette characters
+   `χ_{w(p₁)}(gP p₁)` and `χ_{w(p₂)}(gP p₂)`; integrating out `l_t` forces `w(p₁) = w(p₂)`
+   — MATCHING, which propagates the constraint across the lattice. So the plaquette-level
+   expansion is genuinely necessary. **Conclusion: the §8.11.80/81 claim is sound; not a
+   dead end.**
+
+2. **2-site → full-lattice generalization.** `shared_cascade_factorization_nonneg` and
+   `luscher_2site_cascade_separable` are explicitly 2-site (one temporal link, one shared
+   spatial link). The actual interface has MANY temporal and spatial links. Generalizing the
+   cascade to the full lattice is non-trivial and is the main remaining RISK for steps 3–4.
+   **This risk belongs to later steps, not the immediate task (step 2, pure algebra).** Flagged
+   for when steps 3–4 are reached.
+
+**Verdict:** the immediate task (step 2) is sound and low-risk. Proceed.
+
+### New lemma: `interface_product_plaquette_char_expansion` (ReflectionPositivity.lean:~1693)
+
+```
+∃ (ι : Type) (hι : Fintype ι) (dims : ι → ℕ)
+  (ρ : ∀ i, SU N →* Matrix (Fin (dims i)) (Fin (dims i)) ℂ)
+  (hU : ∀ i, IsUnitaryRepresentation (ρ i))
+  (hMeas : ∀ i, Measurable (repCharacter (ρ i)))
+  (hIrr : ∀ i, IsIrreducible (ρ i))
+  (hDims : ∀ i, 0 < dims i)
+  (coeff : ι → ℝ) (hcoeff : ∀ s, 0 ≤ coeff s)
+  (F : (InterfacePlaquette T L → ι) → ℝ) (hF : ∀ w, 0 ≤ F w),
+  ∀ (U : LinkVariable (SU N) (PeriodicSite T L)),
+  ∏ p : InterfacePlaquette T L,
+    (Real.exp ((β * β / N) * (Matrix.trace ((gP p) : Matrix (Fin N) (Fin N) ℂ)).re) : ℂ) =
+  ∑ w : InterfacePlaquette T L → ι, (F w : ℂ) *
+    ∏ p : InterfacePlaquette T L, repCharacter (ρ (w p)) (gP p)
+```
+
+where `gP p = interfaceLinkVar U (interfaceLinkAssign p 0) · interfaceLinkVar U (interfaceLinkAssign p 1) ·
+(interfaceLinkVar U (interfaceLinkAssign p 2))⁻¹ · (interfaceLinkVar U (interfaceLinkAssign p 3))⁻¹`
+and `F w = ∏ p, coeff (w p) ≥ 0`. This is the **plaquette-level** analogue of
+`interface_product_character_expansion` (link-level): one character per PLAQUETTE, not per link.
+
+### Two failed approaches and why (key lessons for the next session)
+
+**Failed approach 1 — `obtain` from `plaquette_product_single_char_decomp` + `exact`:**
+```
+obtain ⟨F', hF', hF'_decomp⟩ := plaquette_product_single_char_decomp ρ coeff hcoeff ... gP
+exact hF'_decomp   -- TYPE MISMATCH
+```
+The mismatch was ONLY in the RHS: `↑(F' w)` (from the decomp) vs `↑((fun w => ∏ p, coeff (w p)) w)`
+(from the goal's `refine`). The LHS matched perfectly (both `(↑(gP p)).trace.re` — confirming the
+`Complex.re` vs `.re` worry from §8.11.81 was a NON-issue; Lean elaborates `Complex.re (Tr X)` to
+`(Tr X).re` syntactically). **Root cause:** `obtain` from an existential makes the witness `F'`
+OPAQUE — Lean no longer knows `F' = fun w => ∏ p, coeff (w p)` definitionally. So `F' w` is not
+defeq to the goal's explicit `(fun w => ∏ p, coeff (w p)) w`. This is fundamental to `obtain` from
+`∃`; it cannot be worked around by making a "uniform" version (any `obtain` from `∃` is opaque).
+
+**Failed approach 2 — inline the product-of-sums proof WITH `set gP`:**
+```
+set gP : InterfacePlaquette T L → SU N := fun p => [long expr]
+rw [Finset.prod_congr rfl (fun p _ => hexp1 (gP p))]
+rw [Fintype.prod_sum (fun p s => (coeff s : ℂ) * repCharacter (ρ s) (gP p))]
+refine Finset.sum_congr rfl (fun w _ => ?_)
+rw [Finset.prod_mul_distrib]
+simp only [Complex.ofReal_prod]   -- UNSOLVED GOAL
+```
+`set gP` replaced the long expression in the goal's **LHS** (inside the Boltzmann factor) with
+`gP p`, but did **NOT** replace it in the goal's **RHS** (inside `repCharacter (ρ (w p)) (long expr)`).
+The final goal was `(∏ x, … (gP x)) = (∏ p, … (long expr p))` — defeq-closable in principle (`gP p`
+beta-reduces to the long expr via the `let`-binding), but `simp`'s closing `rfl` did not unfold the
+local `let`-def `gP`. (The asymmetry is likely a `set`-abstraction quirk: the LHS and RHS long
+expressions live under different binders / have different `: SU N` annotation, so `set` matched
+only one.)
+
+### Working approach — inline WITHOUT `set` (explicit long expression)
+
+The fix: write the plaquette-product expression **explicitly** in both the `hexp1` application and
+the `Fintype.prod_sum` argument (no `set`), so the LHS (from `Fintype.prod_sum`) and the RHS (from
+the lemma statement) carry the **identical** expression, and `rfl` (via `simp only [Complex.ofReal_prod]`)
+closes the goal:
+```
+rw [Finset.prod_congr rfl (fun p _ => hexp1
+    (interfaceLinkVar N T L U (interfaceLinkAssign T L p 0) * … * …⁻¹ * …⁻¹))]
+rw [Fintype.prod_sum (fun p s => (coeff s : ℂ) * repCharacter (ρ s)
+    (interfaceLinkVar N T L U (interfaceLinkAssign T L p 0) * … * …⁻¹ * …⁻¹))]
+refine Finset.sum_congr rfl (fun w _ => ?_)
+rw [Finset.prod_mul_distrib]
+simp only [Complex.ofReal_prod]
+```
+This is exactly the proof body of `plaquette_product_single_char_decomp` (PeterWeyl.lean:1404–1413),
+inlined with `c' = coeff`, `c = β*β/N`, `P = InterfacePlaquette T L`. The `F` is provided by the
+outer `refine` as `fun w => ∏ p, coeff (w p)` (definitionally transparent), so it matches the goal.
+
+**Axioms:** [propext, Classical.choice, Quot.sound, peterWeyl_clebschGordan_plaquette] — the standard
+3 plus the project's Peter-Weyl axiom. No `sorryAx`. Axiom count unchanged (6 overall).
+
+### What this enables (STEP 5 step 2 DONE)
+
+This is STEP 5 step 2 of §8.11.80: the plaquette-level interface expansion. Combined with the
+constant `C` from `interface_boltzmann_eq_abstract_product`, it gives
+`exp(-β·S_int) = C · Σ_{w : InterfacePlaquette → ι} F(w) · ∏_p χ_{w(p)}(gP p)` with `F(w) ≥ 0`,
+`C > 0` — one character per plaquette, the form the Lüscher cascade needs.
+
+### Corrected remaining work for STEP 5
+
+1. ✅ `plaquette_boltzmann_character_expansion_single` (uniform `∀ g` version) — DONE (session 102).
+2. ✅ **Plaquette-level interface expansion** — DONE this session (`interface_product_plaquette_char_expansion`).
+3. ⬜ **Cascade the temporal links** — apply `luscher_key_identity` / Schur orthogonality to integrate
+   out each temporal interface link (shared between two plaquette characters), forcing matching
+   `w(p₁) = w(p₂)`, producing constant coefficients. Spatial interface links remain as shared
+   variable `z`. **RISK (from self-check):** the existing cascade lemmas are 2-site; generalizing to
+   the full lattice (many temporal + spatial links) is non-trivial and is the main remaining risk.
+4. ⬜ **Apply `shared_cascade_factorization_nonneg`** (or `_conj`) — conclude `⟨g, Tg⟩ ≥ 0`.
+
+Then STEP 6: use `integral_G_thetaG_eq_inner_g_Tg` (TransferMatrix.lean:5149) to convert to
+`∫ G·G(θU) ≥ 0`, replace `transferMatrixPositivity_axiom` (ReflectionPositivity.lean:~3641,
+axioms 6→5).
+
+### No new mathlib candidates this session
+
+The plaquette-level interface expansion is specific to the SU(N) lattice setting.
+
+### Addendum: combined plaquette-level interface Boltzmann expansion (also VERIFIED)
+
+The composition lemma `interface_boltzmann_plaquette_char_expansion` (ReflectionPositivity.lean:~1750)
+was also added and VERIFIED this session. It composes `interface_boltzmann_eq_abstract_product`
+(`exp(-β·S_int) = C · ∏_p exp(c·Re Tr(gP p))`, `C > 0`) with
+`interface_product_plaquette_char_expansion` to give the full plaquette-level interface Boltzmann
+expansion (viewed in ℂ):
+
+    (exp(-β·S_int(U)) : ℂ) = (C : ℂ) · ∑_{w : InterfacePlaquette → ι} F(w) · ∏_p χ_{w(p)}(gP p)
+
+with `C > 0`, `F(w) ≥ 0`. Proof follows the same pattern as `interface_boltzmann_character_expansion`
+(link-level): `rw [hC_eq_all U]; have h := hF_decomp U; norm_cast at h; rw [Complex.ofReal_mul, h]`.
+`#print axioms` = [propext, Classical.choice, Quot.sound, peterWeyl_clebschGordan_plaquette] (no sorryAx).
+This is the form the Lüscher cascade operates on (the constant `C` factors out of the integral).
+
+## §8.11.83 — Bipartite L-site cascade VERIFIED (session 105, 2026-08-14)
+
+**Status: VERIFIED. `bipartiteChainIntegral_eq` compiled,
+`#print axioms` = [propext, Classical.choice, Quot.sound, characterOrthogonality]
+(no sorryAx). Build GREEN.**
+
+### What was done
+
+Session 104 wrote the `bipartiteChainIntegral` definition and `bipartiteChainIntegral_eq`
+lemma but the build FAILED with 4 errors (syntax, rewrite, unsolved goals). Session 105
+fixed all errors and verified the lemma.
+
+**New lemma: `bipartiteChainIntegral_eq`** (PositiveDefinite.lean:~1763)
+
+The bipartite open-chain L-site cascade generalizes `chainIntegral_eq` to plaquettes with
+BOTH a V-link and a W-link (the structure needed for the transfer matrix). Each plaquette
+product is `g_i · V_i · g_{i+1}⁻¹ · W_i⁻¹`, and the cascade integrates out the interior
+temporal links g₁,...,gₙ, forcing all representations to match:
+
+    bipartiteChainIntegral a b [(γ₀,V₀,W₀),...,(γₙ,Vₙ,Wₙ)] =
+      δ_{all γ=γ₀} · (1/d_γ)^n · χ_γ(a · V-product · b⁻¹ · W-product⁻¹)
+
+where `n = rest.length`, `V-product = V₀·...·Vₙ`, `W-product = W₀·...·Wₙ`.
+
+**New helper lemma: `repCharacter_cyclic2`** (PositiveDefinite.lean:~795)
+
+    χ(g · h) = χ(h · g)
+
+Proved from `Matrix.trace_mul_comm` (`Tr(A·B) = Tr(B·A)`). This is the 2-factor special
+case of cyclic invariance of the trace. No unitary/irreducibility hypothesis needed.
+Logged as mathlib candidate §9 (standard-but-unformalized).
+
+### Build errors fixed
+
+1. **Syntax error (line ~1843):** Extra `)` in the `luscher_key_identity` argument list.
+   Fixed by removing the stray paren.
+2. **`mul_inv_rev` ambiguity (line ~1877):** Both `_root_.mul_inv_rev` (group) and
+   `Matrix.mul_inv_rev` (matrix) matched. Fixed by qualifying as `_root_.mul_inv_rev`.
+3. **`ring` failure (pos case):** After the cyclic rewrite, the LHS and RHS character
+   arguments differed only by associativity of the last two factors
+   (`... * W-prod⁻¹ * W₀⁻¹` vs `... * (W-prod⁻¹ * W₀⁻¹)`). `ring` treats `repCharacter`
+   as an atom but couldn't see through the associativity difference. Fixed by adding an
+   explicit `rw [show ... = ... from by ac_rfl]` to align the character arguments before
+   `ring`.
+4. **`h2` rewrite (line ~1842):** Added `change` to explicitly state the goal form before
+   `rw [hcyc g]`, matching the pattern from `chainIntegral_eq` (line 1668).
+
+### Proof structure (pos case)
+
+The pos case (γ₁ = γ₀) is the hardest part. The approach:
+1. `simp only [if_pos hγ, hRHS, if_true]` + `rw [hγ]` to simplify both sides.
+2. Unfold RHS list products (`List.map_cons`, `List.prod_cons`, `mul_inv_rev`).
+3. Cyclic rewrite of LHS character to match RHS character, using `repCharacter_cyclic2`
+   twice: `χ(A * B) = χ(B * A)` then `χ(W₀⁻¹ * Z) = χ(Z * W₀⁻¹)`, with `ac_rfl` for
+   reassociation between the two cyclic steps.
+4. `rw [pow_add, pow_one]` for the power, then `ring` for the coefficient.
+
+### What this enables (STEP 5 step 3 — open chain DONE)
+
+This is the open-chain building block. The CYCLIC version (a = b = g₀, integrated out via
+`conjugation_integral`) gives the separable kernel `Σ_s c_s · χ_s(W-product) · χ_s(V-product)`
+with `c_s ≥ 0`. This is the next step.
+
+### Remaining work for STEP 5
+
+3a. ✅ Open-chain bipartite cascade — DONE (`bipartiteChainIntegral_eq`).
+3b. ✅ **Cyclic cascade** — DONE (`bipartiteCyclicCascade_eq`). Closes the chain
+    (a = b = g₀, integrate out g₀ via `conjugation_integral`), producing the separable
+    kernel `(1/d)^(n+1) · χ(W-product⁻¹) · χ(V-product)`. Also extracted
+    `char_conjugation_integrable` as a standalone lemma for reuse.
+3c. ⬜ **Connect to lattice** — match the plaquette-level expansion
+    (`interface_boltzmann_plaquette_char_expansion`) to the bipartite cascade structure.
+    RISK: the full lattice is 3D, not 1D.
+4. ⬜ **Apply `shared_cascade_factorization_nonneg`** — conclude `⟨g, Tg⟩ ≥ 0`.
+
+Then STEP 6: replace `transferMatrixPositivity_axiom` (axioms 6→5).
+
+## §8.11.84 — Adversarial self-check + 3D obstacle analysis (session 106, 2026-08-14)
+
+**Status: ANALYSIS ONLY. No code changes. Build unchanged (GREEN from session 105).**
+
+### Adversarial self-check (standing instruction §4)
+
+This session performed the periodic adversarial self-check: steelmanning the case
+that the current cascade scaffolding is a dead end for the transfer matrix positivity
+proof. The conclusion is **mixed**: the 1D cascade is verified and the σ-twist obstacle
+IS handled, but the 1D→3D connection is a genuine structural gap that requires
+substantial new formalization.
+
+### The 3D obstacle (confirmed)
+
+**The core problem:** The bipartite cascade (`bipartiteChainIntegral_eq`,
+`bipartiteCyclicCascade_eq`) is a **1D** tool. It assumes each temporal link appears
+in exactly **2** plaquettes (a chain: plaquette `i` has `g_i · V_i · g_{i+1}⁻¹ · W_i⁻¹`,
+so `g_i` is shared between plaquettes `i-1` and `i`). The cascade integrates out the
+interior `g_i` one at a time via Schur orthogonality, forcing all representations to
+match.
+
+**The 3D lattice structure:** On the 3+1D lattice (`PeriodicSite T L` with 3 spatial
+directions x, y, z), each temporal link `u_t(x, t=0)` at the interface appears in
+**6** interface plaquettes (3 spatial directions ν=1,2,3 × 2 orientations: forward
+as link-0 of plaquette `(x, 0, ν)` and backward as link-2 of plaquette `(x-ν̂, 0, ν)`).
+
+This was verified by examining `plaquetteLinkIdx` (ReflectionPositivity.lean:1085):
+- link 0: `(n, μ)` — temporal at `n`
+- link 2: `(n+μ̂+ν̂, μ)` — temporal at `n+ν̂` (inverted), same time as `n` (since ν is spatial)
+
+So for temporal plaquettes (μ=0, ν spatial), both temporal links are at the same time
+slice, at spatial sites `x` and `x+ν̂`. Each temporal link `u_t(x, t=0)` is shared across
+all 3 spatial directions.
+
+**Consequence:** The product of characters from the plaquette-level expansion
+(`interface_boltzmann_plaquette_char_expansion`) is:
+```
+∏_x ∏_{ν=1,2,3} χ_{w(x,ν)}(u_t(x) · V_{x,ν} · u_t(x+ν̂)⁻¹ · W_{x,ν}⁻¹)
+```
+This is a **3D network** (each `u_t(x)` in 6 factors), NOT a 1D chain (each `g_i` in 2
+factors). The 1D cascade does NOT apply.
+
+**Per-direction factorization fails:** The interface Boltzmann factor does factor as
+`∏_ν [∏_x B_p(plaquette(x,ν))]` (each plaquette belongs to one direction), but the
+temporal links are **shared** across the directional sub-products. Expanding each
+direction independently and then integrating out `u_t(x)` requires handling 6
+characters simultaneously (3 from forward plaquettes, 3 from backward), which is
+exactly the 3D case the cascade doesn't handle.
+
+### The σ-twist obstacle (RESOLVED by the cascade)
+
+A key positive finding: the σ-twist obstacle from §8.11.38 (the reflection conjugates
+the CHARACTER, giving `A²` not `|A|²`) **IS handled** by the cascade + conj form.
+
+The cyclic cascade produces: `(1/d)^(n+1) · χ(W-prod⁻¹) · χ(V-prod)`.
+
+Via `cascade_shared_kernel_form` (PositiveDefiniteIntegral.lean:2002):
+`χ_s(x⁻¹·z⁻¹) = χ_s((z·x)⁻¹) = conj(χ_s(z·x))` (by `mul_inv_rev` + `repCharacter_inv`).
+
+So when `W-prod = z·x` and `V-prod = z·y` (shared interface link `z`, positive links
+`x`, negative links `y`), the cascade result becomes:
+```
+(1/d)^(n+1) · conj(χ_s(z·x)) · χ_s(z·y)
+```
+which is exactly the `shared_cascade_factorization_nonneg_conj` kernel form
+(PositiveDefiniteIntegral.lean:1934) with `c_s = (1/d_s)^(n+1) ≥ 0`.
+
+**Conclusion:** The σ-twist is NOT the remaining obstacle. The conj form handles it.
+The ONLY remaining obstacle is the 1D→3D structural gap.
+
+### Verified building blocks for the 3D case
+
+1. **`single_site_3D_luscher_integral`** (PeterWeyl.lean:3055) — VERIFIED. Integrates
+   out ONE temporal link appearing in 3 plaquettes (3 unbarred + 3 barred matrix
+   elements) via 3-fold CG decomposition + Schur orthogonality. Gives a sum over
+   combined representations `α` with CG coefficients. `#print axioms` =
+   `[propext, Classical.choice, Quot.sound, characterOrthogonality]`.
+
+2. **`cg_unitarity_nonneg`** (PeterWeyl.lean:3296) — VERIFIED. In the **diagonal** case
+   (barred indices = unbarred indices), the single-site 3D integral gives
+   `∑_{α,p,q} (1/dims α) · |C(α,p,q)|² ≥ 0`. This demonstrates the |C|² structure from
+   CG unitarity. BUT: only the diagonal case (self-correlation), not the off-diagonal
+   case (transfer matrix inner product).
+
+3. **`bipartiteChainIntegral_eq` / `bipartiteCyclicCascade_eq`** (PositiveDefinite.lean) —
+   VERIFIED. 1D cascade. Produces separable kernel with non-negative coefficients.
+
+4. **`shared_cascade_factorization_nonneg` / `_conj`** (PositiveDefiniteIntegral.lean) —
+   VERIFIED. Separable kernel `Σ_s c_s · χ_s(z·x) · conj(χ_s(z·y))` with `c_s ≥ 0`
+   gives non-negative integral.
+
+5. **`cascade_shared_kernel_form`** (PositiveDefiniteIntegral.lean:2002) — VERIFIED.
+   Converts `χ(W-prod⁻¹) · χ(V-prod)` to `conj(χ(z·x)) · χ(z·y)`.
+
+### The missing piece: 3D global cascade
+
+The 3D resolution (from §8.11.41, CONJECTURED not formalized): The GLOBAL cascade
+(integrating out ALL `u_t(x)` site by site) matches representations across sites, and
+the CG UNITARITY (`hcgME_unitary`) ensures the coefficients are `|C|²` type
+(non-negative). Result: `U_3D = ∑_γ a_γ · Φ_γ(u_s) · conj(Φ_γ(v_s))` with `a_γ ≥ 0`.
+
+**Why this is hard to formalize:**
+- At each site, `single_site_3D_luscher_integral` gives CG coefficients that involve
+  NEIGHBORING temporal links (not yet integrated out).
+- The cascade doesn't close locally — the CG coefficients from site `x` depend on
+  `u_t(x+ν̂)` for each direction ν, which are integrated out at neighboring sites.
+- The global argument requires CG unitarity (`hcgME_unitary`) to combine the CG
+  coefficients across sites into `|C|²` terms.
+- `cg_unitarity_nonneg` proves this for the DIAGONAL case only; the off-diagonal
+  (multi-site, transfer matrix inner product) case is NOT formalized.
+
+### Gauge-fixing approach (also complex for 3D)
+
+The gauge-fixing approach (§8.11.39) works cleanly for 1D: fix `u_t(0) = e`, change
+variables to relative links `v(x) = u_t(x+1)⁻¹ · u_t(x)`, constraint `∏ v(x) = e`
+enforced by character expansion of delta function, Schur orthogonality gives
+`|c_γ|²/d_γ ≥ 0`.
+
+For 3D, the relative links `v_ν(x) = u_t(x+ν̂)⁻¹ · u_t(x)` (one per direction ν per
+site x) satisfy a **zero-curvature constraint**:
+```
+v_μ(x) · v_ν(x+μ̂) = v_ν(x) · v_μ(x+ν̂)   (non-commuting, for each 2D face)
+```
+This is a set of non-commuting constraints (one per spatial 2D face), much more
+complex than the 1D constraint `∏ v(x) = e`. The character expansion of the
+corresponding delta function is not straightforward. This approach is also not
+formalized for 3D.
+
+### Assessment and path forward
+
+**The cascade approach is NOT a dead end** — the σ-twist is handled, and the 3D
+resolution is conjectured with a clear mechanism (CG unitarity → |C|²). But the 1D→3D
+connection requires substantial new formalization:
+
+**Option A: 3D global cascade.** Formalize the multi-site cascade using
+`single_site_3D_luscher_integral` + CG unitarity. The key lemma: the global cascade
+gives `∑_γ a_γ · Φ_γ · conj(Φ_γ)` with `a_γ ≥ 0` (off-diagonal case). Then apply
+`shared_cascade_factorization_nonneg_conj`. Major effort; the off-diagonal CG
+unitarity argument is the crux.
+
+**Option B: 1+1D proof of concept.** Prove the cascade works for 1 spatial direction
+(where it applies directly). Requires a separate formalization (the existing
+`InterfacePlaquette` includes all 3 directions). Doesn't prove 3D but validates the
+mechanism end-to-end and identifies the exact 3D gap.
+
+**Option C: Operator factorization T = B*B.** Define the half-step operator B, show
+`T = B†B`, conclude `⟨f, Tf⟩ = ‖Bf‖² ≥ 0`. Requires understanding the Lüscher
+decomposition `T = V^{1/2} · U · V^{1/2}`. Different approach from character expansion.
+
+**Option D: Fock space (Lüscher 1977).** Build the Hilbert space as a Fock space,
+construct the transfer matrix explicitly, show it's positive definite. Completely
+different formalization; requires detailed study of the Lüscher construction.
+
+**Recommendation:** Option B (1+1D proof of concept) is the most tractable immediate
+step — it validates the full pipeline (plaquette expansion → cascade → conj form →
+`shared_cascade_factorization_nonneg_conj`) end-to-end for the case where the cascade
+applies. Then Option A (3D global cascade) extends to the full lattice. The 1+1D case
+would also clarify whether the `shared_cascade_factorization_nonneg_conj` lemma's
+hypotheses can be discharged in the concrete lattice setting.
+
+### What remains unchanged
+
+- All verified lemmas from session 105 remain GREEN (no code changes this session).
+- Axiom count: still 6 (4 standard + `peterWeyl_clebschGordan_plaquette` +
+  `transferMatrixPositivity_axiom`).
+- The cascade lemmas (`bipartiteChainIntegral_eq`, `bipartiteCyclicCascade_eq`,
+  `cascade_shared_kernel_form`, `shared_cascade_factorization_nonneg_conj`) are
+  verified building blocks that will be used in either Option A or B.
+
+### Key distinction: character-level vs matrix-element-level CG decomposition
+
+A crucial finding from this session's analysis:
+
+**Character-level CG decomposition** (`hcg_decomp` from `peterWeyl_clebschGordan_plaquette`):
+`χ_s(g) · χ_t(g) = ∑_ν cg s t ν · χ_ν(g)` — requires BOTH characters to have the SAME
+argument `g`. The coefficients `cg s t ν` are multiplicities (non-negative integers ≥ 0).
+Used by `luscher_2site_2D_cascade_charlevel` (PositiveDefinite.lean:1959), which assumes
+both forward plaquettes share the same `W` factor (simplification).
+
+**Matrix-element-level CG decomposition** (`hcgME_decomp`):
+`(ρ_s g)_{ab} · (ρ_t g)_{ij} = ∑_ν ∑_{p,q} cgME · (ρ_ν g)_{pq} · conj(cgME)` — handles
+DIFFERENT arguments (via matrix elements). The CG coefficients `cgME` are complex (NOT
+necessarily non-negative). Used by `single_site_3D_luscher_integral` (PeterWeyl.lean:3055).
+
+**Why this matters for the actual lattice:** In the actual 3D lattice, each temporal link
+appears in 3 forward plaquettes with DIFFERENT W variables (one per spatial direction):
+`χ_{s1}(g·W₁·g'⁻¹) · χ_{s2}(g·W₂·g'⁻¹) · χ_{s3}(g·W₃·g'⁻¹)`. The character-level CG
+decomposition CANNOT combine these (different arguments). The matrix-element-level CG
+decomposition CAN (by expanding each character as a trace, then decomposing the product
+of matrix elements).
+
+**Consequence for non-negativity:** The character-level approach gives non-negative
+coefficients directly (multiplicities ≥ 0). The matrix-element-level approach gives
+complex CG coefficients, requiring the |C|² argument (CG unitarity) for non-negativity.
+`cg_unitarity_nonneg` (PeterWeyl.lean:3296) proves this for the DIAGONAL case only.
+The OFF-DIAGONAL case (transfer matrix inner product, different indices on two sides)
+is NOT proven — this is the crux of the 3D global cascade.
+
+**Even the 2D lattice has this obstacle:** The `luscher_2site_2D_cascade_charlevel` lemma
+uses the same-W simplification. The actual 2D lattice (2 spatial directions) has different
+W variables per direction, requiring the matrix-element-level approach. So the
+character-level cascade is a SIMPLIFIED MODEL, not the actual lattice structure.
+
+## §8.11.85 — Interface plaquette subtlety RESOLVED: change-of-variables approach FLAWED, standard OS approach identified as simpler path (session 113, 2026-08-15)
+
+**Status: ANALYSIS ONLY. No code changes. Build unchanged (GREEN from session 111).**
+
+### The change-of-variables approach (session 112) is FLAWED
+
+Session 112 proposed a change-of-variables + gauge projection approach:
+substitute `W_{x,ν} → u_t(x)·W_{x,ν}·u_t(x+ν̂)⁻¹` (gauge transform of negative
+links by interface temporal links `u_t`), claiming the interface Boltzmann becomes
+`∏ B_p(V·W⁻¹)` independent of `u_t`, making the `u_t` integral a gauge projection `P`.
+
+**This approach does NOT work.** Two fatal flaws:
+
+#### Flaw 1: The simplified plaquette formula doesn't match the actual lattice
+
+The handoff's formula `u_t(x)·V_{x,ν}·u_t(x+ν̂)⁻¹·W_{x,ν}⁻¹` (interface temporal ×
+positive spatial × interface temporal⁻¹ × negative spatial⁻¹) does NOT correspond to
+any actual lattice plaquette. The actual interface plaquettes come in THREE types:
+
+- **Type 1** (time 0→1, μ=0, ν spatial): plaquette `(n=(0,x), μ=0, ν)`. Links:
+  - link 0: `U((0,x), 0)` — temporal at time 0, **interface** link
+  - link 1: `U((1,x), ν)` — spatial at time 1, **positive** link
+  - link 2: `U((1,x+e_ν), 0)` — temporal at time 1, **positive** link (inverted in product)
+  - link 3: `U((0,x+e_ν), ν)` — spatial at time 0, **interface** link (inverted in product)
+  - **No negative links.** Involves interface + positive links only.
+
+- **Type 2** (time T-1→0, μ=0, ν spatial): plaquette `(n=(T-1,x), μ=0, ν)`. Links:
+  - link 0: `U((T-1,x), 0)` — temporal at time T-1, **negative** link
+  - link 1: `U((0,x), ν)` — spatial at time 0, **interface** link
+  - link 2: `U((0,x+e_ν), 0)` — temporal at time 0, **interface** link (inverted in product)
+  - link 3: `U((T-1,x+e_ν), ν)` — spatial at time T-1, **negative** link (inverted in product)
+  - **No positive links.** Involves negative + interface links only.
+
+- **Type 3** (time 0, μ,ν both spatial): plaquette `(n=(0,x), μ, ν)` with μ,ν ≠ 0. Links:
+  - All four links at time 0, all **interface** links.
+  - Involves interface links only.
+
+The handoff's formula mixes a positive spatial link `V` and a negative spatial link `W`
+in the SAME plaquette, but no actual plaquette has this structure. Type 1 has positive
+links but no negative; type 2 has negative links but no positive.
+
+#### Flaw 2: Partial gauge transformation doesn't preserve the interface action
+
+The change of variables only transforms NEGATIVE links (part of `U⁻`), leaving
+interface and positive links fixed. For type 2 plaquettes (which involve both negative
+and interface links), the plaquette product `P = g₀·g₁·g₂⁻¹·g₃⁻¹` has:
+- `g₀` (negative temporal): transformed to `u_t(x)·g₀·u_t(x)⁻¹` (conjugation, since
+  gauge parameter is time-independent)
+- `g₁` (interface spatial): NOT transformed
+- `g₂` (interface temporal): NOT transformed
+- `g₃` (negative spatial): transformed to `u_t(x+e_ν)·g₃·u_t(x+2e_ν)⁻¹` (NOT conjugation)
+
+The transformed plaquette product is NOT a conjugation of the original, so
+`Re Tr(P') ≠ Re Tr(P)` in general. The interface action `S_int` is NOT invariant under
+this partial gauge transformation.
+
+A FULL gauge transformation (all links, including interface and positive) WOULD preserve
+all plaquette products, but then the positive links `V` are also transformed, and `f(V)`
+changes — defeating the purpose (we need `f` to be evaluated at the original positive
+links).
+
+### The STANDARD Osterwalder-Seiler approach: character expansion + reflection + conjugation
+
+The standard proof (Osterwalder-Seiler 1978, Lüscher) works as follows:
+
+1. **Character expansion** of the interface Boltzmann:
+   `exp(-β·S_int) = C · ∑_w F(w) · ∏_p χ_{w(p)}(P_p)`
+   where `P_p = g_{p,0}·g_{p,1}·g_{p,2}⁻¹·g_{p,3}⁻¹` is the plaquette product.
+   [Already in codebase: `interface_boltzmann_plaquette_char_expansion`]
+
+2. **Per-link character factoring** via Part 1 of `peterWeyl_clebschGordan_plaquette`:
+   `exp(c·Re Tr(g₁g₂g₃g₄)) = ∑_{r,s,t,u,v} coeff · χ_s(g₁)·χ_t(g₂)·χ_u(g₃)·χ_v(g₄)`
+   Each character is of a SINGLE link. The inverted links (g₃, g₄ in the plaquette
+   product) give `χ_u(g₃⁻¹) = conj(χ_u(g₃))` and `χ_v(g₄⁻¹) = conj(χ_v(g₄))`.
+
+3. **Group by region**: positive+interface links → factor `Φ_w(U⁺, u⁰)`,
+   negative+interface links → factor `Ψ_w(U⁻, u⁰)`. Interface links appear in BOTH
+   factors (type 1 plaquettes contribute to `Φ_w`, type 2 to `Ψ_w`, type 3 to both).
+   The product of characters at the same link (from multiple plaquettes) is kept as a
+   PRODUCT — no CG decomposition needed.
+
+4. **Reflection + conjugation**: the reflection `θ` maps type 2 plaquettes to type 1
+   plaquettes. The `conj(χ)` factors from inverted plaquette links (links 2,3) provide
+   the conjugation: `Ψ_w(U⁻, u⁰) = conj(Φ_w(θ⁻⁰(U⁻, u⁰)))`.
+   The σ-twist (inversion of temporal interface links) is consistent with this: it maps
+   `g → g⁻¹`, giving `χ(g⁻¹) = conj(χ(g))`, which is exactly the conjugation needed.
+
+5. **Final non-negativity**:
+   `⟨f, Tf⟩ = ∑_w F(w) · ∫ du⁰ |∫ Φ_w(U⁺, u⁰) · f · exp(-β·S⁺) dU⁺|² ≥ 0`
+   since `F(w) ≥ 0` and `|...|² ≥ 0`.
+
+### Key insight: the standard approach does NOT require CG beyond Part 1 or the cascade
+
+The cascade approach (§8.11.84) tried to integrate out individual temporal links using
+Schur orthogonality, which requires CG decomposition (Parts 3-4 of the axiom) and the
+3D obstacle (each temporal link in 6 plaquettes).
+
+The standard approach just groups per-link characters by region and uses the reflection.
+**No individual link integration, no CG decomposition, no cascade.** The product of
+characters at the same link is kept as a product — no need to decompose it into a single
+character via CG.
+
+This is a MAJOR simplification. The only axiom needed is Part 1 (character expansion),
+which is already in the codebase as `peterWeyl_clebschGordan_plaquette`.
+
+### The conjugation mechanism (detailed)
+
+For a type 2 plaquette (T-1→0), the character expansion gives:
+`χ_s(g₀)·χ_t(g₁)·conj(χ_u(g₂))·conj(χ_v(g₃))`
+where `g₀` = neg temporal, `g₁` = int spatial, `g₂` = int temporal, `g₃` = neg spatial.
+
+The reflection maps this to a type 1 plaquette (0→1) with links:
+- `g₀` (neg temporal) → `g₀⁻¹` (pos temporal, inverted by reflection)
+- `g₁` (int spatial) → `g₁` (int spatial, NOT inverted)
+- `g₂` (int temporal) → `g₂⁻¹` (int temporal, inverted by σ-twist)
+- `g₃` (neg spatial) → `g₃` (pos spatial, NOT inverted)
+
+The type 1 plaquette's character expansion gives:
+`χ_{s'}(g₂⁻¹)·χ_{t'}(g₃)·conj(χ_{u'}(g₀⁻¹))·conj(χ_{v'}(g₁))`
+= `conj(χ_{s'}(g₂))·χ_{t'}(g₃)·χ_{u'}(g₀)·conj(χ_{v'}(g₁))`
+
+Taking the conjugate:
+`conj(type 1) = χ_{s'}(g₂)·conj(χ_{t'}(g₃))·conj(χ_{u'}(g₀))·χ_{v'}(g₁)`
+
+For `Ψ_w = conj(Φ_w(θ...))`, we need the representation indices to match:
+`s = u'`, `t = v'`, `u = s'`, `v = t'`. This is ensured by the reflection symmetry
+of the character expansion (same coefficients `coeff` for both plaquette types).
+
+### Adversarial self-check (standing instruction §4)
+
+**Is the standard approach a dead end?** No.
+
+Steelman against: the bookkeeping is complex (each interface link in up to 6 plaquettes,
+exponential terms in the character expansion). The reflection matching requires showing
+representation indices match between reflected plaquettes. Interface links appear in both
+factors, preventing clean factorization.
+
+Counter: the bookkeeping is finite (finite lattice, finite irreps). The reflection
+matching is a bijection between type 1 and type 2 plaquettes (provable once). Interface
+links in the outer integral is standard Fubini. The σ-twist is already handled by
+existing machinery (`thetaReindex`, σ-inversion lemmas). No deep mathematics (CG, Schur
+orthogonality for individual links) is needed — just Part 1 + reflection + |...|².
+
+**Conclusion:** the standard OS approach is the most promising path. It avoids both the
+3D cascade obstacle (§8.11.84) and the flawed change-of-variables approach (session 112).
+The main formalization work is: (a) grouping per-link characters by region, (b) proving
+the reflection conjugation `Ψ_w = conj(Φ_w(θ...))`, (c) assembling the final |...|².
+
+### What remains unchanged
+
+- All verified lemmas from sessions 105-111 remain GREEN (no code changes).
+- Axiom count: still 6 (4 standard + `peterWeyl_clebschGordan_plaquette` +
+  `transferMatrixPositivity_axiom`).
+- 0 sorries in the codebase.
+
+### The interface link challenge and the `character_expansion_positivity` scaffold
+
+**Key discovery:** the codebase already contains the abstract scaffold for the
+reflection positivity proof: `character_expansion_positivity`
+(PositiveDefiniteIntegral.lean:1010). This lemma states:
+
+If `K : X → Y → ℂ` has a finite separable decomposition
+`K(x, y) = ∑_i a_i · Φ_i(x) · conj(Φ_i(θ y))` with `a_i ≥ 0` and `θ`
+measure-preserving, then for real-valued `f`:
+`∫∫ f(x) · f(θ y) · K(x, y) dν(y) dμ(x) = ∑_i a_i · ‖∫ f · Φ_i dμ‖² ≥ 0`.
+
+No group structure, no character orthogonality — just measure-preserving CoV
+and `f` real-valued. This is EXACTLY the scaffold needed.
+
+**The challenge: getting the separable decomposition.** The interface Boltzmann
+`exp(-β·S_int)` must decompose as `∑_w F(w) · Φ_w(x) · conj(Φ_w(θ y))` where
+`x` = positive+interface config, `y` = negative config, `θ` = reflection.
+
+The existing `interface_boltzmann_character_expansion` gives:
+`exp(-β·S_int) = C · ∑_w F(w) · Φ_w · Ψ_w · V_w`
+where `Φ_w = ∏_{pos} χ_{w(l)}(g_l)`, `Ψ_w = ∏_{int} χ_{w(l)}(g_l)`,
+`V_w = ∏_{neg} χ_{w(l)}(g_l)` (dual/conj cancel).
+
+The problem: `Ψ_w` (interface link factor) appears in BOTH the positive and
+negative sides. It cannot be cleanly assigned to either `Φ_w(x)` or
+`conj(Φ_w(θ y))`:
+- Putting all of `Ψ_w` in `Φ_w(x)`: requires `conj(Φ_w(θ y)) = V_w(y)`, i.e.,
+  `Φ_w(θ y) = conj(V_w(y))`. But `Φ_w(θ y) = [∏_{pos} χ_{w(l)}(θg_l)] · Ψ_w(u⁰)`,
+  and `conj(V_w(y)) = ∏_{neg} χ_{dual(w(l))}(g_l)`. The reflection matching
+  `∏_{pos} χ_{w(l)}(θg_l) = ∏_{neg} χ_{dual(w(l))}(g_l)` works for temporal
+  links (inverted by reflection → conj → dual) but NOT for spatial links
+  (not inverted → no conj → dual doesn't match). See detailed analysis above.
+- Splitting `Ψ_w` as `Ψ_w^{1/2} · Ψ_w^{1/2}`: requires a "square root" of the
+  interface character product, which is the HALF-WEIGHT expansion
+  `exp(-β·S_int/2)`. This is the standard OS approach but requires a character
+  expansion of the half-weight Boltzmann, which is more complex.
+
+**The `dependsOnlyOnPosSpatialInterface` hypothesis helps but doesn't fully
+resolve this.** Since `f` doesn't depend on temporal interface links, the
+σ-twist doesn't affect `f`: `f(U⁺, θu⁰) = f(U⁺, u⁰)`. This means
+`A_w(θu⁰) = A_w(u⁰)` (the positive-side integral is invariant under σ-twist
+of interface links). But `Ψ_w(u⁰)` is still complex, so
+`∫ Ψ_w(u⁰) · |A_w(u⁰)|² du⁰` is not obviously ≥ 0.
+
+**Two possible paths forward (for the next session to evaluate):**
+
+1. **Half-weight expansion**: Expand `exp(-β·S_int/2)` (not `exp(-β·S_int)`)
+   in characters. This gives `exp(-β·S_int/2) = ∑_w c_w · Φ_w^{1/2} · Ψ_w^{1/2}`
+   where the interface factor is split between positive and negative sides.
+   Then `G(U) = f·exp(-β·S⁺)·exp(-β·S_int/2)` and
+   `G(θU) = f(θU)·exp(-β·S⁻)·exp(-β·S_int/2)`, and the product
+   `G(U)·G(θU) = f·f(θU)·exp(-β·S⁺)·exp(-β·S⁻)·exp(-β·S_int)` has the
+   full-weight expansion. The half-weight approach requires a character
+   expansion of `exp(-β·S_int/2)`, which may need `√coeff` (square root of
+   the expansion coefficients). This is standard in the OS literature but
+   requires careful formalization.
+
+2. **PD kernel approach**: Use `plaquetteBoltzmannPD` (already proven) +
+   Schur product theorem to show `exp(-β·S_int)` is PD on the interface
+   links. Then show the transfer matrix kernel `K(V, W)` (integral of the
+   PD kernel over negative links) is PD, giving `⟨f, Tf⟩ ≥ 0` by the PD
+   quadratic form property. This avoids the character expansion entirely
+   for the positivity proof but requires showing the connection between
+   PD kernels and reflection positivity (which may need its own lemma).
+
+**Recommendation for next session:** Path 2 (PD kernel approach) may be
+simpler since `plaquetteBoltzmannPD` and `fullBoltzmannPD` are already
+proven, and the `PositiveDefiniteKernel.comp` lemma
+(PositiveDefiniteIntegral.lean:961) provides the composition with
+reflection/projection maps. The key lemma needed is: "if `K` is a PD kernel
+and `θ` is measure-preserving, then `∫ f(x)·f(θy)·K(x,y) dμ(x)dν(y) ≥ 0`"
+— which is essentially `character_expansion_positivity` but with the PD
+property replacing the separable decomposition. This may already exist
+as `integralOperator_nonneg` or a variant.
+
+### Deep analysis of existing machinery (session 113 continued, 2026-08-15)
+
+**MAJOR FINDING: The existing machinery is FAR more extensive than the session 112
+handoff suggested.** The reflection conjugation — the key step I was planning to
+formalize — is ALREADY PROVEN. The transfer matrix inner product has been reduced
+to a concrete form. The remaining obstacle is precisely identified.
+
+#### Already-proven machinery (all 0 sorries, 0 custom axioms)
+
+1. **`fullReflectReindex` (w*)** (TransferMatrix.lean:5749): The CORRECT reflection
+   reindexing that swaps pos ↔ neg via `reflectInterfaceLink`, applying `dual` on
+   time-like links. For pos links: temporal → `w*(l) = dual(w(φ(l)))`, spatial →
+   `w*(l) = w(φ(l))`. For int/neg links: `w*(l) = w(l)` (unchanged).
+
+2. **`charFactorNeg_eq_star_charFactorPos_fullReflect`** (TransferMatrix.lean:5884):
+   The KEY identity: `charFactorNeg w (reflectPosToNeg V⁺) = star(charFactorPos (w*) V⁺)`.
+   This is the "reflection conjugation" — the negative character factor at the reflected
+   positive config equals the conjugate of the positive character factor at w*.
+
+3. **`star_charFactorNeg_eq_charFactorPos_fullReflect`** (TransferMatrix.lean:5940):
+   The conjugate version: `star(charFactorNeg w (reflectPosToNeg V⁺)) = charFactorPos (w*) V⁺`.
+
+4. **`fourierCoeffNeg_eq_fourierCoeffPos_fullReflect`** (TransferMatrix.lean:5970):
+   `B_w(u⁰) = A_{w*}(σ(u⁰))` — the negative Fourier coefficient equals the positive
+   Fourier coefficient at the reflected weight and reflected interface.
+
+5. **`transfer_matrix_fubini_integrated_pull_fullReflect`** (TransferMatrix.lean:6005):
+   The FULL transfer matrix inner product form:
+   `∫ ψ·Tψ = C · ∑_w F(w) · ∫_{u⁰} Ψ_w(u⁰) · A_w(u⁰) · A_{w*}(σ(u⁰)) dμ⁰`
+   where A_w = fourierCoeffPos, Ψ_w = charFactorInt, F(w) ≥ 0.
+
+6. **Full-lattice analogues** (TransferMatrix.lean:6081-6334): `fullReflectReindexLink`,
+   `charFactorPosAll`, `charFactorNegAll`, and the corresponding per-link/product
+   identities for ALL links (not just interface links).
+
+7. **`thetaReindex` (θ)** (TransferMatrix.lean:5315): The PROJECTION reindexing
+   (idempotent, NOT a bijection). This was the first attempt; it's superseded by
+   `fullReflectReindex` (w*) which IS a valid reindexing for the reflection identity.
+
+8. **`character_expansion_positivity`** (PositiveDefiniteIntegral.lean:1010): The
+   abstract scaffold: if K(x,y) = ∑_i a_i · Φ_i(x) · conj(Φ_i(θy)) with a_i ≥ 0 and
+   θ measure-preserving, then ∫∫ f(x)·f(θy)·K(x,y) dν dμ = ∑_i a_i · ‖∫ f·Φ_i dμ‖² ≥ 0.
+
+#### The EXACT remaining obstacle
+
+The transfer matrix inner product is:
+```
+∫ ψ·Tψ = C · ∑_w F(w) · ∫_{u⁰} Ψ_w(u⁰) · A_w(u⁰) · A_{w*}(σ(u⁰)) dμ⁰
+```
+
+For non-negativity, we need each term `∫_{u⁰} Ψ_w(u⁰) · A_w(u⁰) · A_{w*}(σ(u⁰)) dμ⁰ ≥ 0`
+(or the full sum ≥ 0).
+
+**Key simplification from `dependsOnlyOnPosSpatialInterface`:** Since ψ (hence f)
+doesn't depend on temporal interface links, and σ only inverts temporal interface
+links, we have `A_w(σ(u⁰)) = A_w(u⁰)`. So the integral becomes:
+```
+∫_{u⁰} Ψ_w(u⁰) · A_w(u⁰) · A_{w*}(u⁰) dμ⁰
+```
+
+**The obstacle:** Ψ_w(u⁰) = ∏_{l ∈ interfaceLinks} χ_{w(l)}(g_l) is COMPLEX (product
+of characters). The integral `∫ Ψ_w · A_w · A_{w*} dμ⁰` is NOT obviously ≥ 0.
+
+**Why the separable form doesn't work directly:** For `character_expansion_positivity`,
+we need K(x,y) = ∑_w a_w · Φ̃_w(x) · conj(Φ̃_w(θy)). Setting
+Φ̃_w(u) = exp(-β·S⁺/2)·Φ_w(U⁺)·Ψ_w(u⁰), we need conj(Φ̃_w(θy)) = exp(-β·S⁻/2)·star(V_w(U⁻)),
+i.e., Φ̃_w(θy) = exp(-β·S⁻/2)·V_w(U⁻). This requires:
+```
+Φ_w(U⁺(θy)) · Ψ_w(σ(u⁰)) = V_w(U⁻)
+```
+Using the existing identity `star_charFactorNeg_eq_charFactorPos_fullReflect`:
+`charFactorPos (w*) (U⁺(θy)) = star(charFactorNeg w U⁻) = star(V_w(U⁻))`
+So: `Φ_{w*}(U⁺(θy)) = star(V_w(U⁻))`, and we need:
+`star(V_w(U⁻)) · Ψ_w(σ(u⁰)) = V_w(U⁻)`, i.e., `Ψ_w(σ(u⁰)) = V_w(U⁻)/star(V_w(U⁻))`.
+This is NOT an identity — it doesn't hold in general.
+
+**Why sum reindexing w → w* doesn't work:** `fullReflectReindex` is IDEMPOTENT
+(θ(θw) = θw, proven at TransferMatrix.lean:5631), NOT a bijection. So the sum
+reindexing `∑_w F(w)·G(w) = ∑_w F(w*)·G(w*)` is INVALID (§8.11.24).
+
+#### The interface link factor Ψ_w is the crux
+
+The interface character factor `Ψ_w(u⁰) = ∏_{l ∈ interfaceLinks} χ_{w(l)}(g_l)` couples
+the positive and negative sides. It appears in BOTH the positive factor (Φ̃_w includes
+Ψ_w) and the reflected negative factor (Φ̃_w(θy) includes Ψ_w(σ(u⁰))). This prevents
+the clean separation needed for `character_expansion_positivity`.
+
+**Temporal interface links:** Can be integrated out using character orthogonality
+(∫ χ_w dμ = 0 for non-trivial w), forcing w(l) = σ_0 for temporal interface links.
+This is because A_w doesn't depend on temporal interface links (f doesn't depend on them).
+
+**Spatial interface links:** CANNOT be integrated out independently because A_w depends
+on them (through f, which depends on spatial interface links). The integral
+`∫_{u⁰_s} [∏_{spatial int} χ_{w(l)}(g_l)] · A_w(u⁰_s) · A_{w*}(u⁰_s) dμ⁰_s` is the
+remaining challenge.
+
+#### Three possible paths forward (refined)
+
+1. **Half-weight expansion (Path 1):** Expand `exp(-β·S_int/2)` in characters instead of
+   `exp(-β·S_int)`. This splits the interface character factor between the positive and
+   negative sides: `G(U) = f·exp(-β·S⁺)·exp(-β·S_int/2)` uses the half-weight expansion,
+   and `G(θU) = f(θU)·exp(-β·S⁻)·exp(-β·S_int/2)` uses the same half-weight expansion
+   at the reflected config. The product `G(U)·G(θU)` then has the FULL-weight expansion.
+   The key: the half-weight expansion may have a separable form where the interface
+   factor is split as `Ψ_w^{1/2} · Ψ_w^{1/2}`, one half in each factor. This requires
+   a character expansion of `exp(-β·S_int/2)`, which may need `√coeff` (square root of
+   expansion coefficients). **Status: NOT yet formalized. The `√coeff` approach is
+   standard in OS literature but requires careful handling.**
+
+2. **PD kernel approach (Path 2):** Use `plaquetteBoltzmannPD` (proven) + Schur product
+   to show `exp(-β·S_int)` is PD on the interface link group. Then show the transfer
+   matrix kernel `K(u, U⁻) = exp(-β·(S⁺/2 + S⁻/2 + S_int))` is PD, giving `⟨g, Tg⟩ ≥ 0`.
+   The key lemma needed: "if K is a PD kernel and θ is measure-preserving, then
+   `∫ f(x)·f(θy)·K(x,y) dμ dν ≥ 0`" — this is `character_expansion_positivity` with
+   the PD property replacing the separable decomposition. **Status: The PD property
+   of `exp(-β·S_int)` on the interface link group is NOT yet proven (only the plaquette-
+   level and full-lattice PD are proven). The connection between PD kernels and
+   reflection positivity needs a new lemma.**
+
+3. **Direct |...|² approach (Path 3):** Show that the sum
+   `∑_w F(w) · ∫_{u⁰} Ψ_w(u⁰) · A_w(u⁰) · A_{w*}(u⁰) dμ⁰` can be reorganized as
+   `∑_w' F'(w') · |∫_{u⁰} A_{w'}(u⁰) · Ψ'_{w'}(u⁰) dμ⁰|² ≥ 0` for some reindexed sum
+   and modified character factors. This requires understanding the coupling between
+   w and w* through the plaquette coefficients F(w). **Status: NOT yet analyzed in
+   detail. The coupling through F(w) is the key difficulty.**
+
+**Recommendation:** Path 1 (half-weight expansion) is the most standard OS approach and
+most likely to work. The key insight is that `exp(-β·S_int/2) = (exp(-β·S_int))^{1/2}`,
+and if the character expansion of `exp(-β·S_int)` has non-negative coefficients, then
+the half-weight expansion can be obtained by taking square roots of the coefficients
+(this works because the character expansion is a sum of PD functions with non-negative
+coefficients, and the square root of a PD function with non-negative coefficient sum
+is also PD). The next session should investigate whether this can be formalized using
+the existing `peterWeyl_clebschGordan_plaquette` axiom (Part 1).

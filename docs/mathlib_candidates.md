@@ -535,3 +535,31 @@ Our bounded diagonal `∃ M, K(x,x) ≤ M` plus the kernel Cauchy–Schwarz boun
 (via a kernel-CS lemma we do not currently prove). Recommendation: keep the
 verified proof as-is; revisit restating in the product-measure/Lp convention
 only after PR #42003 merges and stabilizes.
+
+---
+
+## 9. `repCharacter_cyclic2`: 2-factor cyclic invariance of characters (standard-but-unformalized)
+
+**Status:** Embedded in `src/lean/YangMills/Proofs/PositiveDefinite.lean:795`.
+
+**Statement.** For a group representation `ρ : G →* Matrix (Fin n) (Fin n) ℂ` and
+group elements `g h : G`, the character `χ(g · h) = χ(h · g)`.
+
+**Proof.** `χ(g · h) = Tr(ρ(g) · ρ(h)) = Tr(ρ(h) · ρ(g)) = χ(h · g)` by
+`Matrix.trace_mul_comm`. No unitary or irreducibility hypothesis needed — pure
+trace algebra. Depends only on `[propext, Classical.choice, Quot.sound]`.
+
+**Why standard-but-unformalized.** This is the 2-factor special case of the
+well-known cyclic invariance of the trace. Mathlib has `Matrix.trace_mul_comm`
+(`Tr(A·B) = Tr(B·A)`) and the 3-factor character version
+`repCharacter_cyclic` (`χ(g·h·k) = χ(h·k·g)`, proved in this project from
+`trace_mul_comm`), but a direct 2-factor `χ(g·h) = χ(h·g)` lemma for group
+characters does not appear to be in Mathlib. An absence check (grep for
+`repCharacter_cyclic2` / `character.*cyclic.*2` / `trace_mul_comm.*character`
+in Mathlib) found no match. The 3-factor version can derive it (set `k = 1`),
+but the direct 2-factor form is cleaner for the bipartite cascade application.
+
+**Use in this project.** Key lemma for rearranging character arguments in the
+bipartite Lüscher cascade (`bipartiteChainIntegral_eq`): cyclically rotating
+`χ((V-prod · b⁻¹ · W-prod⁻¹) · (W₀⁻¹ · a · V₀))` to
+`χ(a · V₀ · V-prod · b⁻¹ · W-prod⁻¹ · W₀⁻¹)` via two applications.

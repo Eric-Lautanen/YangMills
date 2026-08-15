@@ -430,6 +430,7 @@ theorem plaquetteBoltzmannPD (N : ℕ) (c : ℝ) (hc : 0 ≤ c) :
   rw [hfun]
   exact hSr
 
+
 /-- A product of four characters with the 3rd and 4th conjugated,
 `χ_s(g₁) · χ_t(g₂) · conj(χ_u(g₃)) · conj(χ_v(g₄))`, is positive-definite on
 `SU(N)⁴` (left-associated).  This follows from `charProduct4_positiveDefinite`
@@ -1289,6 +1290,87 @@ lemma plaquette_boltzmann_single_char_expansion
     simp only [Complex.ofReal_sum]
 
 #print axioms plaquette_boltzmann_single_char_expansion
+
+/-- **Uniform single-character expansion of the plaquette Boltzmann factor
+(full Peter-Weyl package).**
+
+For `c ≥ 0`, the function `g ↦ exp(c · Re Tr(g))` on `SU(N)` admits a finite
+character expansion
+    exp(c · Re Tr(g)) = Σ_s coeff_s · χ_s(g)     (for ALL g : SU N)
+with `coeff_s ≥ 0`, together with the full Peter-Weyl / Clebsch-Gordan package
+(`ι`, `dims`, `ρ`, `hU`, `hMeas`, `hIrr`, `hDims`).
+
+This is the **uniform** (`∀ g`) version of `plaquette_boltzmann_single_char_expansion`
+(which is parametric in the expansion data and concludes for a specific plaquette
+product).  It is derived from `peterWeyl_clebschGordan_plaquette` Part 1 by setting
+`g₂ = g₃ = g₄ = 1`, using `χ_i(1) = dims(i)`, and collecting the `s`-index.  The
+coefficient is `coeff_s = Σ_{r,t,u,v} coeff(r,s,t,u,v) · dims(t) · dims(u) · dims(v)`,
+which is non-negative and INDEPENDENT of `g` (so the same `coeff` works for all `g`).
+
+This is the key input for the **plaquette-level interface expansion** (STEP 5): it
+provides the `hexp1 : ∀ g, exp(c·Re Tr(g)) = Σ_s coeff_s · χ_s(g)` hypothesis needed
+by `plaquette_product_single_char_decomp`, which expands the product of interface
+plaquette Boltzmann factors as `Σ_{w : P → ι} F(w) · ∏_p χ_{w(p)}(plaquetteProduct p)`
+with `F(w) ≥ 0` — one character per PLAQUETTE (not per link).  At the plaquette level,
+each temporal link appears in two plaquette characters, so the Lüscher cascade forces
+matching (not triviality), producing constant non-negative coefficients — exactly the
+`a(z, i) = c_i ≥ 0` structure required by `character_expansion_nonneg_shared`. -/
+lemma plaquette_boltzmann_character_expansion_single (N : ℕ) (c : ℝ) (hc : 0 ≤ c) :
+    ∃ (ι : Type) (hι : Fintype ι) (dims : ι → ℕ)
+      (ρ : ∀ i, SU N →* Matrix (Fin (dims i)) (Fin (dims i)) ℂ)
+      (hU : ∀ i, IsUnitaryRepresentation (ρ i))
+      (hMeas : ∀ i, Measurable (repCharacter (ρ i)))
+      (hIrr : ∀ i, IsIrreducible (ρ i))
+      (hDims : ∀ i, 0 < dims i)
+      (coeff : ι → ℝ) (hcoeff : ∀ s, 0 ≤ coeff s),
+      ∀ (g : SU N),
+      (Real.exp (c * (Matrix.trace ((g : SU N) : Matrix (Fin N) (Fin N) ℂ)).re) : ℂ) =
+        ∑ s : ι, (coeff s : ℂ) * repCharacter (ρ s) g := by
+  obtain ⟨ι, hι, dims, ρ, hU, hMeas, hIrr, hDims, σ_0, hσ_0_dims, hσ_0_trivial, coeff4, hcoeff4, cg, hcg, hcg_decomp, dual, hdual,
+      cgME, hcgME_decomp, hcgME_unitary,
+      Λ, hΛ, dimsΛ, ρΛ, hUΛ, hIrrΛ, hDimsΛ, emb, hemb, μ, hμ,
+      cgMEΛ, hcgMEΛ_support, hexp4, hL2, hSchurΛ, hcgMEΛ_parts⟩ :=
+    peterWeyl_clebschGordan_plaquette N c hc
+  letI : Fintype ι := hι
+  -- Character at identity = dimension: χ_i(1) = Tr(ρ_i(1)) = Tr(I_{d_i}) = d_i
+  have hchar_one : ∀ i, repCharacter (ρ i) 1 = (dims i : ℂ) := by
+    intro i
+    show Matrix.trace (ρ i 1) = (dims i : ℂ)
+    rw [MonoidHom.map_one, Matrix.trace_one, Fintype.card_fin]
+  -- Single coefficient: coeff_single s = Σ_{r,t,u,v} coeff4(r,s,t,u,v)·dims(t)·dims(u)·dims(v)
+  refine ⟨ι, hι, dims, ρ, hU, hMeas, hIrr, hDims,
+      (fun s => ∑ r, ∑ t, ∑ u, ∑ v, coeff4 r s t u v * dims t * dims u * dims v),
+      fun s => ?_, fun g => ?_⟩
+  · -- Non-negativity: each term coeff4 ≥ 0, dims ≥ 0 (ℕ), product ≥ 0
+    exact Finset.sum_nonneg (fun r _ => Finset.sum_nonneg (fun t _ => Finset.sum_nonneg (fun u _ =>
+      Finset.sum_nonneg (fun v _ => mul_nonneg (mul_nonneg (mul_nonneg
+        (hcoeff4 r s t u v) (Nat.cast_nonneg _)) (Nat.cast_nonneg _)) (Nat.cast_nonneg _)))))
+  · -- Equality: apply hexp4 with g and three identities
+    have h := hexp4 g 1 1 1
+    -- LHS: g * 1 * 1 * 1 = g
+    simp only [mul_one] at h
+    -- RHS: χ_t(1) = dims t, χ_u(1) = dims u, χ_v(1) = dims v
+    simp only [hchar_one] at h
+    -- h : exp(c·Re Tr(g)) = Σ_r Σ_s Σ_t Σ_u Σ_v, coeff4·χ_s(g)·(dims t)·(dims u)·(dims v)
+    -- Goal: exp(c·Re Tr(g)) = Σ_s, (coeff_single s : ℂ) · χ_s(g)
+    rw [h, Finset.sum_comm]
+    refine Finset.sum_congr rfl (fun s hs => ?_)
+    -- Rearrange each summand to put χ_s(g) on the right, then factor it out
+    have h_rearr : ∀ r t u v,
+        (coeff4 r s t u v : ℂ) * (repCharacter (ρ s) g *
+          (dims t : ℂ) * (dims u : ℂ) * (dims v : ℂ)) =
+        ((coeff4 r s t u v * dims t * dims u * dims v : ℝ) : ℂ) *
+          repCharacter (ρ s) g := by
+      intro r t u v
+      push_cast
+      ring
+    rw [Finset.sum_congr rfl (fun r _ => Finset.sum_congr rfl (fun t _ =>
+        Finset.sum_congr rfl (fun u _ => Finset.sum_congr rfl (fun v _ => h_rearr r t u v))))]
+    simp only [← Finset.sum_mul]
+    congr 1
+    simp only [Complex.ofReal_sum]
+
+#print axioms plaquette_boltzmann_character_expansion_single
 
 /-- **Multi-plaquette single-index character expansion (product-of-sums).**
 
@@ -2952,6 +3034,456 @@ lemma integral_ME_times_3barred_MEs
   ring
 
 #print axioms integral_ME_times_3barred_MEs
+
+/-- **Integrability of a 4-ME product (1 unbarred × 3 barred).** General version of the
+`hInt_4ME` step from `single_site_3D_luscher_integral`: for any representations `σ, t₁, t₂, t₃`
+and any indices, the product `(ρ_σ g)_{pq} · conj((ρ_{t₁} g)_{c₁d₁}) · conj((ρ_{t₂} g)_{c₂d₂}) · conj((ρ_{t₃} g)_{c₃d₃})`
+is integrable w.r.t. the Haar probability measure.
+
+Proof: expand the 3 barred MEs via `cgME_decomp_3fold_conj` (pointwise identity), then each
+leaf is `(ρ_σ g)_{pq} · conj((ρ_β g)_{p'q'})` times a CG coefficient, which is integrable by
+`characterOrthogonality` (`hInt`). The finite sum is integrable by `integrable_finsetSum`.
+0 sorries, 0 new axioms. -/
+lemma integrable_ME_times_3barred_MEs
+    {G : Type*} [Group G] [TopologicalSpace G]
+    [CompactSpace G] [MeasurableSpace G] [BorelSpace G]
+    (μ : Measure G) [IsProbabilityMeasure μ]
+    (ι : Type) [Fintype ι] [DecidableEq ι] (dims : ι → ℕ)
+    (hDims : ∀ i, 0 < dims i)
+    (ρ : ∀ i, G →* Matrix (Fin (dims i)) (Fin (dims i)) ℂ)
+    (hU : ∀ i, IsUnitaryRepresentation (ρ i))
+    (hIrr : ∀ i, IsIrreducible (ρ i))
+    (cgME : ∀ (s t ν : ι), Fin (dims s) → Fin (dims t) → Fin (dims ν) → ℂ)
+    (hcgME_decomp : ∀ (s t : ι) (g : G) (a b : Fin (dims s)) (i j : Fin (dims t)),
+        (ρ s g) a b * (ρ t g) i j =
+        ∑ ν : ι, ∑ p : Fin (dims ν), ∑ q : Fin (dims ν),
+          cgME s t ν a i p * (ρ ν g) p q * conj (cgME s t ν b j q))
+    (σ : ι) (p : Fin (dims σ)) (q : Fin (dims σ))
+    (t1 t2 t3 : ι) (c1 d1 : Fin (dims t1)) (c2 d2 : Fin (dims t2)) (c3 d3 : Fin (dims t3)) :
+    Integrable (fun g => (ρ σ g) p q *
+        (conj ((ρ t1 g) c1 d1) * conj ((ρ t2 g) c2 d2) * conj ((ρ t3 g) c3 d3))) μ := by
+  obtain ⟨hInt, hSchur_diag, hSchur_offdiag⟩ :=
+    characterOrthogonality μ ι dims hDims ρ hU hIrr
+  -- Pointwise identity: expand 3 barred MEs via cgME_decomp_3fold_conj
+  have hpt_barred : ∀ (g : G),
+      conj ((ρ t1 g) c1 d1) * conj ((ρ t2 g) c2 d2) * conj ((ρ t3 g) c3 d3) =
+      ∑ ν' : ι, ∑ r' : Fin (dims ν'), ∑ s' : Fin (dims ν'),
+        ∑ β : ι, ∑ p' : Fin (dims β), ∑ q' : Fin (dims β),
+          conj (cgME t1 t2 ν' c1 c2 r') * cgME t1 t2 ν' d1 d2 s' *
+          conj (cgME ν' t3 β r' c3 p') * conj ((ρ β g) p' q') * cgME ν' t3 β s' d3 q' := by
+    intro g
+    exact cgME_decomp_3fold_conj ι dims ρ cgME hcgME_decomp t1 t2 t3 g c1 d1 c2 d2 c3 d3
+  -- Rewrite the function using the expansion
+  rw [show (fun g => (ρ σ g) p q *
+        (conj ((ρ t1 g) c1 d1) * conj ((ρ t2 g) c2 d2) * conj ((ρ t3 g) c3 d3))) =
+      (fun g => ∑ ν' : ι, ∑ r' : Fin (dims ν'), ∑ s' : Fin (dims ν'),
+        ∑ β : ι, ∑ p' : Fin (dims β), ∑ q' : Fin (dims β),
+          conj (cgME t1 t2 ν' c1 c2 r') * cgME t1 t2 ν' d1 d2 s' *
+          conj (cgME ν' t3 β r' c3 p') * cgME ν' t3 β s' d3 q' *
+          ((ρ σ g) p q * conj ((ρ β g) p' q'))) from by
+    funext g
+    rw [hpt_barred g, Finset.mul_sum]
+    apply Finset.sum_congr rfl
+    intro ν' _
+    rw [Finset.mul_sum]
+    apply Finset.sum_congr rfl
+    intro r' _
+    rw [Finset.mul_sum]
+    apply Finset.sum_congr rfl
+    intro s' _
+    rw [Finset.mul_sum]
+    apply Finset.sum_congr rfl
+    intro β _
+    rw [Finset.mul_sum]
+    apply Finset.sum_congr rfl
+    intro p' _
+    rw [Finset.mul_sum]
+    apply Finset.sum_congr rfl
+    intro q' _
+    ring]
+  -- Integrability of each leaf: (CG coeff) * ((ρ σ g) p q * conj ((ρ β g) p' q'))
+  apply integrable_finsetSum Finset.univ
+  intro ν' _
+  apply integrable_finsetSum Finset.univ
+  intro r' _
+  apply integrable_finsetSum Finset.univ
+  intro s' _
+  apply integrable_finsetSum Finset.univ
+  intro β _
+  apply integrable_finsetSum Finset.univ
+  intro p' _
+  apply integrable_finsetSum Finset.univ
+  intro q' _
+  exact Integrable.smul
+    (conj (cgME t1 t2 ν' c1 c2 r') * cgME t1 t2 ν' d1 d2 s' *
+     conj (cgME ν' t3 β r' c3 p') * cgME ν' t3 β s' d3 q')
+    (hInt σ β p q p' q')
+
+#print axioms integrable_ME_times_3barred_MEs
+#print axioms integrable_ME_times_3barred_MEs
+
+/-- **Integrability of a 6-ME product (3 unbarred × 3 barred).** For any representations
+`s₁, s₂, s₃, t₁, t₂, t₃` and any indices, the product of 3 unbarred matrix elements times
+3 barred matrix elements (as arises in the 3D Lüscher integral) is integrable w.r.t. the Haar
+probability measure.
+
+Proof: decompose the 3 unbarred MEs via `cgME_decomp_3fold` (pointwise identity), then each
+leaf is `(ρ_α g)_{pq} · (3 barred MEs)` times a CG coefficient, which is integrable by
+`integrable_ME_times_3barred_MEs`. The finite sum is integrable by `integrable_finsetSum`.
+0 sorries, 0 new axioms. -/
+lemma integrable_6ME_product
+    {G : Type*} [Group G] [TopologicalSpace G]
+    [CompactSpace G] [MeasurableSpace G] [BorelSpace G]
+    (μ : Measure G) [IsProbabilityMeasure μ]
+    (ι : Type) [Fintype ι] [DecidableEq ι] (dims : ι → ℕ)
+    (hDims : ∀ i, 0 < dims i)
+    (ρ : ∀ i, G →* Matrix (Fin (dims i)) (Fin (dims i)) ℂ)
+    (hU : ∀ i, IsUnitaryRepresentation (ρ i))
+    (hIrr : ∀ i, IsIrreducible (ρ i))
+    (cgME : ∀ (s t ν : ι), Fin (dims s) → Fin (dims t) → Fin (dims ν) → ℂ)
+    (hcgME_decomp : ∀ (s t : ι) (g : G) (a b : Fin (dims s)) (i j : Fin (dims t)),
+        (ρ s g) a b * (ρ t g) i j =
+        ∑ ν : ι, ∑ p : Fin (dims ν), ∑ q : Fin (dims ν),
+          cgME s t ν a i p * (ρ ν g) p q * conj (cgME s t ν b j q))
+    (s1 s2 s3 : ι) (a1 b1 : Fin (dims s1)) (a2 b2 : Fin (dims s2)) (a3 b3 : Fin (dims s3))
+    (t1 t2 t3 : ι) (c1 d1 : Fin (dims t1)) (c2 d2 : Fin (dims t2)) (c3 d3 : Fin (dims t3)) :
+    Integrable (fun g =>
+      (ρ s1 g) a1 b1 * (ρ s2 g) a2 b2 * (ρ s3 g) a3 b3 *
+      conj ((ρ t1 g) c1 d1) * conj ((ρ t2 g) c2 d2) * conj ((ρ t3 g) c3 d3)) μ := by
+  -- Pointwise identity: apply cgME_decomp_3fold to the 3 unbarred MEs, distribute barred product
+  have hpt : ∀ (g : G),
+      (ρ s1 g) a1 b1 * (ρ s2 g) a2 b2 * (ρ s3 g) a3 b3 *
+      conj ((ρ t1 g) c1 d1) * conj ((ρ t2 g) c2 d2) * conj ((ρ t3 g) c3 d3) =
+      ∑ ν : ι, ∑ r : Fin (dims ν), ∑ s : Fin (dims ν),
+        ∑ α : ι, ∑ p : Fin (dims α), ∑ q : Fin (dims α),
+        (cgME s1 s2 ν a1 a2 r * conj (cgME s1 s2 ν b1 b2 s) *
+         cgME ν s3 α r a3 p * conj (cgME ν s3 α s b3 q)) *
+        ((ρ α g) p q * (conj ((ρ t1 g) c1 d1) * conj ((ρ t2 g) c2 d2) *
+         conj ((ρ t3 g) c3 d3))) := by
+    intro g
+    have hreassoc : (ρ s1 g) a1 b1 * (ρ s2 g) a2 b2 * (ρ s3 g) a3 b3 *
+        conj ((ρ t1 g) c1 d1) * conj ((ρ t2 g) c2 d2) * conj ((ρ t3 g) c3 d3) =
+        ((ρ s1 g) a1 b1 * (ρ s2 g) a2 b2 * (ρ s3 g) a3 b3) *
+        (conj ((ρ t1 g) c1 d1) * conj ((ρ t2 g) c2 d2) * conj ((ρ t3 g) c3 d3)) := by ring
+    rw [hreassoc, cgME_decomp_3fold ι dims ρ cgME hcgME_decomp s1 s2 s3 g a1 b1 a2 b2 a3 b3]
+    rw [Finset.sum_mul]
+    apply Finset.sum_congr rfl
+    intro ν _
+    rw [Finset.sum_mul]
+    apply Finset.sum_congr rfl
+    intro r _
+    rw [Finset.sum_mul]
+    apply Finset.sum_congr rfl
+    intro s _
+    rw [Finset.sum_mul]
+    apply Finset.sum_congr rfl
+    intro α _
+    rw [Finset.sum_mul]
+    apply Finset.sum_congr rfl
+    intro p _
+    rw [Finset.sum_mul]
+    apply Finset.sum_congr rfl
+    intro q _
+    ring
+  -- Rewrite the function using the expansion
+  rw [show (fun g =>
+        (ρ s1 g) a1 b1 * (ρ s2 g) a2 b2 * (ρ s3 g) a3 b3 *
+        conj ((ρ t1 g) c1 d1) * conj ((ρ t2 g) c2 d2) * conj ((ρ t3 g) c3 d3)) =
+      (fun g => ∑ ν : ι, ∑ r : Fin (dims ν), ∑ s : Fin (dims ν),
+        ∑ α : ι, ∑ p : Fin (dims α), ∑ q : Fin (dims α),
+        (cgME s1 s2 ν a1 a2 r * conj (cgME s1 s2 ν b1 b2 s) *
+         cgME ν s3 α r a3 p * conj (cgME ν s3 α s b3 q)) *
+        ((ρ α g) p q * (conj ((ρ t1 g) c1 d1) * conj ((ρ t2 g) c2 d2) *
+         conj ((ρ t3 g) c3 d3)))) from by
+    funext g; exact hpt g]
+  -- Integrability of each leaf: (CG coeff) * ((ρ α g) p q * (3 barred MEs))
+  apply integrable_finsetSum Finset.univ
+  intro ν _
+  apply integrable_finsetSum Finset.univ
+  intro r _
+  apply integrable_finsetSum Finset.univ
+  intro s _
+  apply integrable_finsetSum Finset.univ
+  intro α _
+  apply integrable_finsetSum Finset.univ
+  intro p _
+  apply integrable_finsetSum Finset.univ
+  intro q _
+  exact Integrable.smul
+    (cgME s1 s2 ν a1 a2 r * conj (cgME s1 s2 ν b1 b2 s) *
+     cgME ν s3 α r a3 p * conj (cgME ν s3 α s b3 q))
+    (integrable_ME_times_3barred_MEs μ ι dims hDims ρ hU hIrr cgME hcgME_decomp
+      α p q t1 t2 t3 c1 d1 c2 d2 c3 d3)
+#print axioms integrable_6ME_product
+#print axioms integrable_6ME_product
+
+set_option maxHeartbeats 20000000 in
+/-- **Character-level single-site 3D Lüscher integral.** The integral of a product of 6
+characters — 3 unbarred `χ_{sᵢ}(g·Aᵢ)` and 3 barred `χ_{tⱼ}(g⁻¹·Bⱼ)` — over the Haar measure
+equals a sum over all matrix-element indices of the constant (product of `ρ(A)` and `ρ(B)`
+matrix elements) times the 6-ME integral (evaluated by `single_site_3D_luscher_integral`).
+
+This is the key building block for the 3D global cascade: it converts the character-level
+integral (which arises from the plaquette-level character expansion of the interface
+Boltzmann factor) into a sum of matrix-element-level integrals, each of which is evaluated
+by `single_site_3D_luscher_integral`. The result is a sum of CG-coefficient products times
+`(1/dims α)`, which (in the diagonal case) gives `|C|² ≥ 0` by `cg_unitarity_nonneg`.
+
+Proof: expand each character as a trace (using `Matrix.trace` + `repMatrixElement_inv` for
+the barred characters), distribute the product into a 12-fold sum, exchange the sums with the
+integral (justified by `integrable_6ME_product`), and apply `single_site_3D_luscher_integral`
+to each 6-ME integral. 0 sorries, 0 new axioms. -/
+lemma char_level_single_site_3D_integral
+    {G : Type*} [Group G] [TopologicalSpace G]
+    [CompactSpace G] [MeasurableSpace G] [BorelSpace G]
+    (μ : Measure G) [IsProbabilityMeasure μ]
+    (ι : Type) [Fintype ι] [DecidableEq ι] (dims : ι → ℕ)
+    (hDims : ∀ i, 0 < dims i)
+    (ρ : ∀ i, G →* Matrix (Fin (dims i)) (Fin (dims i)) ℂ)
+    (hU : ∀ i, IsUnitaryRepresentation (ρ i))
+    (hIrr : ∀ i, IsIrreducible (ρ i))
+    (cgME : ∀ (s t ν : ι), Fin (dims s) → Fin (dims t) → Fin (dims ν) → ℂ)
+    (hcgME_decomp : ∀ (s t : ι) (g : G) (a b : Fin (dims s)) (i j : Fin (dims t)),
+        (ρ s g) a b * (ρ t g) i j =
+        ∑ ν : ι, ∑ p : Fin (dims ν), ∑ q : Fin (dims ν),
+          cgME s t ν a i p * (ρ ν g) p q * conj (cgME s t ν b j q))
+    (s1 s2 s3 t1 t2 t3 : ι) (A1 A2 A3 B1 B2 B3 : G) :
+    ∫ g, repCharacter (ρ s1) (g * A1) * repCharacter (ρ s2) (g * A2) *
+        repCharacter (ρ s3) (g * A3) * repCharacter (ρ t1) (g⁻¹ * B1) *
+        repCharacter (ρ t2) (g⁻¹ * B2) * repCharacter (ρ t3) (g⁻¹ * B3) ∂μ =
+      ∑ a1 : Fin (dims s1), ∑ b1 : Fin (dims s1),
+      ∑ a2 : Fin (dims s2), ∑ b2 : Fin (dims s2),
+      ∑ a3 : Fin (dims s3), ∑ b3 : Fin (dims s3),
+      ∑ c1 : Fin (dims t1), ∑ d1 : Fin (dims t1),
+      ∑ c2 : Fin (dims t2), ∑ d2 : Fin (dims t2),
+      ∑ c3 : Fin (dims t3), ∑ d3 : Fin (dims t3),
+        (ρ s1 A1) b1 a1 * (ρ s2 A2) b2 a2 * (ρ s3 A3) b3 a3 *
+        (ρ t1 B1) d1 c1 * (ρ t2 B2) d2 c2 * (ρ t3 B3) d3 c3 *
+        ∫ g, (ρ s1 g) a1 b1 * (ρ s2 g) a2 b2 * (ρ s3 g) a3 b3 *
+          conj ((ρ t1 g) d1 c1) * conj ((ρ t2 g) d2 c2) * conj ((ρ t3 g) d3 c3) ∂μ := by
+  -- htrace_mul helper: Matrix.trace (A * B) = ∑ i, ∑ j, A i j * B j i
+  have htrace_mul : ∀ (n : ℕ) (A B : Matrix (Fin n) (Fin n) ℂ),
+      Matrix.trace (A * B) = ∑ i : Fin n, ∑ j : Fin n, A i j * B j i := by
+    intro n A B; simp [Matrix.trace, Matrix.mul_apply]
+  -- Character expansions (unbarred): χ_s(g·A) = ∑ a, ∑ b, (ρ s g) a b * (ρ s A) b a
+  have hchar_s1 : ∀ (g : G),
+      repCharacter (ρ s1) (g * A1) =
+      ∑ a1 : Fin (dims s1), ∑ b1 : Fin (dims s1), (ρ s1 g) a1 b1 * (ρ s1 A1) b1 a1 := by
+    intro g; rw [repCharacter, MonoidHom.map_mul, htrace_mul]
+  have hchar_s2 : ∀ (g : G),
+      repCharacter (ρ s2) (g * A2) =
+      ∑ a2 : Fin (dims s2), ∑ b2 : Fin (dims s2), (ρ s2 g) a2 b2 * (ρ s2 A2) b2 a2 := by
+    intro g; rw [repCharacter, MonoidHom.map_mul, htrace_mul]
+  have hchar_s3 : ∀ (g : G),
+      repCharacter (ρ s3) (g * A3) =
+      ∑ a3 : Fin (dims s3), ∑ b3 : Fin (dims s3), (ρ s3 g) a3 b3 * (ρ s3 A3) b3 a3 := by
+    intro g; rw [repCharacter, MonoidHom.map_mul, htrace_mul]
+  -- Character expansions (barred): χ_t(g⁻¹·B) = ∑ c, ∑ d, conj((ρ t g) d c) * (ρ t B) d c
+  have hchar_t1 : ∀ (g : G),
+      repCharacter (ρ t1) (g⁻¹ * B1) =
+      ∑ c1 : Fin (dims t1), ∑ d1 : Fin (dims t1), conj ((ρ t1 g) d1 c1) * (ρ t1 B1) d1 c1 := by
+    intro g; rw [repCharacter, MonoidHom.map_mul, htrace_mul]
+    apply Finset.sum_congr rfl; intro c1 _; apply Finset.sum_congr rfl; intro d1 _
+    rw [repMatrixElement_inv (ρ t1) (hU t1) g c1 d1]
+  have hchar_t2 : ∀ (g : G),
+      repCharacter (ρ t2) (g⁻¹ * B2) =
+      ∑ c2 : Fin (dims t2), ∑ d2 : Fin (dims t2), conj ((ρ t2 g) d2 c2) * (ρ t2 B2) d2 c2 := by
+    intro g; rw [repCharacter, MonoidHom.map_mul, htrace_mul]
+    apply Finset.sum_congr rfl; intro c2 _; apply Finset.sum_congr rfl; intro d2 _
+    rw [repMatrixElement_inv (ρ t2) (hU t2) g c2 d2]
+  have hchar_t3 : ∀ (g : G),
+      repCharacter (ρ t3) (g⁻¹ * B3) =
+      ∑ c3 : Fin (dims t3), ∑ d3 : Fin (dims t3), conj ((ρ t3 g) d3 c3) * (ρ t3 B3) d3 c3 := by
+    intro g; rw [repCharacter, MonoidHom.map_mul, htrace_mul]
+    apply Finset.sum_congr rfl; intro c3 _; apply Finset.sum_congr rfl; intro d3 _
+    rw [repMatrixElement_inv (ρ t3) (hU t3) g c3 d3]
+  -- Pointwise identity: expand characters, distribute product into 12-level sum
+  have hpt : ∀ (g : G),
+      repCharacter (ρ s1) (g * A1) * repCharacter (ρ s2) (g * A2) *
+      repCharacter (ρ s3) (g * A3) * repCharacter (ρ t1) (g⁻¹ * B1) *
+      repCharacter (ρ t2) (g⁻¹ * B2) * repCharacter (ρ t3) (g⁻¹ * B3) =
+      ∑ a1 : Fin (dims s1), ∑ b1 : Fin (dims s1),
+      ∑ a2 : Fin (dims s2), ∑ b2 : Fin (dims s2),
+      ∑ a3 : Fin (dims s3), ∑ b3 : Fin (dims s3),
+      ∑ c1 : Fin (dims t1), ∑ d1 : Fin (dims t1),
+      ∑ c2 : Fin (dims t2), ∑ d2 : Fin (dims t2),
+      ∑ c3 : Fin (dims t3), ∑ d3 : Fin (dims t3),
+        (ρ s1 A1) b1 a1 * (ρ s2 A2) b2 a2 * (ρ s3 A3) b3 a3 *
+        (ρ t1 B1) d1 c1 * (ρ t2 B2) d2 c2 * (ρ t3 B3) d3 c3 *
+        ((ρ s1 g) a1 b1 * (ρ s2 g) a2 b2 * (ρ s3 g) a3 b3 *
+         conj ((ρ t1 g) d1 c1) * conj ((ρ t2 g) d2 c2) * conj ((ρ t3 g) d3 c3)) := by
+    intro g
+    have hreassoc :
+        repCharacter (ρ s1) (g * A1) * repCharacter (ρ s2) (g * A2) *
+        repCharacter (ρ s3) (g * A3) * repCharacter (ρ t1) (g⁻¹ * B1) *
+        repCharacter (ρ t2) (g⁻¹ * B2) * repCharacter (ρ t3) (g⁻¹ * B3) =
+        repCharacter (ρ s1) (g * A1) * (repCharacter (ρ s2) (g * A2) *
+        (repCharacter (ρ s3) (g * A3) * (repCharacter (ρ t1) (g⁻¹ * B1) *
+        (repCharacter (ρ t2) (g⁻¹ * B2) * repCharacter (ρ t3) (g⁻¹ * B3))))) := by ring
+    rw [hreassoc, hchar_s1, Finset.sum_mul]
+    apply Finset.sum_congr rfl; intro a1 _
+    rw [Finset.sum_mul]
+    apply Finset.sum_congr rfl; intro b1 _
+    rw [hchar_s2, Finset.sum_mul, Finset.mul_sum]
+    apply Finset.sum_congr rfl; intro a2 _
+    rw [Finset.sum_mul, Finset.mul_sum]
+    apply Finset.sum_congr rfl; intro b2 _
+    rw [hchar_s3, Finset.sum_mul, Finset.mul_sum, Finset.mul_sum]
+    apply Finset.sum_congr rfl; intro a3 _
+    rw [Finset.sum_mul, Finset.mul_sum, Finset.mul_sum]
+    apply Finset.sum_congr rfl; intro b3 _
+    rw [hchar_t1, Finset.sum_mul, Finset.mul_sum, Finset.mul_sum, Finset.mul_sum]
+    apply Finset.sum_congr rfl; intro c1 _
+    rw [Finset.sum_mul, Finset.mul_sum, Finset.mul_sum, Finset.mul_sum]
+    apply Finset.sum_congr rfl; intro d1 _
+    rw [hchar_t2, Finset.sum_mul, Finset.mul_sum, Finset.mul_sum, Finset.mul_sum, Finset.mul_sum]
+    apply Finset.sum_congr rfl; intro c2 _
+    rw [Finset.sum_mul, Finset.mul_sum, Finset.mul_sum, Finset.mul_sum, Finset.mul_sum]
+    apply Finset.sum_congr rfl; intro d2 _
+    rw [hchar_t3, Finset.mul_sum, Finset.mul_sum, Finset.mul_sum, Finset.mul_sum, Finset.mul_sum]
+    apply Finset.sum_congr rfl; intro c3 _
+    rw [Finset.mul_sum, Finset.mul_sum, Finset.mul_sum, Finset.mul_sum, Finset.mul_sum]
+    apply Finset.sum_congr rfl; intro d3 _
+    ring
+  -- Rewrite the integral using hpt
+  rw [show (∫ g, repCharacter (ρ s1) (g * A1) * repCharacter (ρ s2) (g * A2) *
+        repCharacter (ρ s3) (g * A3) * repCharacter (ρ t1) (g⁻¹ * B1) *
+        repCharacter (ρ t2) (g⁻¹ * B2) * repCharacter (ρ t3) (g⁻¹ * B3) ∂μ) =
+      (∫ g, ∑ a1 : Fin (dims s1), ∑ b1 : Fin (dims s1),
+        ∑ a2 : Fin (dims s2), ∑ b2 : Fin (dims s2),
+        ∑ a3 : Fin (dims s3), ∑ b3 : Fin (dims s3),
+        ∑ c1 : Fin (dims t1), ∑ d1 : Fin (dims t1),
+        ∑ c2 : Fin (dims t2), ∑ d2 : Fin (dims t2),
+        ∑ c3 : Fin (dims t3), ∑ d3 : Fin (dims t3),
+          (ρ s1 A1) b1 a1 * (ρ s2 A2) b2 a2 * (ρ s3 A3) b3 a3 *
+          (ρ t1 B1) d1 c1 * (ρ t2 B2) d2 c2 * (ρ t3 B3) d3 c3 *
+          ((ρ s1 g) a1 b1 * (ρ s2 g) a2 b2 * (ρ s3 g) a3 b3 *
+           conj ((ρ t1 g) d1 c1) * conj ((ρ t2 g) d2 c2) * conj ((ρ t3 g) d3 c3)) ∂μ) from by
+    congr 1 with g; exact hpt g]
+  -- Exchange the 12 sums with the integral (12 levels of integral_finsetSum)
+  rw [integral_finsetSum Finset.univ (fun a1 _ => by
+    apply integrable_finsetSum Finset.univ; intro b1 _; apply integrable_finsetSum Finset.univ; intro a2 _
+    apply integrable_finsetSum Finset.univ; intro b2 _; apply integrable_finsetSum Finset.univ; intro a3 _
+    apply integrable_finsetSum Finset.univ; intro b3 _; apply integrable_finsetSum Finset.univ; intro c1 _
+    apply integrable_finsetSum Finset.univ; intro d1 _; apply integrable_finsetSum Finset.univ; intro c2 _
+    apply integrable_finsetSum Finset.univ; intro d2 _; apply integrable_finsetSum Finset.univ; intro c3 _
+    apply integrable_finsetSum Finset.univ; intro d3 _
+    exact Integrable.smul
+      ((ρ s1 A1) b1 a1 * (ρ s2 A2) b2 a2 * (ρ s3 A3) b3 a3 *
+       (ρ t1 B1) d1 c1 * (ρ t2 B2) d2 c2 * (ρ t3 B3) d3 c3)
+      (integrable_6ME_product μ ι dims hDims ρ hU hIrr cgME hcgME_decomp
+        s1 s2 s3 a1 b1 a2 b2 a3 b3 t1 t2 t3 d1 c1 d2 c2 d3 c3))]
+  apply Finset.sum_congr rfl; intro a1 _
+  rw [integral_finsetSum Finset.univ (fun b1 _ => by
+    apply integrable_finsetSum Finset.univ; intro a2 _; apply integrable_finsetSum Finset.univ; intro b2 _
+    apply integrable_finsetSum Finset.univ; intro a3 _; apply integrable_finsetSum Finset.univ; intro b3 _
+    apply integrable_finsetSum Finset.univ; intro c1 _; apply integrable_finsetSum Finset.univ; intro d1 _
+    apply integrable_finsetSum Finset.univ; intro c2 _; apply integrable_finsetSum Finset.univ; intro d2 _
+    apply integrable_finsetSum Finset.univ; intro c3 _; apply integrable_finsetSum Finset.univ; intro d3 _
+    exact Integrable.smul
+      ((ρ s1 A1) b1 a1 * (ρ s2 A2) b2 a2 * (ρ s3 A3) b3 a3 *
+       (ρ t1 B1) d1 c1 * (ρ t2 B2) d2 c2 * (ρ t3 B3) d3 c3)
+      (integrable_6ME_product μ ι dims hDims ρ hU hIrr cgME hcgME_decomp
+        s1 s2 s3 a1 b1 a2 b2 a3 b3 t1 t2 t3 d1 c1 d2 c2 d3 c3))]
+  apply Finset.sum_congr rfl; intro b1 _
+  rw [integral_finsetSum Finset.univ (fun a2 _ => by
+    apply integrable_finsetSum Finset.univ; intro b2 _; apply integrable_finsetSum Finset.univ; intro a3 _
+    apply integrable_finsetSum Finset.univ; intro b3 _; apply integrable_finsetSum Finset.univ; intro c1 _
+    apply integrable_finsetSum Finset.univ; intro d1 _; apply integrable_finsetSum Finset.univ; intro c2 _
+    apply integrable_finsetSum Finset.univ; intro d2 _; apply integrable_finsetSum Finset.univ; intro c3 _
+    apply integrable_finsetSum Finset.univ; intro d3 _
+    exact Integrable.smul
+      ((ρ s1 A1) b1 a1 * (ρ s2 A2) b2 a2 * (ρ s3 A3) b3 a3 *
+       (ρ t1 B1) d1 c1 * (ρ t2 B2) d2 c2 * (ρ t3 B3) d3 c3)
+      (integrable_6ME_product μ ι dims hDims ρ hU hIrr cgME hcgME_decomp
+        s1 s2 s3 a1 b1 a2 b2 a3 b3 t1 t2 t3 d1 c1 d2 c2 d3 c3))]
+  apply Finset.sum_congr rfl; intro a2 _
+  rw [integral_finsetSum Finset.univ (fun b2 _ => by
+    apply integrable_finsetSum Finset.univ; intro a3 _; apply integrable_finsetSum Finset.univ; intro b3 _
+    apply integrable_finsetSum Finset.univ; intro c1 _; apply integrable_finsetSum Finset.univ; intro d1 _
+    apply integrable_finsetSum Finset.univ; intro c2 _; apply integrable_finsetSum Finset.univ; intro d2 _
+    apply integrable_finsetSum Finset.univ; intro c3 _; apply integrable_finsetSum Finset.univ; intro d3 _
+    exact Integrable.smul
+      ((ρ s1 A1) b1 a1 * (ρ s2 A2) b2 a2 * (ρ s3 A3) b3 a3 *
+       (ρ t1 B1) d1 c1 * (ρ t2 B2) d2 c2 * (ρ t3 B3) d3 c3)
+      (integrable_6ME_product μ ι dims hDims ρ hU hIrr cgME hcgME_decomp
+        s1 s2 s3 a1 b1 a2 b2 a3 b3 t1 t2 t3 d1 c1 d2 c2 d3 c3))]
+  apply Finset.sum_congr rfl; intro b2 _
+  rw [integral_finsetSum Finset.univ (fun a3 _ => by
+    apply integrable_finsetSum Finset.univ; intro b3 _; apply integrable_finsetSum Finset.univ; intro c1 _
+    apply integrable_finsetSum Finset.univ; intro d1 _; apply integrable_finsetSum Finset.univ; intro c2 _
+    apply integrable_finsetSum Finset.univ; intro d2 _; apply integrable_finsetSum Finset.univ; intro c3 _
+    apply integrable_finsetSum Finset.univ; intro d3 _
+    exact Integrable.smul
+      ((ρ s1 A1) b1 a1 * (ρ s2 A2) b2 a2 * (ρ s3 A3) b3 a3 *
+       (ρ t1 B1) d1 c1 * (ρ t2 B2) d2 c2 * (ρ t3 B3) d3 c3)
+      (integrable_6ME_product μ ι dims hDims ρ hU hIrr cgME hcgME_decomp
+        s1 s2 s3 a1 b1 a2 b2 a3 b3 t1 t2 t3 d1 c1 d2 c2 d3 c3))]
+  apply Finset.sum_congr rfl; intro a3 _
+  rw [integral_finsetSum Finset.univ (fun b3 _ => by
+    apply integrable_finsetSum Finset.univ; intro c1 _; apply integrable_finsetSum Finset.univ; intro d1 _
+    apply integrable_finsetSum Finset.univ; intro c2 _; apply integrable_finsetSum Finset.univ; intro d2 _
+    apply integrable_finsetSum Finset.univ; intro c3 _; apply integrable_finsetSum Finset.univ; intro d3 _
+    exact Integrable.smul
+      ((ρ s1 A1) b1 a1 * (ρ s2 A2) b2 a2 * (ρ s3 A3) b3 a3 *
+       (ρ t1 B1) d1 c1 * (ρ t2 B2) d2 c2 * (ρ t3 B3) d3 c3)
+      (integrable_6ME_product μ ι dims hDims ρ hU hIrr cgME hcgME_decomp
+        s1 s2 s3 a1 b1 a2 b2 a3 b3 t1 t2 t3 d1 c1 d2 c2 d3 c3))]
+  apply Finset.sum_congr rfl; intro b3 _
+  rw [integral_finsetSum Finset.univ (fun c1 _ => by
+    apply integrable_finsetSum Finset.univ; intro d1 _; apply integrable_finsetSum Finset.univ; intro c2 _
+    apply integrable_finsetSum Finset.univ; intro d2 _; apply integrable_finsetSum Finset.univ; intro c3 _
+    apply integrable_finsetSum Finset.univ; intro d3 _
+    exact Integrable.smul
+      ((ρ s1 A1) b1 a1 * (ρ s2 A2) b2 a2 * (ρ s3 A3) b3 a3 *
+       (ρ t1 B1) d1 c1 * (ρ t2 B2) d2 c2 * (ρ t3 B3) d3 c3)
+      (integrable_6ME_product μ ι dims hDims ρ hU hIrr cgME hcgME_decomp
+        s1 s2 s3 a1 b1 a2 b2 a3 b3 t1 t2 t3 d1 c1 d2 c2 d3 c3))]
+  apply Finset.sum_congr rfl; intro c1 _
+  rw [integral_finsetSum Finset.univ (fun d1 _ => by
+    apply integrable_finsetSum Finset.univ; intro c2 _; apply integrable_finsetSum Finset.univ; intro d2 _
+    apply integrable_finsetSum Finset.univ; intro c3 _; apply integrable_finsetSum Finset.univ; intro d3 _
+    exact Integrable.smul
+      ((ρ s1 A1) b1 a1 * (ρ s2 A2) b2 a2 * (ρ s3 A3) b3 a3 *
+       (ρ t1 B1) d1 c1 * (ρ t2 B2) d2 c2 * (ρ t3 B3) d3 c3)
+      (integrable_6ME_product μ ι dims hDims ρ hU hIrr cgME hcgME_decomp
+        s1 s2 s3 a1 b1 a2 b2 a3 b3 t1 t2 t3 d1 c1 d2 c2 d3 c3))]
+  apply Finset.sum_congr rfl; intro d1 _
+  rw [integral_finsetSum Finset.univ (fun c2 _ => by
+    apply integrable_finsetSum Finset.univ; intro d2 _; apply integrable_finsetSum Finset.univ; intro c3 _
+    apply integrable_finsetSum Finset.univ; intro d3 _
+    exact Integrable.smul
+      ((ρ s1 A1) b1 a1 * (ρ s2 A2) b2 a2 * (ρ s3 A3) b3 a3 *
+       (ρ t1 B1) d1 c1 * (ρ t2 B2) d2 c2 * (ρ t3 B3) d3 c3)
+      (integrable_6ME_product μ ι dims hDims ρ hU hIrr cgME hcgME_decomp
+        s1 s2 s3 a1 b1 a2 b2 a3 b3 t1 t2 t3 d1 c1 d2 c2 d3 c3))]
+  apply Finset.sum_congr rfl; intro c2 _
+  rw [integral_finsetSum Finset.univ (fun d2 _ => by
+    apply integrable_finsetSum Finset.univ; intro c3 _; apply integrable_finsetSum Finset.univ; intro d3 _
+    exact Integrable.smul
+      ((ρ s1 A1) b1 a1 * (ρ s2 A2) b2 a2 * (ρ s3 A3) b3 a3 *
+       (ρ t1 B1) d1 c1 * (ρ t2 B2) d2 c2 * (ρ t3 B3) d3 c3)
+      (integrable_6ME_product μ ι dims hDims ρ hU hIrr cgME hcgME_decomp
+        s1 s2 s3 a1 b1 a2 b2 a3 b3 t1 t2 t3 d1 c1 d2 c2 d3 c3))]
+  apply Finset.sum_congr rfl; intro d2 _
+  rw [integral_finsetSum Finset.univ (fun c3 _ => by
+    apply integrable_finsetSum Finset.univ; intro d3 _
+    exact Integrable.smul
+      ((ρ s1 A1) b1 a1 * (ρ s2 A2) b2 a2 * (ρ s3 A3) b3 a3 *
+       (ρ t1 B1) d1 c1 * (ρ t2 B2) d2 c2 * (ρ t3 B3) d3 c3)
+      (integrable_6ME_product μ ι dims hDims ρ hU hIrr cgME hcgME_decomp
+        s1 s2 s3 a1 b1 a2 b2 a3 b3 t1 t2 t3 d1 c1 d2 c2 d3 c3))]
+  apply Finset.sum_congr rfl; intro c3 _
+  rw [integral_finsetSum Finset.univ (fun d3 _ => by
+    exact Integrable.smul
+      ((ρ s1 A1) b1 a1 * (ρ s2 A2) b2 a2 * (ρ s3 A3) b3 a3 *
+       (ρ t1 B1) d1 c1 * (ρ t2 B2) d2 c2 * (ρ t3 B3) d3 c3)
+      (integrable_6ME_product μ ι dims hDims ρ hU hIrr cgME hcgME_decomp
+        s1 s2 s3 a1 b1 a2 b2 a3 b3 t1 t2 t3 d1 c1 d2 c2 d3 c3))]
+  apply Finset.sum_congr rfl; intro d3 _
+  -- Pull the constant out of the integral
+  rw [integral_const_mul]
+#print axioms char_level_single_site_3D_integral
 
 set_option maxHeartbeats 1000000 in
 /-- **Single-site 3D Lüscher integral (Step 2 of the Lüscher roadmap, §8.11.41–42).**
