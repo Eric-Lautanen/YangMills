@@ -8055,3 +8055,73 @@ remaining work is the 3D global cascade (Step B), which is the genuine
 crux. This is "known but unformalized" math (Lüscher's approach is
 standard in the literature), not genuinely open math. No axiom
 strengthening is needed — the obstacle is formalization effort.
+
+## §8.11.87 — Session 120 (2026-08-15): Step A.5 COMPLETE
+
+Step A.5 (T = V^{1/2}·U·V^{1/2} factorization, the ABA ≥ 0 algebraic step)
+is now COMPLETE and committed. Two new lemmas in LuscherDecomposition.lean:
+
+### 1. Kernel-level factorization: `transferMatrix_kernel_VUV_factorization`
+
+The transfer matrix kernel `exp(-β·(S⁺(u)/2 + S⁺(u')/2 + S_int))` factors as:
+
+    K = V^{1/2}(u) · U_kernel(u, u', full_config) · V^{1/2}(u')
+
+where:
+- **V^{1/2}(u) = exp(-β·S_spatial⁺(u)/2)** — the spatial Boltzmann factor
+  (PD by `spatialBoltzmannPD`, Step A.1). Depends only on positive-time
+  spatial links (within a single time slice).
+- **U_kernel = exp(-β·(S_temporal⁺(u)/2 + S_temporal⁺(u')/2 + S_int))** —
+  the temporal integral operator kernel. Includes the FULL interface action
+  S_int (spatial interface plaquettes depend on interface links, which are
+  shared between the two sides of the transfer matrix, so they belong to U,
+  not V).
+
+**Proof:** Split S⁺ = S_spatial + S_temporal (keeping S_int whole), regroup
+the exponent as `[spatial⁺(u)/2] + [temporal⁺(u)/2 + temporal⁺(u')/2 + S_int]
++ [spatial⁺(u')/2]`, apply `Real.exp_add` twice. Pure algebra. Only standard
+3 axioms (propext, Classical.choice, Quot.sound).
+
+### 2. Operator-level factorization: `transferMatrixReflected_VUV_factorization`
+
+Lifts the kernel identity to the operator level:
+
+    (Tψ)(u) = V^{1/2}(u) · ∫_{V⁺} V^{1/2}(u')·ψ(u')·U_kernel dμ⁺(V⁺)
+
+where u' = mergePosInterface(V⁺, σ(u⁰)). This is the ABA form:
+**T = V^{1/2}·U·V^{1/2}** at the operator level.
+
+**Proof:** Apply the kernel factorization pointwise, rearrange with `ring`,
+pull V^{1/2}(u) out of the integral via `integral_const_mul`. Only standard
+3 axioms.
+
+### What this means for the positivity argument
+
+The inner product `⟨g, Tg⟩ = ∫ g(u)·(Tg)(u) dμ⁺⁰(u)` now becomes:
+
+    ⟨g, Tg⟩ = ∫ (V^{1/2}·g)(u) · (U·(V^{1/2}·g))(u) dμ⁺⁰(u) = ⟨V^{1/2}g, U·(V^{1/2}g)⟩
+
+This is ≥ 0 **if U is positive** (Step B). The V^{1/2} factor is PD by
+`spatialBoltzmannPD` (Step A.1), and the group-PD → operator positivity
+connection is `integralOperator_nonneg` (Step A.2). So the entire Step A
+(A.1–A.5) is now complete; the remaining obstacle is **Step B: showing U
+is positive via the 3D Lüscher cascade**.
+
+### Adversarial self-check (session 120)
+
+Steelmanning the dead-end case: (1) The w* idempotency dead end is
+documented — the character expansion approach via `fullReflectReindex`
+cannot work because w* is idempotent, not a bijection. The Lüscher
+cascade route bypasses this by integrating out temporal links site by
+site. (2) The 3D cascade (Step B) is the genuine crux — it requires
+connecting the abstract cascade (LuscherCascade.lean) to the concrete
+3D lattice structure, which is substantial formalization effort. (3)
+The "6→5" headline remains misleading per `honest_frontier_audit.md` —
+even if Step B closes, the assumption burden has relocated to
+`peterWeyl_clebschGordan_plaquette`, not decreased. (4) Step A.5 itself
+is pure algebra and does not advance the mathematical frontier — it's
+wiring that connects Steps A.1–A.4 to the positivity conclusion.
+
+**Honest verdict:** Step A.5 is a clean algebraic identity that was
+straightforward to prove. The real work remains Step B (3D cascade).
+No axiom strengthening was needed or used.

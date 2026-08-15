@@ -58,3 +58,22 @@ The path forward does NOT require strengthening any axiom. The 3D cascade
 uses the existing `peterWeyl_clebschGordan_plaquette` axiom (which provides
 CG decomposition + Schur orthogonality). The obstacle is formalization
 effort, not missing assumptions.
+
+## Session 120 (2026-08-15): No axiom changes — Step A.5 completed
+
+No axioms were strengthened or added this session. Step A.5 (the T = V^{1/2}·U·V^{1/2}
+factorization) was completed:
+
+- `transferMatrix_kernel_VUV_factorization` (LuscherDecomposition.lean:461): proves
+  the kernel-level identity `K = V^{1/2}(u) · U_kernel · V^{1/2}(u')` where
+  V^{1/2} = exp(-β·S_spatial⁺/2) and U_kernel = exp(-β·(S_temporal⁺(u)/2 +
+  S_temporal⁺(u')/2 + S_int)). Pure algebra (Real.exp_add + ring). Only standard
+  3 axioms.
+
+- `transferMatrixReflected_VUV_factorization` (LuscherDecomposition.lean:507): lifts
+  the kernel identity to the operator level, showing
+  `(Tψ)(u) = V^{1/2}(u) · ∫ V^{1/2}(u')·ψ(u')·U_kernel dμ⁺(V⁺)`.
+  This is the ABA form: T = V^{1/2}·U·V^{1/2}. Only standard 3 axioms.
+
+Both lemmas use only `propext`, `Classical.choice`, `Quot.sound`. No axiom
+strengthening was needed — the factorization is pure algebra + integral_const_mul.
