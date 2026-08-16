@@ -8381,3 +8381,86 @@ term explosion.
 
 **Status:** Step B.2 is NOT YET STARTED. The next session should begin by studying the
 2-site cascade structure and sketching the B operator definition (B.2a).
+
+### Deeper analysis: the 3-fold isometry (composed Parseval) — the key lemma for B.2
+
+**The core challenge.** The single isometry `cgME_isometry_normSq` proves the Parseval
+identity for a SINGLE CG application (one (s,t) pair → ν). But the 3D cascade uses the
+3-fold CG decomposition (`cgME_decomp_3fold`), which applies CG TWICE:
+1. First: `cgME s1 s2 ν` (combining reps s1, s2 → ν)
+2. Second: `cgME ν s3 α` (combining ν, s3 → α)
+
+The 3-fold CG coefficient is:
+```
+C(α,p,q; a,b) = ∑_{ν,r,s} cgME s1 s2 ν a1 a2 r * cgME ν s3 α r a3 p *
+                         conj(cgME s1 s2 ν b1 b2 s * cgME ν s3 α s b3 q)
+```
+where a = (a1,a2,a3) are row indices, b = (b1,b2,b3) are column indices.
+
+**The 3-fold isometry (norm-sq form) would be:**
+```
+∑_{α,p} |∑_{a1,a2,a3} [∑_{ν,r} cgME s1 s2 ν a1 a2 r * cgME ν s3 α r a3 p] * v(a1,a2,a3)|²
+  = ∑_{a1,a2,a3} |v(a1,a2,a3)|²
+```
+
+**Why this is NOT a simple composition of two single isometries.** The naive approach:
+1. Define intermediate `u_{a3}(ν,r) = ∑_{a1,a2} cgME s1 s2 ν a1 a2 r * v(a1,a2,a3)`
+2. Apply single isometry (s1,s2)→ν: `∑_{ν,r} |u_{a3}(ν,r)|² = ∑_{a1,a2} |v(a1,a2,a3)|²`
+3. Define `w(α,p) = ∑_{ν,r,a3} cgME ν s3 α r a3 p * u_{a3}(ν,r)`
+4. Apply single isometry (ν,s3)→α: `∑_{α,p} |w(α,p)|² = ∑_{ν,r,a3} |u_{a3}(ν,r)|²`
+
+**The problem:** Step 4 fails because the single isometry for (ν,s3)→α requires ν to be
+FIXED, but in step 3, ν is SUMMED over. The single isometry says:
+```
+∑_{α,p} |∑_{r,a3} cgME ν s3 α r a3 p * u_ν(r,a3)|² = ∑_{r,a3} |u_ν(r,a3)|²
+```
+for each FIXED ν. But `w(α,p) = ∑_ν ∑_{r,a3} cgME ν s3 α r a3 p * u_ν(r,a3)` sums over ν,
+so the single isometry doesn't directly apply.
+
+**The resolution.** The 3-fold isometry requires a more careful argument. Two approaches:
+
+**Approach A (completeness relation, not norm-sq).** Instead of the norm-sq form, prove the
+3-fold COMPLETENESS relation directly from `hcgME_unitary`:
+```
+∑_{α,p,q} conj(C(α,p,q; a,b)) * C(α,p,q; a',b') = δ_{a,a'} · δ_{b,b'}
+```
+This can be proved by applying `hcgME_unitary` twice:
+1. Apply `hcgME_unitary` for (s1,s2)→ν: collapses the (a1,a2,b1,b2) indices to δ
+2. Apply `hcgME_unitary` for (ν,s3)→α: collapses the (r,a3,s,b3) indices to δ
+The index bookkeeping is the challenge — the (ν,r,s) sum is shared between the two
+applications, and the order of collapse matters.
+
+**Approach B (associativity / 6j symbols).** The 3-fold CG decomposition depends on the
+association order: (s1⊗s2)⊗s3 vs s1⊗(s2⊗s3). The two are related by 6j symbols (Racah
+coefficients). The isometry holds regardless of association order because the total map
+s1⊗s2⊗s3 → ⊕_α α is unitary. But formalizing this requires the 6j symbol machinery, which
+is not currently in the project.
+
+**Approach C (direct from hcgME_unitary, norm-sq form).** Prove the 3-fold isometry
+(norm-sq form) directly by expanding `|w|² = conj(w)·w`, distributing the product of sums,
+exchanging the (α,p) sum with the (a,b) sums, and applying `hcgME_unitary` twice to collapse
+the inner sums. This is the same technique as `cgME_isometry_normSq` but with an extra level
+of CG composition. The proof would be ~2x the length of `cgME_isometry_normSq` (which is
+208 lines), so ~400 lines. The main challenge is the sum reordering (16+ `Finset.sum_comm`
+swaps) and the two-level delta collapse.
+
+**Recommendation:** Approach C (direct from `hcgME_unitary`, norm-sq form) is the most
+tractable. It follows the same pattern as the proven `cgME_isometry_normSq` but with an
+extra CG level. The key steps:
+1. Expand `|w(α,p)|² = conj(w(α,p)) * w(α,p)`
+2. Distribute conj through the (a1,a2,a3,ν,r) sums and w through the (b1,b2,b3,ν',r') sums
+3. Exchange the (α,p) sum to the inside
+4. Apply `hcgME_unitary` for (ν,s3)→α to collapse the (α,p) sum: gives δ_{r,r'} · δ_{a3,b3}
+5. Collapse the δ_{a3,b3} (sum over a3=b3)
+6. Apply `hcgME_unitary` for (s1,s2)→ν to collapse the (ν,r) sum: gives δ_{a1,b1} · δ_{a2,b2}
+7. Collapse the remaining deltas
+8. Conclude `∑ |v|² = ∑ |v|²`
+
+This is the **key lemma for B.2** — call it `cgME_3fold_isometry_normSq`. Once proven, it
+provides the composed Parseval identity that the 3D cascade needs. The cascade non-negativity
+then follows by applying this isometry to the cascade kernel (matching the CG coefficient
+products to the B operator).
+
+**Estimated effort:** ~400 lines of Lean, comparable to `cgME_isometry_normSq` (208 lines)
+but with an extra CG level. The sum reordering is the main challenge (more swaps, more
+dependent types). This is the natural first formalization target for the next session.
