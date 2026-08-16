@@ -8125,3 +8125,259 @@ wiring that connects Steps A.1–A.4 to the positivity conclusion.
 **Honest verdict:** Step A.5 is a clean algebraic identity that was
 straightforward to prove. The real work remains Step B (3D cascade).
 No axiom strengthening was needed or used.
+
+## §8.11.88 — Session 121 (2026-08-15): Step B adversarial self-check + structural analysis
+
+### Adversarial self-check (session 121)
+
+Steelmanning the dead-end case for Step B (3D off-diagonal cascade):
+
+1. **The 1D vs 3D structural gap is fundamental.** In the 1D bipartite
+   cascade (`bipartiteChainIntegral_eq`), each temporal link appears in
+   exactly 2 plaquettes (one forward, one backward). The 2-character
+   integral is evaluated by Schur orthogonality, which gives a Kronecker
+   delta: either the reps match (survive as a single character × scalar)
+   or they don't (vanish). This keeps the cascade clean — each step
+   produces a single character, and the induction works.
+
+   In 3D (3+1D lattice), each temporal link appears in 6 plaquettes
+   (3 spatial directions × 2 orientations: forward and backward). The
+   6-character integral (3 unbarred `χ_s(g·A)`, 3 barred
+   `conj(χ_t(g·B))`) is evaluated by `single_site_3D_luscher_integral`,
+   which uses matrix-element CG (`cgME_decomp_3fold`) to reduce 3
+   unbarred MEs to 1, then Schur to integrate. The result is a SUM of
+   CG matrix-element products — NOT a single character. There is no
+   Kronecker delta killing; the CG decomposition produces a sum.
+
+2. **The 2D cascade works because of character-level CG.**
+   `luscher_2site_2D_cascade_charlevel` handles 2 plaquettes per link
+   (2 spatial directions). The 2 characters per link have the SAME
+   argument (e.g., `χ_{s1}(g₀·W·g₁⁻¹) · χ_{s2}(g₀·W·g₁⁻¹)`), so
+   character-level CG (`χ_s · χ_t = Σ_ν cg(s,t,ν) · χ_ν` with
+   `cg ≥ 0`) reduces them to a single character. Then Schur integrates.
+   The coefficient `cg(s1,s2,ν)·cg(t1,t2,ν)·(1/dims ν) ≥ 0` because
+   character-level CG coefficients are non-negative.
+
+   In 3D, the 3 characters per link have DIFFERENT arguments
+   (`χ_{s1}(g·A1)`, `χ_{s2}(g·A2)`, `χ_{s3}(g·A3)` with A1≠A2≠A3 —
+   different spatial link products per direction). Character-level CG
+   requires the SAME argument, so it does NOT apply. Matrix-element CG
+   is required, and its coefficients are complex (not non-negative).
+
+3. **The single-site 3D integral is NOT non-negative off-diagonal.**
+   `cg_unitarity_nonneg` proves non-negativity only in the DIAGONAL case
+   (barred indices = unbarred indices), giving `Σ |C|²/dims α ≥ 0`.
+   The off-diagonal case gives `C · conj(C')` (a complex inner product),
+   which is NOT necessarily real or non-negative. The non-negativity
+   is GLOBAL — it emerges only after integrating out ALL temporal links
+   and using CG unitarity to collapse the intermediate sums.
+
+4. **Term explosion concern.** In 1D, each cascade step kills all but
+   one term (Schur delta), so the term count stays bounded. In 3D, each
+   step produces a SUM of CG products. The full cascade over a 3D grid
+   of temporal links has exponential term growth. The CG unitarity
+   (`hcgME_unitary`) collapses this at the END, but the intermediate
+   bookkeeping is substantial. A direct step-by-step formalization on
+   the concrete lattice may be intractable; an abstract tensor-network
+   formulation may be needed.
+
+5. **`hcgME_unitary` has never been applied.** The CG unitarity
+   hypothesis (`hcgME_unitary`: `∑_ν ∑_p conj(cgME s t ν a i p) *
+   cgME s t ν b j p = δ_{a,b}·δ_{i,j}`) is available in the axiom but
+   has not been used in any proof. It is the key ingredient for the 3D
+   cascade collapse. Applying it is the essential new step.
+
+6. **The "6→5" headline remains misleading** per `honest_frontier_audit.md`.
+
+**Honest verdict:** Step B is NOT a dead end — the math is known
+(Lüscher, Osterwalder-Seiler). But the formalization is genuinely hard:
+the 3D cascade requires matrix-element CG (complex coefficients), the
+non-negativity is global (not single-site), and the term explosion may
+require an abstract formulation. The key new ingredient is applying
+`hcgME_unitary` to collapse the cascade. This is "known but
+unformalized" — substantial multi-session effort, not open math.
+
+### Structural analysis: what Step B requires
+
+The character expansion (`temporal_product_character_expansion`) gives:
+```
+∏_p exp(...) = ∑_w F(w) · Φ_w(spatial) · Ψ_w(temporal)
+```
+where `F(w) ≥ 0`, `Φ_w` = product of spatial-link characters (external
+kernel variables W, V), `Ψ_w` = product of temporal-link characters
+(internal, to be integrated out).
+
+The cascade integrates out temporal links:
+```
+K(W,V) = ∑_w F(w) · Φ_w(W,V) · [∫ Ψ_w(temporal) dμ(temporal)]
+```
+
+In 1D: `∫ Ψ_w dμ = (1/d_γ)^n · χ_γ(W-prod · V-prod⁻¹)` — a single
+character, giving a PD kernel `Σ_s c_s · χ_s(W·V⁻¹)` with `c_s ≥ 0`.
+
+In 3D: `∫ Ψ_w dμ` = sum of CG matrix-element products (complex). The
+non-negativity comes from the B*B structure: the cascade defines an
+operator B (Fourier coefficient extraction), and `K = B*B` gives
+`⟨g, Tg⟩ = ‖Bg‖² ≥ 0`. The CG unitarity (`hcgME_unitary`) is the
+mechanism that makes B*B work.
+
+**Formalization plan for Step B:**
+- B.1: Apply `hcgME_unitary` to prove a CG-collapse identity (the key
+  new ingredient — `hcgME_unitary` has never been applied).
+- B.2: Use the collapse to show the 2-site 3D cascade produces a
+  separable kernel (analogous to `luscher_2site_2D_cascade_charlevel`
+  but with matrix-element CG).
+- B.3: Generalize to the full 3D grid (induction or tensor network).
+- B.4: Apply `shared_cascade_factorization_nonneg_conj` to conclude.
+
+## §8.11.89 — Session 124 (2026-08-16): Step B.1 COMPLETE; adversarial self-check; B.2 formalization plan
+
+### Step B.1 COMPLETE — `cgME_isometry_normSq` proven (session 123, commit a3e33b4)
+
+The CG Parseval identity (the key building block for Step B) is now PROVEN in
+`src/lean/YangMills/Proofs/PeterWeyl/CGUnitarity.lean`:
+
+```
+∑ (ν : ι), ∑ (p : Fin (dims ν)),
+  Complex.normSq (∑ (a : Fin (dims s)), ∑ (i : Fin (dims t)),
+    cgME s t ν a i p * v a i) =
+∑ (a : Fin (dims s)), ∑ (i : Fin (dims t)),
+  Complex.normSq (v a i)
+```
+
+**`#print axioms cgME_isometry_normSq` = `[propext, Classical.choice, Quot.sound]`** — only
+the 3 standard axioms, NO `sorryAx`. This is the **first-ever application of
+`hcgME_unitary`** (the CG unitarity relation from the Peter-Weyl axiom), which had been
+available in the axiom since its introduction (strengthening #5, 2026-08-02) but never
+applied in any proof.
+
+**Confirmation of the §8.11.88 prediction.** The session 121 structural analysis
+identified `hcgME_unitary` as "the essential new ingredient for the 3D cascade collapse"
+and predicted that applying it was the key step. This prediction is now **confirmed**:
+`cgME_isometry_normSq` is proved by a direct application of `hcgME_unitary` (Step 5 of the
+proof: `simp only [hcgME_unitary]` collapses the inner sum to a Kronecker delta, then the
+delta is eliminated by `Finset.sum_eq_single`).
+
+**Proof technique (6 steps, for reference):**
+1. **ℝ→ℂ conversion**: `rw [← Complex.ofReal_inj]; simp only [Complex.ofReal_sum];
+   simp only [Complex.normSq_eq_conj_mul_self]` — converts the ℝ-valued normSq sum to a
+   ℂ-valued sum where `normSq z = conj z * z` applies. (This was the line 51 bug —
+   `simp only [Complex.normSq_eq_conj_mul_self]` alone made no progress because the sum
+   was ℝ-valued, not coerced to ℂ.)
+2. **conj expansion** (`hconj` have): uses forward `map_sum (starRingEnd ℂ)` to push conj
+   through the sums, then `map_mul` to split products.
+3. **Product distribution**: `simp only [Finset.sum_mul_sum]` then a `sum_comm` to reorder
+   (a,b,i,j) → (a,i,b,j), with `ring` at the leaf.
+4. **Sum exchange** (the hard part): 8 `Finset.sum_comm` swaps (each wrapped in
+   `Finset.sum_congr rfl` to go under binders) to reorder `(ν,p,a,i,b,j) → (a,i,b,j,ν,p)`.
+   The dependent `p : Fin (dims ν)` sum is handled because within a fixed `ν`, `p` is
+   independent of `a,i,b,j`.
+5. **Reassociation + factoring**: `h_term` (a `ring` identity) reassociates each leaf term,
+   then `simp only [← Finset.mul_sum]` factors `conj(v) * v` out of the `(ν,p)` sum.
+6. **Delta collapse**: `simp only [hcgME_unitary]` rewrites the inner sum to
+   `if a = b ∧ i = j then 1 else 0`, then `congr 1; ext a; congr 1; ext i` peels the outer
+   sums, then nested `Finset.sum_eq_single a` / `Finset.sum_eq_single i` with
+   `if_pos (And.intro rfl rfl)` / `if_neg (fun h => hij (h.2.symm))` / `Finset.sum_eq_zero`
+   handle the three cases.
+
+**Axiom count**: still 6 (the `peterWeyl_clebschGordan_plaquette` axiom, which contains
+`hcgME_unitary`). The new lemma uses `hcgME_unitary` but does NOT reduce the axiom count
+yet — that requires Step B.2 (proving `transferMatrixPositivity_axiom` from this).
+
+### Adversarial self-check (session 124)
+
+Steelmanning the dead-end case for the cgME_isometry_normSq → cascade non-negativity
+approach:
+
+1. **The isometry is single-site; the cascade is multi-site.** `cgME_isometry_normSq`
+   proves the Parseval identity for a SINGLE application of the CG change-of-basis (one
+   (s,t) pair → ν). The 3D cascade requires applying CG at EACH temporal link, and the
+   isometry needs to compose across sites. The multi-site generalization requires an
+   inductive/tensor-network argument that is not yet formalized and may be substantial.
+
+2. **The off-diagonal case involves DIFFERENT reps.** The isometry
+   `cgME_isometry_normSq` is for a fixed (s,t) pair — it says `cgME s t ν` is an isometry
+   from `Fin(dims s) × Fin(dims t)` to `⊕_ν Fin(dims ν)`. But in the off-diagonal cascade,
+   the unbarred MEs use reps (s1,s2,s3) and the barred MEs use reps (t1,t2,t3). The
+   isometry for (s1,s2) doesn't directly collapse the cross-term between (s1,s2) and
+   (t1,t2). The non-negativity is GLOBAL — it emerges only after summing over ALL sites
+   and ALL weights, with the isometry collapsing the FULL sum, not individual cross-terms.
+
+3. **The B*B structure requires defining the operator B.** The cascade defines B as the
+   Fourier coefficient extraction operator, but formalizing B as a linear operator on the
+   right Hilbert space, and showing `⟨g, Tg⟩ = ‖Bg‖²`, requires matching the abstract
+   isometry (finite-dimensional ℓ²) to the concrete cascade (integrals over group
+   elements). The index bookkeeping is substantial.
+
+4. **Term explosion.** As noted in §8.11.88, the 3D cascade has exponential term growth.
+   The isometry collapses the cascade at the END, but the intermediate bookkeeping (12
+   nested sums per site, composed across sites) may be intractable in Lean without an
+   abstract tensor-network formulation.
+
+5. **Closing transferMatrixPositivity_axiom does NOT close the mass gap or continuum
+   limit.** Per `honest_frontier_audit.md`: even if Step B.2 succeeds, the "6→5" headline
+   is misleading (peterWeyl_clebschGordan_plaquette has absorbed ~3 substantial
+   prerequisites comparably hard to the target), and the genuinely open problems
+   (continuum_limit_exists: B5 IR control; mass_gap_axiom: M1b uniform gap) remain open.
+   Step B.2 is "known but unformalized" — substantial formalization effort, not open math.
+
+**Honest verdict:** The cgME_isometry_normSq → cascade non-negativity approach is NOT a
+dead end — the math is known (Lüscher, Osterwalder-Seiler), and the isometry IS the right
+tool (it is the Parseval identity that makes the B*B kernel positive semidefinite). But
+the formalization is genuinely hard: the multi-site generalization, the off-diagonal
+cross-term handling, and the term explosion all require careful work. The isometry is a
+necessary but not sufficient ingredient — it must be composed across sites and matched to
+the concrete cascade structure. This is "known but unformalized" — substantial
+multi-session effort, not open math, and not a quick win.
+
+### B.2 formalization plan: how cgME_isometry_normSq applies to the 3D off-diagonal cascade
+
+**The structure of the problem.** The reflection-positivity integral is:
+```
+I = ∫ f(U) · f(θU) · exp(-β S_W(U)) dμ₀
+```
+After character expansion (`osG_thetaG_eq_char_expansion_pointwise`), this becomes:
+```
+I = C · ∑_w F(w) · ∫ [f(U)·f(θU)·r(U)] · Φ_w(U) · Ψ_w(U) · V_w(U) dμ₀
+```
+where Φ_w = positive-link characters (external), Ψ_w = interface-link characters
+(internal, integrated out), V_w = negative-link conj characters (external, reflected).
+
+**The cascade.** Integrating out the temporal (interface) links gives a kernel
+K(W,V) = ∑_w F(w) · Φ_w(W) · [∫ Ψ_w(temporal) dμ] · V_w(V). In 1D, `∫ Ψ_w dμ` is a single
+character (Schur delta), giving a PD kernel `Σ_s c_s χ_s(W·V⁻¹)`. In 3D, `∫ Ψ_w dμ` is a
+sum of CG matrix-element products (complex), and the non-negativity is GLOBAL.
+
+**The B*B structure.** The cascade defines an operator B (Fourier coefficient extraction):
+`(Bg)_w = ∫ g · Ψ_w dμ` (roughly). Then `⟨g, Tg⟩ = ⟨Bg, Bg⟩ = ‖Bg‖² ≥ 0`. The CG
+isometry (`cgME_isometry_normSq`) is the mechanism that makes B an isometry (B*B = I on
+the Fourier side), hence T = B*B is positive semidefinite.
+
+**The connection to single_site_3D_luscher_integral.** The 6-ME integral evaluates to:
+```
+∑_{ν,r,s,α,p,q} U(ν,r,s,α,p,q) · (1/dims α) · ∑_{ν',r',s'} V(ν',r',s',α,p,q)
+```
+where U = unbarred CG product, V = barred CG product. In the diagonal case (U=V), this is
+`∑ (1/dims α) |C|² ≥ 0` (proven by `cg_unitarity_nonneg`). In the off-diagonal case, the
+non-negativity requires the isometry to collapse the FULL sum over all sites and weights.
+
+**The formalization path for B.2:**
+- **B.2a**: Define the operator B abstractly — for a fixed (s,t) pair, B maps
+  `v : Fin(dims s) → Fin(dims t) → ℂ` to `(Bg) : ∀ ν, Fin(dims ν) → ℂ` via
+  `(Bg) ν p = ∑_{a,i} cgME s t ν a i p * v a i`. The isometry `cgME_isometry_normSq`
+  then gives `‖Bg‖² = ‖g‖²` (Parseval).
+- **B.2b**: Show the 2-site 3D cascade kernel factors as B*B. The 2-site cascade
+  integrates out one temporal link, producing a kernel K(W,V) that is a sum of CG
+  products. Match this to the B*B form: K(W,V) = ∑_w F(w) · (BΦ_w)(W) · conj((BΦ_w)(V)).
+- **B.2c**: Apply the isometry to conclude `⟨g, Tg⟩ = ‖Bg‖² ≥ 0` for the 2-site case.
+- **B.3**: Generalize to the full 3D grid (induction or tensor network).
+- **B.4**: Apply `shared_cascade_factorization_nonneg_conj` to conclude.
+
+**Key challenge:** B.2b requires matching the abstract isometry (which operates on
+finite-dimensional ℓ² vectors) to the concrete cascade (which involves integrals over
+group elements and 12 nested sums per site). The index bookkeeping is the main
+formalization hurdle. An abstract tensor-network formulation may be needed to manage the
+term explosion.
+
+**Status:** Step B.2 is NOT YET STARTED. The next session should begin by studying the
+2-site cascade structure and sketching the B operator definition (B.2a).

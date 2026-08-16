@@ -255,6 +255,8 @@ Mathlib candidate, but a candidate for a short expository note.
 | 6 | Schur orthogonality (GOT) | standard, currently AXIOM | — | **High-impact target** (not proved here) |
 | 7 | §8.11.67 RP obstruction clarification | expository | — | Write-up candidate |
 | 8 | General L² integralOperator_nonneg (bounded diag) | possibly-novel formulation | std 3 | **Packaged** — `PositiveDefiniteKernelGeneral.lean`, VERIFIED, no sorry |
+| 9 | `repCharacter_cyclic2`: 2-factor cyclic invariance | standard-but-unformalized | std 3 | Embedded — clean, few deps |
+| 10 | `cgME_isometry_normSq`: Parseval for unitary change-of-basis | standard-but-unformalized | std 3 | Ready to package — pure algebra |
 
 **Honest bottom line.** The genuinely *novel* contribution (in formulation, not
 depth) is #1 (Mercer-type kernels). Items #2–#4 are standard mathematics that
@@ -563,3 +565,69 @@ but the direct 2-factor form is cleaner for the bipartite cascade application.
 bipartite Lüscher cascade (`bipartiteChainIntegral_eq`): cyclically rotating
 `χ((V-prod · b⁻¹ · W-prod⁻¹) · (W₀⁻¹ · a · V₀))` to
 `χ(a · V₀ · V-prod · b⁻¹ · W-prod⁻¹ · W₀⁻¹)` via two applications.
+
+---
+
+## 10. `cgME_isometry_normSq`: Parseval identity for unitary change-of-basis matrices (standard-but-unformalized)
+
+**Status:** Embedded in `src/lean/YangMills/Proofs/PeterWeyl/CGUnitarity.lean:37`.
+Ready to package (general, no Yang-Mills-specific content).
+
+**Statement.** Let `ι` be a finite type, `dims : ι → ℕ`, and
+`cgME : ∀ (s t ν : ι), Fin (dims s) → Fin (dims t) → Fin (dims ν) → ℂ` a family of
+"change-of-basis matrices" satisfying the **unitarity (completeness) relation**:
+```
+∀ (s t : ι) (a b : Fin (dims s)) (i j : Fin (dims t)),
+  ∑ ν : ι, ∑ p : Fin (dims ν),
+    conj (cgME s t ν a i p) * cgME s t ν b j p =
+    if a = b ∧ i = j then (1 : ℂ) else 0
+```
+Then for any `v : Fin (dims s) → Fin (dims t) → ℂ`:
+```
+∑ (ν : ι), ∑ (p : Fin (dims ν)),
+  Complex.normSq (∑ (a : Fin (dims s)), ∑ (i : Fin (dims t)),
+    cgME s t ν a i p * v a i) =
+∑ (a : Fin (dims s)), ∑ (i : Fin (dims t)),
+  Complex.normSq (v a i)
+```
+This is the **Parseval identity** (ℓ²-norm preservation) for a unitary change-of-basis
+matrix. The matrix `cgME s t ν` maps `Fin(dims s) × Fin(dims t)` to `⊕_ν Fin(dims ν)`,
+and the unitarity relation says the "rows" are orthonormal. The identity says the map
+`v ↦ (ν, p ↦ ∑_{a,i} cgME_{a,i,p} · v_{a,i})` is an ℓ²-isometry.
+
+**Why standard-but-unformalized.** This is the finite-dimensional Parseval identity — a
+direct consequence of a unitary matrix preserving the ℓ² norm. It is standard linear
+algebra (equivalent to `‖Uv‖ = ‖v‖` for a unitary `U`). Mathlib has
+`Matrix.PosSemidef`, `Matrix.IsUnitary`, and inner-product-space isometry machinery, but
+the specific packaging — a 3-index "matrix" `cgME s t ν a i p` (not a standard
+`Matrix (Fin m) (Fin n) ℂ`), with the unitarity relation stated as a sum-of-products
+identity (not `U* U = I`), and the conclusion as a `normSq`-sum identity (not
+`‖Uv‖ = ‖v‖` in an inner product space) — does not appear to be in Mathlib in this form.
+An absence check (grep for `normSq.*sum.*isometry` / `Parseval` / `unitary.*normSq` in
+Mathlib) found no direct match. The standard `InnerProductSpace` isometry API uses
+`‖f x‖ = ‖x‖` for a continuous linear map `f`; this lemma is the explicit finite-sum
+version for a "matrix" given by a sum-of-products unitarity relation, which is the natural
+form for representation-theoretic CG coefficients.
+
+**Substance.** The proof is a direct algebraic calculation: expand `|w|² = conj(w)·w`,
+distribute the product of sums, exchange the `(ν,p)` sum with the `(a,i,b,j)` sums, apply
+the unitarity relation to collapse `∑_{ν,p} conj(cgME_{a,i})·cgME_{b,j}` to `δ_{a,b}·δ_{i,j}`,
+then collapse the delta. The formalization challenge is the sum reordering (8
+`Finset.sum_comm` swaps with dependent types) and the `ℝ→ℂ` coercion bridge. Not deep,
+but nontrivial to formalize cleanly.
+
+**Axioms.** `propext, Classical.choice, Quot.sound` only — **no `sorryAx`**, no
+Yang-Mills-specific axioms. The unitarity relation is a hypothesis, not an axiom.
+
+**Submittability.** Good candidate — clean statement, pure algebra (finite sums over
+`Fin`-indexed types, `Complex.normSq`), no analysis or measure theory. The 3-index
+"matrix" form is the natural one for CG coefficients and other representation-theoretic
+change-of-basis matrices. Would need extraction from the Yang-Mills namespace and
+generalization (the `cgME` name is Yang-Mills-specific; the lemma itself is not).
+
+**Use in this project.** The key building block for Step B.2 of the transfer matrix
+positivity proof: the 3D Lüscher cascade defines a Fourier coefficient extraction
+operator B, and `cgME_isometry_normSq` gives `‖Bg‖² = ‖g‖²` (Parseval), which is the
+mechanism that makes the transfer matrix kernel `T = B*B` positive semidefinite. This is
+the first-ever application of `hcgME_unitary` (the CG unitarity relation from the
+Peter-Weyl axiom), which had been available but never applied.
