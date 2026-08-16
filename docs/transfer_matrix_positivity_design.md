@@ -8464,3 +8464,89 @@ products to the B operator).
 **Estimated effort:** ~400 lines of Lean, comparable to `cgME_isometry_normSq` (208 lines)
 but with an extra CG level. The sum reordering is the main challenge (more swaps, more
 dependent types). This is the natural first formalization target for the next session.
+
+## §8.11.90 — Session 125 (2026-08-16): KEY FINDING — 3-fold isometry requires cross-rep orthogonality
+
+### The discovery
+
+The 3-fold isometry as stated in §8.11.89 is **NOT provable from `hcgME_unitary` alone**.
+Expanding `|w(α,p)|² = conj(w)·w` and distributing the product of sums, the inner
+collapse requires:
+
+```
+∑_{α,p} conj(cgME ν s3 α r a3 p) · cgME ν' s3 α r' b3 p
+```
+
+- When `ν = ν'`: `hcgME_unitary` gives `δ_{r,r'} δ_{a3,b3}`. ✓
+- When `ν ≠ ν'`: this is **cross-rep orthogonality** — NOT given by `hcgME_unitary`. ✗
+
+`hcgME_unitary` only says each individual CG matrix `cgME s t` (for a FIXED first
+arg `s`) is an isometry (column orthonormality). The cross-rep orthogonality says
+that CG matrices with DIFFERENT first args (`s ≠ s'`) have orthogonal column
+spaces when summed over the output. This is NOT a consequence of individual
+isometries — two different isometries can have overlapping column spaces.
+
+### Counterexample
+
+Consider a 2-element index set `ι = {0, 1}` with `dims = [1, 1]` (all 1-dimensional).
+Define `cgME 0 0 0 _ _ _ = 1`, `cgME 1 0 0 _ _ _ = 1` (both map to the same output).
+Then `hcgME_unitary` holds for each `s` individually (each is a 1×1 isometry), but
+`∑_α conj(cgME 0 0 α) · cgME 1 0 α = 1 ≠ 0` — cross-rep orthogonality FAILS.
+
+### The resolution
+
+The cross-rep orthogonality IS derivable from the existing axiom
+(`hcgME_decomp` + Schur orthogonality), because the matrix elements of distinct
+irreps are orthogonal. The CG decomposition respects this orthogonality. So it
+is NOT a new axiom — it is a CONSEQUENCE of the existing axiom that needs to be
+formalized as a lemma.
+
+This is "known but unformalized" — standard representation theory (unitarity of
+the CG change-of-basis), not open math.
+
+### Restructured B.2 plan
+
+1. **B.2a (this session, PARTIAL):** Prove `cgME_multirep_isometry_normSq` — the
+   multi-rep isometry with `hcgME_unitary` + `hcgME_cross_rep` as hypotheses.
+   Steps 1-4 and 6 are DONE (compile correctly). Step 5 (21 sum swaps) is `sorry`.
+   The proof structure is correct; the 21 swaps are mechanical work.
+
+2. **B.2b (next):** Fill in the 21 sum swaps for Step 5 of
+   `cgME_multirep_isometry_normSq`. The reordering is from
+   `(α, p, s', a', i', s, a, i)` to `(s, a, i, s', a', i', α, p)` — 21 adjacent
+   swaps, each a `Finset.sum_comm` wrapped in `Finset.sum_congr rfl`.
+
+3. **B.2c:** Prove `cgME_3fold_isometry_normSq` by composing the single isometry
+   (`cgME_isometry_normSq`) with the multi-rep isometry. Define intermediate
+   `u(ν, r, a3) = ∑_{a1,a2} cgME s1 s2 ν a1 a2 r · v(a1,a2,a3)`, apply single
+   isometry for (s1,s2)→ν, then multi-rep isometry for (ν,s3)→α.
+
+4. **B.2d:** Derive `hcgME_cross_rep` from `hcgME_decomp` + Schur orthogonality.
+   This closes the gap: the multi-rep isometry's hypothesis becomes a proven lemma.
+
+5. **B.2e:** Connect the isometry to the cascade non-negativity (the actual
+   `transferMatrixPositivity_axiom` replacement).
+
+### Current codebase state
+
+- `cgME_multirep_isometry_normSq` is in `CGUnitarity.lean` with `sorry` for Step 5.
+  Steps 1-4 (ℝ→ℂ, conj expansion, product distribution, sum exchange setup) and
+  Step 6 (hcgME_unitary/hcgME_cross_rep application, delta collapse) compile
+  correctly. The `sorry` is in the side goal (proving the sum exchange).
+- The build has 1 `sorry` (in `cgME_multirep_isometry_normSq`). The rest of the
+  codebase is GREEN.
+- Axiom count: still 6 (no change — the new lemma has a `sorry` so it depends on
+  `sorryAx`).
+
+### Key insight for the 21 swaps
+
+The 21 swaps reorder `(α, p, s', a', i', s, a, i)` → `(s, a, i, s', a', i', α, p)`:
+- Phase 1: Move `s` to front (5 swaps: swap with i', a', s', p, α)
+- Phase 2: Move `a` to position 2 (5 swaps)
+- Phase 3: Move `i` to position 3 (5 swaps)
+- Phase 4: Move `s'` to position 4 (2 swaps: swap with p, α)
+- Phase 5: Move `a'` to position 5 (2 swaps)
+- Phase 6: Move `i'` to position 6 (2 swaps)
+
+After reordering, reassociate each leaf term with `ring` and factor `conj(u) * u`
+out of the `(α, p)` sum using `← Finset.mul_sum`.
