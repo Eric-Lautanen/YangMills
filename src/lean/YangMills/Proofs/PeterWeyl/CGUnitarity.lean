@@ -409,4 +409,109 @@ lemma cgME_multirep_isometry_normSq
             simp only [← Finset.mul_sum]))))))]
 #print axioms cgME_multirep_isometry_normSq
 
+/-! ## 3-fold CG isometry (composed Parseval for the 3D cascade)
+
+The 3D Lüscher cascade applies the CG change-of-basis TWICE in sequence:
+1. First CG: `(s1, s2) → ν` (combining reps s1, s2 → intermediate ν)
+2. Second CG: `(ν, s3) → α` (combining ν, s3 → final α)
+
+The 3-fold CG coefficient is `∑_{ν,r} cgME s1 s2 ν a1 a2 r * cgME ν s3 α r a3 p`.
+The 3-fold isometry (composed Parseval) says this combined change-of-basis is an
+isometry: it preserves the ℓ² norm.
+
+This is proved by COMPOSING the multi-rep isometry (`cgME_multirep_isometry_normSq`)
+with the single isometry (`cgME_isometry_normSq`):
+1. Rewrite the LHS inner sum to the multi-rep isometry form (distribute + reorder +
+   reassociate + factor).
+2. Apply the multi-rep isometry (second CG: `(ν, s3) → α` with ν summed).
+3. Reorder the RHS to apply the single isometry for each fixed `a3`.
+4. Apply the single isometry (first CG: `(s1, s2) → ν` for each `a3`).
+5. Reorder to the final form.
+
+Hypotheses: `hcgME_unitary` + `hcgME_cross_rep` (same as the multi-rep isometry).
+0 sorries, 0 new axioms. -/
+
+set_option maxHeartbeats 1000000 in
+lemma cgME_3fold_isometry_normSq
+    {ι : Type*} [Fintype ι] [DecidableEq ι] (dims : ι → ℕ)
+    (cgME : ∀ (s t ν : ι), Fin (dims s) → Fin (dims t) → Fin (dims ν) → ℂ)
+    (hcgME_unitary : ∀ (s t : ι) (a b : Fin (dims s)) (i j : Fin (dims t)),
+        ∑ ν : ι, ∑ p : Fin (dims ν),
+          conj (cgME s t ν a i p) * cgME s t ν b j p =
+          if a = b ∧ i = j then (1 : ℂ) else 0)
+    (hcgME_cross_rep : ∀ (s s' t : ι), s ≠ s' →
+        ∀ (a : Fin (dims s)) (i : Fin (dims t)) (a' : Fin (dims s')) (i' : Fin (dims t)),
+        ∑ α : ι, ∑ p : Fin (dims α),
+          conj (cgME s t α a i p) * cgME s' t α a' i' p = 0)
+    (s1 s2 s3 : ι) (v : Fin (dims s1) → Fin (dims s2) → Fin (dims s3) → ℂ) :
+    ∑ (α : ι), ∑ (p : Fin (dims α)),
+      Complex.normSq (∑ (a1 : Fin (dims s1)), ∑ (a2 : Fin (dims s2)), ∑ (a3 : Fin (dims s3)),
+        (∑ (ν : ι), ∑ (r : Fin (dims ν)),
+          cgME s1 s2 ν a1 a2 r * cgME ν s3 α r a3 p) * v a1 a2 a3) =
+    ∑ (a1 : Fin (dims s1)), ∑ (a2 : Fin (dims s2)), ∑ (a3 : Fin (dims s3)),
+      Complex.normSq (v a1 a2 a3) := by
+  -- Step 1: Rewrite LHS inner sum to multi-rep isometry form
+  have hlhs : ∀ (α : ι) (p : Fin (dims α)),
+      (∑ (a1 : Fin (dims s1)), ∑ (a2 : Fin (dims s2)), ∑ (a3 : Fin (dims s3)),
+        (∑ (ν : ι), ∑ (r : Fin (dims ν)),
+          cgME s1 s2 ν a1 a2 r * cgME ν s3 α r a3 p) * v a1 a2 a3) =
+      (∑ (ν : ι), ∑ (r : Fin (dims ν)), ∑ (a3 : Fin (dims s3)),
+        cgME ν s3 α r a3 p * (∑ (a1 : Fin (dims s1)), ∑ (a2 : Fin (dims s2)),
+          cgME s1 s2 ν a1 a2 r * v a1 a2 a3)) := by
+    intro α p
+    simp only [Finset.sum_mul]
+    -- 8 swaps: (a1, a2, a3, ν, r) → (ν, r, a3, a1, a2)
+    -- Phase 1: Move ν to front (3 swaps: swap ν with a3, a2, a1)
+    conv => enter [1, 2]; ext; enter [2]; ext; rw [Finset.sum_comm]
+    conv => enter [1, 2]; ext; rw [Finset.sum_comm]
+    conv => enter [1]; rw [Finset.sum_comm]
+    -- Phase 2: Move r to position 2 (3 swaps: swap r with a3, a2, a1)
+    conv => enter [1, 2]; ext; enter [2]; ext; enter [2]; ext; rw [Finset.sum_comm]
+    conv => enter [1, 2]; ext; enter [2]; ext; rw [Finset.sum_comm]
+    conv => enter [1, 2]; ext; rw [Finset.sum_comm]
+    -- Phase 3: Move a3 to position 3 (2 swaps: swap a3 with a2, a1)
+    conv => enter [1, 2]; ext; enter [2]; ext; enter [2]; ext; rw [Finset.sum_comm]
+    conv => enter [1, 2]; ext; enter [2]; ext; rw [Finset.sum_comm]
+    -- Reassociate and factor: cgME s1 s2 * cgME ν s3 * v → cgME ν s3 * (cgME s1 s2 * v)
+    apply Finset.sum_congr rfl; intro ν _; apply Finset.sum_congr rfl; intro r _
+    apply Finset.sum_congr rfl; intro a3 _
+    have h_term : ∀ (a1 : Fin (dims s1)) (a2 : Fin (dims s2)),
+        cgME s1 s2 ν a1 a2 r * cgME ν s3 α r a3 p * v a1 a2 a3 =
+        cgME ν s3 α r a3 p * (cgME s1 s2 ν a1 a2 r * v a1 a2 a3) := by
+      intro a1 a2; ring
+    rw [Finset.sum_congr rfl (fun a1 _ => Finset.sum_congr rfl (fun a2 _ => h_term a1 a2))]
+    simp only [← Finset.mul_sum]
+  -- Apply hlhs to rewrite LHS
+  rw [show (∑ (α : ι), ∑ (p : Fin (dims α)),
+        Complex.normSq (∑ (a1 : Fin (dims s1)), ∑ (a2 : Fin (dims s2)), ∑ (a3 : Fin (dims s3)),
+          (∑ (ν : ι), ∑ (r : Fin (dims ν)),
+            cgME s1 s2 ν a1 a2 r * cgME ν s3 α r a3 p) * v a1 a2 a3)) =
+      (∑ (α : ι), ∑ (p : Fin (dims α)),
+        Complex.normSq (∑ (ν : ι), ∑ (r : Fin (dims ν)), ∑ (a3 : Fin (dims s3)),
+          cgME ν s3 α r a3 p * (∑ (a1 : Fin (dims s1)), ∑ (a2 : Fin (dims s2)),
+            cgME s1 s2 ν a1 a2 r * v a1 a2 a3))) from by
+    exact Finset.sum_congr rfl (fun α _ => Finset.sum_congr rfl (fun p _ =>
+      congrArg Complex.normSq (hlhs α p)))]
+  -- Step 2: Apply multi-rep isometry (second CG: (ν, s3) → α with ν summed)
+  rw [cgME_multirep_isometry_normSq dims cgME hcgME_unitary hcgME_cross_rep s3
+    (fun (ν : ι) (r : Fin (dims ν)) (a3 : Fin (dims s3)) =>
+      ∑ (a1 : Fin (dims s1)), ∑ (a2 : Fin (dims s2)),
+        cgME s1 s2 ν a1 a2 r * v a1 a2 a3)]
+  -- Step 3: Reorder RHS from (ν, r, a3) to (a3, ν, r)
+  conv => enter [1, 2]; ext; rw [Finset.sum_comm]
+  conv => enter [1]; rw [Finset.sum_comm]
+  -- Step 4: Apply single isometry for each a3 (first CG: (s1, s2) → ν)
+  rw [show (∑ (a3 : Fin (dims s3)), ∑ (ν : ι), ∑ (r : Fin (dims ν)),
+        Complex.normSq (∑ (a1 : Fin (dims s1)), ∑ (a2 : Fin (dims s2)),
+          cgME s1 s2 ν a1 a2 r * v a1 a2 a3)) =
+      (∑ (a3 : Fin (dims s3)), ∑ (a1 : Fin (dims s1)), ∑ (a2 : Fin (dims s2)),
+        Complex.normSq (v a1 a2 a3)) from by
+    exact Finset.sum_congr rfl (fun a3 _ =>
+      cgME_isometry_normSq dims cgME hcgME_unitary s1 s2 (fun a1 a2 => v a1 a2 a3))]
+  -- Step 5: Reorder from (a3, a1, a2) to (a1, a2, a3)
+  conv => enter [1]; rw [Finset.sum_comm]
+  conv => enter [1, 2]; ext; rw [Finset.sum_comm]
+
+#print axioms cgME_3fold_isometry_normSq
+
 end YangMills

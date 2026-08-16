@@ -8550,3 +8550,89 @@ The 21 swaps reorder `(α, p, s', a', i', s, a, i)` → `(s, a, i, s', a', i', �
 
 After reordering, reassociate each leaf term with `ring` and factor `conj(u) * u`
 out of the `(α, p)` sum using `← Finset.mul_sum`.
+
+## §8.11.91 — Session 127 (2026-08-16): B.2c COMPLETE — cgME_3fold_isometry_normSq proven by composition
+
+### The result
+
+`cgME_3fold_isometry_normSq` is now PROVEN with 0 sorries, 0 new axioms.
+`#print axioms` = `[propext, Classical.choice, Quot.sound]` — the standard 3 only.
+
+The 3-fold CG isometry (composed Parseval for the 3D cascade) states:
+```
+∑_{α,p} |∑_{a1,a2,a3} [∑_{ν,r} cgME s1 s2 ν a1 a2 r * cgME ν s3 α r a3 p] * v(a1,a2,a3)|²
+  = ∑_{a1,a2,a3} |v(a1,a2,a3)|²
+```
+
+This is the key lemma for Step B.2: the 3D cascade applies CG twice (first
+`(s1,s2)→ν`, then `(ν,s3)→α`), and this isometry says the combined change-of-basis
+preserves the ℓ² norm.
+
+### The approach: composition (not direct expansion)
+
+The handoff from session 126 suggested two options: (A) prove a "double multi-rep"
+isometry first then compose, or (B) prove the 3-fold isometry directly. A third,
+simpler approach was discovered: **compose the existing multi-rep isometry with the
+existing single isometry**, without needing a "double multi-rep" isometry or the
+`hcgME_cross_rep_t` hypothesis.
+
+The key insight: for FIXED `s1, s2, s3`, the 3-fold cascade has only `ν` as a
+summation variable in the second CG (not both `ν` and `s3`). The `s3` is FIXED.
+So the multi-rep isometry (which sums over the first arg `s` with the second arg `t`
+fixed) applies directly to the second CG with `t = s3` and `s = ν` (summed).
+
+The composition works as follows:
+1. **Rewrite LHS inner sum** to the multi-rep isometry form: distribute `v` into
+   the `(ν, r)` sum (`Finset.sum_mul`), reorder `(a1, a2, a3, ν, r) → (ν, r, a3, a1, a2)`
+   (8 `Finset.sum_comm` swaps via `conv`), reassociate and factor
+   `cgME ν s3 α r a3 p` out of the `(a1, a2)` sum (`ring` + `← Finset.mul_sum`).
+2. **Apply multi-rep isometry** (second CG: `(ν, s3) → α` with `ν` summed):
+   `u = fun ν r a3 => ∑ a1, ∑ a2, cgME s1 s2 ν a1 a2 r * v a1 a2 a3`.
+3. **Reorder RHS** from `(ν, r, a3)` to `(a3, ν, r)` (2 `Finset.sum_comm` swaps).
+4. **Apply single isometry** for each fixed `a3` (first CG: `(s1, s2) → ν`):
+   `v' = fun a1 a2 => v a1 a2 a3` via `Finset.sum_congr`.
+5. **Reorder** from `(a3, a1, a2)` to `(a1, a2, a3)` (2 `Finset.sum_comm` swaps).
+
+Total: 12 `Finset.sum_comm` swaps (8 in Step 1, 2 in Step 3, 2 in Step 5), much
+less than the direct expansion approach (~40+ swaps with 13 variables).
+
+### Key technique: `congrArg Complex.normSq` for `Finset.sum_congr`
+
+When using `Finset.sum_congr` to rewrite a sum of `Complex.normSq (...)` terms,
+the per-term equality must be wrapped with `congrArg Complex.normSq`:
+```lean
+Finset.sum_congr rfl (fun α _ => Finset.sum_congr rfl (fun p _ =>
+  congrArg Complex.normSq (hlhs α p)))
+```
+This is because `hlhs α p` proves `inner_sum = reordered_inner_sum`, but
+`Finset.sum_congr` expects `Complex.normSq (inner_sum) = Complex.normSq (reordered_inner_sum)`.
+
+### Hypotheses
+
+The lemma takes `hcgME_unitary` + `hcgME_cross_rep` as hypotheses (same as the
+multi-rep isometry). It does NOT need `hcgME_cross_rep_t` (cross-rep orthogonality
+for the second arg) — that was a concern from the handoff, but it doesn't arise
+because `s3` is FIXED (not summed) in this formulation.
+
+### Build status
+
+- **Git**: clean working tree before this commit.
+- **Build**: GREEN — `lake build` completes successfully (3008 jobs), 0 errors,
+  0 sorries in actual proof code.
+- **Axiom count**: still 6 (no change — the new lemma has 0 sorries and depends
+  only on the standard 3 axioms).
+- **Key file**: `src/lean/YangMills/Proofs/PeterWeyl/CGUnitarity.lean` — now
+  contains `cgME_isometry_normSq` (single), `cgME_multirep_isometry_normSq`
+  (multi-rep), and `cgME_3fold_isometry_normSq` (3-fold), all GREEN, 0 sorries.
+
+### Next steps
+
+1. **B.2d**: Derive `hcgME_cross_rep` from `hcgME_decomp` + Schur orthogonality.
+   This closes the gap: the 3-fold isometry's hypothesis becomes a proven lemma.
+   `hcgME_cross_rep` is "known but unformalized" — standard representation theory
+   (unitarity of the CG change-of-basis), not open math.
+
+2. **B.2e**: Connect the 3-fold isometry to the cascade non-negativity (the actual
+   `transferMatrixPositivity_axiom` replacement, reducing axioms 6→5). This
+   requires matching the abstract isometry to the concrete cascade structure
+   (the B operator, the kernel K(W,V), the term explosion).
