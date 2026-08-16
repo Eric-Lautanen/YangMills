@@ -8636,3 +8636,51 @@ because `s3` is FIXED (not summed) in this formulation.
    `transferMatrixPositivity_axiom` replacement, reducing axioms 6→5). This
    requires matching the abstract isometry to the concrete cascade structure
    (the B operator, the kernel K(W,V), the term explosion).
+
+### Adversarial self-check (session 127): B.2d derivability obstacle
+
+**Finding: `hcgME_cross_rep` may NOT be derivable from the existing axiom alone.**
+
+The design doc §8.11.90 claims `hcgME_cross_rep` is derivable from `hcgME_decomp` +
+Schur orthogonality. On careful analysis, this claim is **questionable**:
+
+1. `hcgME_unitary` provides COLUMN orthonormality for each `s` individually:
+   `∑_ν ∑_p conj(cgME s t ν a i p) * cgME s t ν b j p = δ_{a,b} δ_{i,j}`.
+   This says the intertwiner `U_{s,t}: V_s ⊗ V_t → ⊕_ν V_ν` is an ISOMETRY.
+
+2. `hcgME_cross_rep` requires the COMBINED map `⊕_s (V_s ⊗ V_t) → ⊕_ν V_ν` to be
+   unitary, meaning the images of different `s` blocks are ORTHOGONAL. This is
+   NOT a consequence of individual isometries — two isometries can have overlapping
+   images.
+
+3. The `hcgME_decomp` + Schur orthogonality give a 4-fold product integral that
+   does NOT simplify to 0 for `s ≠ s'` (Schur orthogonality handles 2-fold products,
+   not 4-fold). So the direct derivation route is blocked.
+
+4. The CG coefficients are NOT uniquely determined by `hcgME_decomp` + `hcgME_unitary`
+   — there's a phase freedom (unitary transformation within each `ν` block). The
+   cross-rep orthogonality depends on the specific choice of phases.
+
+**Counterexample (from §8.11.90):** `ι = {0,1}`, `dims = [1,1]`, `cgME 0 0 0 = 1`,
+`cgME 1 0 0 = 1`. Then `hcgME_unitary` holds for each `s` (each is a 1×1 isometry),
+but `∑_α conj(cgME 0 0 α) * cgME 1 0 α = 1 ≠ 0` — cross-rep orthogonality FAILS.
+
+**Implication:** B.2d may require STRENGTHENING the axiom to provide the full
+unitarity of the combined CG change-of-basis (including cross-rep orthogonality).
+This would be a flagged axiom strengthening. The cross-rep orthogonality is "known
+but unformalized" (standard representation theory), so the strengthening is not
+adding a new mathematical assumption, just formalizing a known consequence that the
+current axiom does not explicitly provide.
+
+**Alternative approaches to consider:**
+- (a) Strengthen the axiom to include `hcgME_cross_rep` (or the full unitarity of
+  the combined map). Flag in axiom growth log.
+- (b) Find a derivation of `hcgME_cross_rep` from `hcgME_decomp` + Schur orthogonality
+  that avoids the 4-fold product issue (e.g., using the intertwining property +
+  Schur's lemma for the composition `U_{s,t}^* * U_{s',t}`).
+- (c) Avoid `hcgME_cross_rep` entirely by proving the 3-fold isometry directly from
+  `hcgME_decomp` + Schur orthogonality (bypassing the isometry composition).
+
+**Status:** This is a BELIEVED obstacle, not yet verified. The next session should
+either confirm the obstacle (by attempting approach (b) and failing) or find a
+derivation. If the obstacle is confirmed, approach (a) is the fallback.
