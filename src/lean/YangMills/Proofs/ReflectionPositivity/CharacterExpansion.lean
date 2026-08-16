@@ -261,7 +261,7 @@ lemma interface_product_character_expansion (N T L : ℕ) (β : ℝ) [NeZero T] 
           (∏ l ∈ interfaceLinkInt T L, repCharacter (ρ (w l)) (interfaceLinkVar N T L U l)) *
           star (∏ l ∈ interfaceLinkNeg T L, repCharacter (ρ (dual (w l))) (interfaceLinkVar N T L U l)) := by
   obtain ⟨ι, hι, dims, ρ, hU, hMeas, hIrr, hDims, σ_0, hσ_0_dims, hσ_0_trivial, coeff, hcoeff, cg, hcg, hcg_decomp, dual, hdual,
-      cgME, hcgME_decomp, hcgME_unitary,
+      cgME, hcgME_decomp, hcgME_unitary, hcgME_cross_rep,
       Λ, hΛ, dimsΛ, ρΛ, hUΛ, hIrrΛ, hDimsΛ, emb, hemb, μ, hμ,
       cgMEΛ, hcgMEΛ_support, hexp4, hL2, hSchurΛ, hcgMEΛ_parts⟩ :=
     peterWeyl_clebschGordan_plaquette N (β * β / N) (plaquetteBoltzmann_tm_coupling_nonneg N β hN)

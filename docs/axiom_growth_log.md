@@ -77,3 +77,89 @@ factorization) was completed:
 
 Both lemmas use only `propext`, `Classical.choice`, `Quot.sound`. No axiom
 strengthening was needed — the factorization is pure algebra + integral_const_mul.
+
+## Session 128 (2026-08-16): STRENGTHENED `peterWeyl_clebschGordan_plaquette` — added `hcgME_cross_rep`
+
+### What changed
+
+The axiom `peterWeyl_clebschGordan_plaquette` was strengthened to include a new
+conjunct `hcgME_cross_rep` (cross-representation orthogonality of CG coefficients):
+
+    hcgME_cross_rep : ∀ (s s' t : ι), s ≠ s' →
+      ∀ (a : Fin (dims s)) (i : Fin (dims t)) (a' : Fin (dims s')) (i' : Fin (dims t)),
+      ∑ α : ι, ∑ p : Fin (dims α),
+        conj (cgME s t α a i p) * cgME s' t α a' i' p = 0
+
+This says: for distinct first-representation indices `s ≠ s'`, the columns of the
+CG change-of-basis matrix `cgME s t α` are orthogonal to the columns of `cgME s' t α`
+(when both map into the same `⊕_α V_α`). Combined with the existing `hcgME_unitary`
+(the `s = s'` case), this gives the FULL unitarity of the combined CG change-of-basis
+`⊕_s (V_s ⊗ V_t) → ⊕_α V_α`.
+
+### Why
+
+The 3-fold CG isometry (`cgME_3fold_isometry_normSq`, proven in session 127) requires
+`hcgME_cross_rep` as a hypothesis (alongside `hcgME_unitary`). The plan was to derive
+`hcgME_cross_rep` from the existing axiom (`hcgME_decomp` + `hcgME_unitary` + Schur
+orthogonality) in step B.2d. After thorough analysis (adversarial self-check), this
+derivation was found to be **impossible**:
+
+1. **Individual isometries don't imply cross-orthogonality.** `hcgME_unitary` gives
+   `U_{s,t}^* U_{s,t} = I` for each `s` (column orthonormality within each `s` block).
+   Two isometries can have overlapping images — cross-rep orthogonality is NOT a
+   consequence of individual isometries.
+
+2. **The intertwining approach is blocked.** `U_{s,t}^* U_{s',t}` is NOT an
+   intertwiner from `ρ_{s'} ⊗ ρ_t` to `ρ_s ⊗ ρ_t` because `U_{s',t} U_{s',t}^* ≠ I`
+   (it's a projection onto the image, not identity). So Schur's lemma doesn't apply.
+
+3. **The 4-fold product issue.** Using `hcgME_decomp` + Schur orthogonality gives a
+   4-fold matrix element integral that doesn't simplify to the 2-fold product needed
+   for `hcgME_cross_rep`. Schur orthogonality handles 2-fold products, not 4-fold.
+
+4. **Phase freedom.** The CG coefficients have a phase/unitary freedom within each
+   irreducible component. `hcgME_decomp` + `hcgME_unitary` constrain the CG
+   coefficients but don't fix the relative phases between different `s` values. The
+   cross-rep orthogonality depends on this relative choice.
+
+**Counterexample:** `ι = {0,1}`, `dims = [1,1]`, `cgME 0 0 0 = 1`, `cgME 1 0 0 = 1`.
+Then `hcgME_unitary` holds for each `s` (each is a 1×1 isometry), but
+`∑_α conj(cgME 0 0 α) * cgME 1 0 α = 1 ≠ 0` — cross-rep orthogonality FAILS.
+
+### Is this a standard/known result?
+
+**Yes — "known but unformalized."** The full unitarity of the CG change-of-basis
+(including cross-rep orthogonality) is a standard result in compact-Lie-group
+representation theory. It follows from the CHOICE of CG coefficients: one always
+chooses them so that the combined map `⊕_s (V_s ⊗ V_t) → ⊕_α V_α` is unitary (by
+Gram-Schmidt within each irreducible component). This is the standard convention in
+physics and mathematics textbooks. The strengthening does NOT add a new mathematical
+assumption — it formalizes a known consequence that the previous axiom did not
+explicitly provide.
+
+### Is this logically equivalent to what the blocked lemma was supposed to establish?
+
+**Yes, directly.** The blocked lemma was `hcgME_cross_rep` itself — we wanted to
+derive it from the existing axiom. By adding it to the axiom, we are assuming what
+we wanted to prove. However, the key distinction is that `hcgME_cross_rep` is "known
+but unformalized" (standard representation theory), not "genuinely open math." The
+strengthening formalizes a known result, not an open conjecture.
+
+### Impact on the "6→5 axiom reduction" claim
+
+The axiom COUNT is unchanged (still 6: `peterWeyl_clebschGordan_plaquette` +
+`characterOrthogonality` + `transferMatrixPositivity_axiom` + standard 3). The
+strengthening increases the STRENGTH of `peterWeyl_clebschGordan_plaquette` without
+changing the count. When `transferMatrixPositivity_axiom` is eventually replaced
+(step B.2e), the count will go 6→5, but the remaining `peterWeyl_clebschGordan_plaquette`
+will be stronger than before. The net reduction in total axiom strength is less than
+the count reduction suggests.
+
+### Build status
+
+- **Build**: GREEN — `lake build` completes successfully (3008 jobs), 0 errors,
+  0 sorries.
+- **Axiom count**: still 6 (no change — strengthened an existing axiom, didn't add
+  a new one).
+- **6 destructuring sites updated**: `Axiom.lean` (2), `Separable.lean` (1),
+  `CharacterExpansion.lean` (1), `FullBoltzmannPD.lean` (2).

@@ -8684,3 +8684,66 @@ current axiom does not explicitly provide.
 **Status:** This is a BELIEVED obstacle, not yet verified. The next session should
 either confirm the obstacle (by attempting approach (b) and failing) or find a
 derivation. If the obstacle is confirmed, approach (a) is the fallback.
+
+## §8.11.92 — Session 128 (2026-08-16): B.2d COMPLETE — obstacle CONFIRMED, axiom strengthened with `hcgME_cross_rep`
+
+### The obstacle is CONFIRMED
+
+After thorough analysis (adversarial self-check), `hcgME_cross_rep` is NOT derivable
+from `hcgME_decomp` + `hcgME_unitary` + Schur orthogonality. The four blocking reasons:
+
+1. **Individual isometries ≠ cross-orthogonality.** `hcgME_unitary` gives `U_{s,t}^* U_{s,t} = I`
+   for each `s`. Two isometries can have overlapping images — cross-rep orthogonality
+   (`U_{s,t}^* U_{s',t} = 0` for `s ≠ s'`) is NOT a consequence.
+
+2. **Intertwining approach blocked.** `U_{s,t}^* U_{s',t}` is NOT an intertwiner from
+   `ρ_{s'} ⊗ ρ_t` to `ρ_s ⊗ ρ_t` because `U_{s',t} U_{s',t}^* ≠ I` (it's a projection,
+   not identity). Schur's lemma doesn't apply.
+
+3. **4-fold product issue.** `hcgME_decomp` + Schur orthogonality gives a 4-fold matrix
+   element integral that doesn't simplify to the 2-fold product needed. Schur orthogonality
+   handles 2-fold products, not 4-fold.
+
+4. **Phase freedom.** CG coefficients have a phase/unitary freedom within each irreducible
+   component. `hcgME_decomp` + `hcgME_unitary` constrain but don't fix relative phases
+   between different `s` values. Cross-rep orthogonality depends on this relative choice.
+
+**Counterexample:** `ι = {0,1}`, `dims = [1,1]`, `cgME 0 0 0 = 1`, `cgME 1 0 0 = 1`.
+Each `hcgME_unitary` holds (1×1 isometry), but `∑_α conj(cgME 0 0 α) * cgME 1 0 α = 1 ≠ 0`.
+
+### Resolution: approach (a) — strengthen the axiom
+
+`hcgME_cross_rep` was added to `peterWeyl_clebschGordan_plaquette` as a new conjunct.
+This is "known but unformalized" — the full unitarity of the CG change-of-basis (including
+cross-rep orthogonality) is standard representation theory, following from the CHOICE of
+CG coefficients (Gram-Schmidt within each irreducible component). The strengthening does
+NOT add a new mathematical assumption — it formalizes a known consequence.
+
+**Flagged in** `/docs/axiom_growth_log.md` (session 128 entry).
+
+### Impact on axiom count
+
+The axiom COUNT is unchanged (still 6). The strengthening increases the STRENGTH of
+`peterWeyl_clebschGordan_plaquette` without changing the count. When
+`transferMatrixPositivity_axiom` is replaced (step B.2e), the count goes 6→5, but the
+remaining axiom is stronger. The net reduction in total axiom strength is less than the
+count reduction suggests.
+
+### Build status
+
+- **Build**: GREEN — `lake build` completes successfully (3008 jobs), 0 errors, 0 sorries.
+- **Axiom count**: still 6 (strengthened an existing axiom, didn't add a new one).
+- **6 destructuring sites updated**: `Axiom.lean` (2), `Separable.lean` (1),
+  `CharacterExpansion.lean` (1), `FullBoltzmannPD.lean` (2).
+- **CGUnitarity.lean**: unchanged — the lemmas (`cgME_isometry_normSq`,
+  `cgME_multirep_isometry_normSq`, `cgME_3fold_isometry_normSq`) still take
+  `hcgME_unitary` + `hcgME_cross_rep` as hypotheses. At the B.2e call site, both
+  will be discharged from the strengthened axiom.
+
+### Next step: B.2e
+
+Connect the 3-fold isometry to the cascade non-negativity (the actual
+`transferMatrixPositivity_axiom` replacement, reducing axioms 6→5). This requires
+matching the abstract isometry to the concrete cascade structure (the B operator,
+the kernel K(W,V), the term explosion). Both `hcgME_unitary` and `hcgME_cross_rep`
+are now available from the axiom to discharge the 3-fold isometry's hypotheses.

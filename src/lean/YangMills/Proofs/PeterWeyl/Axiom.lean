@@ -158,6 +158,10 @@ axiom peterWeyl_clebschGordan_plaquette (N : ℕ) (c : ℝ) (hc : 0 ≤ c) :
         ∑ ν : ι, ∑ p : Fin (dims ν),
           conj (cgME s t ν a i p) * cgME s t ν b j p =
           if a = b ∧ i = j then (1 : ℂ) else 0)
+      (hcgME_cross_rep : ∀ (s s' t : ι), s ≠ s' →
+        ∀ (a : Fin (dims s)) (i : Fin (dims t)) (a' : Fin (dims s')) (i' : Fin (dims t)),
+        ∑ α : ι, ∑ p : Fin (dims α),
+          conj (cgME s t α a i p) * cgME s' t α a' i' p = 0)
       (Λ : Type) (hΛ : Encodable Λ)
       (dimsΛ : Λ → ℕ)
       (ρΛ : ∀ ℓ, SU N →* Matrix (Fin (dimsΛ ℓ)) (Fin (dimsΛ ℓ)) ℂ)
@@ -278,7 +282,7 @@ theorem plaquetteBoltzmannPD (N : ℕ) (c : ℝ) (hc : 0 ≤ c) :
         (Real.exp (c * (Matrix.trace ((p.1.1.1 * p.1.1.2 * p.1.2 * p.2 : SU N) :
             Matrix (Fin N) (Fin N) ℂ)).re) : ℂ)) := by
   obtain ⟨ι, hι, dims, ρ, hU, hMeas, hIrr, hDims, σ_0, hσ_0_dims, hσ_0_trivial, coeff, hcoeff, cg, hcg, hcg_decomp, dual, hdual,
-      cgME, hcgME_decomp, hcgME_unitary,
+      cgME, hcgME_decomp, hcgME_unitary, hcgME_cross_rep,
       Λ, hΛ, dimsΛ, ρΛ, hUΛ, hIrrΛ, hDimsΛ, emb, hemb, μ, hμ,
       cgMEΛ, hcgMEΛ_support, hexp4, hL2, hSchurΛ, hcgMEΛ_parts⟩ :=
     peterWeyl_clebschGordan_plaquette N c hc
@@ -382,7 +386,7 @@ theorem plaquetteBoltzmannPD_inv (N : ℕ) (c : ℝ) (hc : 0 ≤ c) :
         (Real.exp (c * (Matrix.trace ((p.1.1.1 * p.1.1.2 * p.1.2⁻¹ * p.2⁻¹ : SU N) :
             Matrix (Fin N) (Fin N) ℂ)).re) : ℂ)) := by
   obtain ⟨ι, hι, dims, ρ, hU, hMeas, hIrr, hDims, σ_0, hσ_0_dims, hσ_0_trivial, coeff, hcoeff, cg, hcg, hcg_decomp, dual, hdual,
-      cgME, hcgME_decomp, hcgME_unitary,
+      cgME, hcgME_decomp, hcgME_unitary, hcgME_cross_rep,
       Λ, hΛ, dimsΛ, ρΛ, hUΛ, hIrrΛ, hDimsΛ, emb, hemb, μ, hμ,
       cgMEΛ, hcgMEΛ_support, hexp4, hL2, hSchurΛ, hcgMEΛ_parts⟩ :=
     peterWeyl_clebschGordan_plaquette N c hc

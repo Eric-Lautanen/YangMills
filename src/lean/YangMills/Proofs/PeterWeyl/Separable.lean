@@ -222,7 +222,7 @@ lemma plaquette_boltzmann_character_expansion_single (N : ℕ) (c : ℝ) (hc : 0
       (Real.exp (c * (Matrix.trace ((g : SU N) : Matrix (Fin N) (Fin N) ℂ)).re) : ℂ) =
         ∑ s : ι, (coeff s : ℂ) * repCharacter (ρ s) g := by
   obtain ⟨ι, hι, dims, ρ, hU, hMeas, hIrr, hDims, σ_0, hσ_0_dims, hσ_0_trivial, coeff4, hcoeff4, cg, hcg, hcg_decomp, dual, hdual,
-      cgME, hcgME_decomp, hcgME_unitary,
+      cgME, hcgME_decomp, hcgME_unitary, hcgME_cross_rep,
       Λ, hΛ, dimsΛ, ρΛ, hUΛ, hIrrΛ, hDimsΛ, emb, hemb, μ, hμ,
       cgMEΛ, hcgMEΛ_support, hexp4, hL2, hSchurΛ, hcgMEΛ_parts⟩ :=
     peterWeyl_clebschGordan_plaquette N c hc
