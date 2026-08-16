@@ -358,8 +358,55 @@ lemma cgME_multirep_isometry_normSq
       ring
     · -- s ∉ univ case
       intro h; exact absurd (Finset.mem_univ s) h
-  · -- Step 5: Prove the sum exchange (21 swaps) + reassociation + factoring
-    sorry
+  · -- Step 5: 21 sum swaps + reassociation + factoring
+    -- Phase 1: Move s to front (5 swaps: swap s with i', a', s', p, α)
+    conv => enter [1, 2]; ext; enter [2]; ext; enter [2]; ext; enter [2]; ext; rw [Finset.sum_comm]
+    conv => enter [1, 2]; ext; enter [2]; ext; enter [2]; ext; rw [Finset.sum_comm]
+    conv => enter [1, 2]; ext; enter [2]; ext; rw [Finset.sum_comm]
+    conv => enter [1, 2]; ext; rw [Finset.sum_comm]
+    conv => enter [1]; rw [Finset.sum_comm]
+    -- Phase 2: Move a to position 2 (5 swaps: swap a with i', a', s', p, α)
+    conv => enter [1, 2]; ext; enter [2]; ext; enter [2]; ext; enter [2]; ext; enter [2]; ext; rw [Finset.sum_comm]
+    conv => enter [1, 2]; ext; enter [2]; ext; enter [2]; ext; enter [2]; ext; rw [Finset.sum_comm]
+    conv => enter [1, 2]; ext; enter [2]; ext; enter [2]; ext; rw [Finset.sum_comm]
+    conv => enter [1, 2]; ext; enter [2]; ext; rw [Finset.sum_comm]
+    conv => enter [1, 2]; ext; rw [Finset.sum_comm]
+    -- Phase 3: Move i to position 3 (5 swaps: swap i with i', a', s', p, α)
+    conv => enter [1, 2]; ext; enter [2]; ext; enter [2]; ext; enter [2]; ext; enter [2]; ext; enter [2]; ext; rw [Finset.sum_comm]
+    conv => enter [1, 2]; ext; enter [2]; ext; enter [2]; ext; enter [2]; ext; enter [2]; ext; rw [Finset.sum_comm]
+    conv => enter [1, 2]; ext; enter [2]; ext; enter [2]; ext; enter [2]; ext; rw [Finset.sum_comm]
+    conv => enter [1, 2]; ext; enter [2]; ext; enter [2]; ext; rw [Finset.sum_comm]
+    conv => enter [1, 2]; ext; enter [2]; ext; rw [Finset.sum_comm]
+    -- Phase 4: Move s' to position 4 (2 swaps: swap s' with p, α)
+    conv => enter [1, 2]; ext; enter [2]; ext; enter [2]; ext; enter [2]; ext; rw [Finset.sum_comm]
+    conv => enter [1, 2]; ext; enter [2]; ext; enter [2]; ext; rw [Finset.sum_comm]
+    -- Phase 5: Move a' to position 5 (2 swaps: swap a' with p, α)
+    conv => enter [1, 2]; ext; enter [2]; ext; enter [2]; ext; enter [2]; ext; enter [2]; ext; rw [Finset.sum_comm]
+    conv => enter [1, 2]; ext; enter [2]; ext; enter [2]; ext; enter [2]; ext; rw [Finset.sum_comm]
+    -- Phase 6: Move i' to position 6 (2 swaps: swap i' with p, α)
+    conv => enter [1, 2]; ext; enter [2]; ext; enter [2]; ext; enter [2]; ext; enter [2]; ext; enter [2]; ext; rw [Finset.sum_comm]
+    conv => enter [1, 2]; ext; enter [2]; ext; enter [2]; ext; enter [2]; ext; enter [2]; ext; rw [Finset.sum_comm]
+    -- Reassociation + factoring: conj(cgME) * conj(u) * (cgME * u) → conj(u) * u * (conj(cgME) * cgME)
+    -- then factor conj(u) * u out of the (α, p) sum
+    rw [show (∑ (s : ι), ∑ (a : Fin (dims s)), ∑ (i : Fin (dims t)),
+      ∑ (s' : ι), ∑ (a' : Fin (dims s')), ∑ (i' : Fin (dims t)),
+      ∑ (α : ι), ∑ (p : Fin (dims α)),
+        conj (cgME s' t α a' i' p) * conj (u s' a' i') * (cgME s t α a i p * u s a i)) =
+      (∑ (s : ι), ∑ (a : Fin (dims s)), ∑ (i : Fin (dims t)),
+      ∑ (s' : ι), ∑ (a' : Fin (dims s')), ∑ (i' : Fin (dims t)),
+        conj (u s' a' i') * u s a i *
+        (∑ (α : ι), ∑ (p : Fin (dims α)),
+          conj (cgME s' t α a' i' p) * cgME s t α a i p)) from by
+      exact Finset.sum_congr rfl (fun s _ => Finset.sum_congr rfl (fun a _ =>
+        Finset.sum_congr rfl (fun i _ => Finset.sum_congr rfl (fun s' _ =>
+          Finset.sum_congr rfl (fun a' _ => Finset.sum_congr rfl (fun i' _ => by
+            have h_term : ∀ (α : ι) (p : Fin (dims α)),
+                conj (cgME s' t α a' i' p) * conj (u s' a' i') * (cgME s t α a i p * u s a i) =
+                conj (u s' a' i') * u s a i * (conj (cgME s' t α a' i' p) * cgME s t α a i p) := by
+              intro α p; ring
+            rw [Finset.sum_congr rfl (fun α _ =>
+              Finset.sum_congr rfl (fun p _ => h_term α p))]
+            simp only [← Finset.mul_sum]))))))]
 #print axioms cgME_multirep_isometry_normSq
 
 end YangMills
