@@ -8747,3 +8747,157 @@ Connect the 3-fold isometry to the cascade non-negativity (the actual
 matching the abstract isometry to the concrete cascade structure (the B operator,
 the kernel K(W,V), the term explosion). Both `hcgME_unitary` and `hcgME_cross_rep`
 are now available from the axiom to discharge the 3-fold isometry's hypotheses.
+
+## §8.11.93 — Session 129 (2026-08-18): B.2e adversarial self-check + structural obstacle analysis
+
+### Adversarial self-check (session 129)
+
+Steelmanning the dead-end case for B.2e (connecting the 3-fold isometry to cascade
+non-negativity):
+
+1. **The 3-fold isometry does NOT directly match the single-site integral structure.**
+   The 3-fold isometry (`cgME_3fold_isometry_normSq`) operates on ROW indices only:
+   ```
+   ∑_{α,p} |∑_{a1,a2,a3} [∑_{ν,r} cgME s1 s2 ν a1 a2 r * cgME ν s3 α r a3 p] * v(a1,a2,a3)|²
+     = ∑_{a1,a2,a3} |v(a1,a2,a3)|²
+   ```
+   But the single-site integral (`single_site_3D_luscher_integral`) involves BOTH row
+   (a1,a2,a3) AND column (b1,b2,b3) indices, with a SHARED intermediate representation ν:
+   ```
+   U(ν,r,s,α,p,q) = [cgME s1 s2 ν a1 a2 r * cgME ν s3 α r a3 p] *
+                     conj([cgME s1 s2 ν b1 b2 s * cgME ν s3 α s b3 q])
+   ```
+   The row part uses summation index r, the column part uses s, but BOTH share the same ν.
+   The 3-fold isometry sums over ν independently for rows and columns, while the single-site
+   integral has ν SHARED. This is a structural mismatch.
+
+2. **The single-site integral has both p and q indices; the isometry has only p.**
+   The Schur orthogonality integral gives `(1/dims α) · δ_{p,p'} · δ_{q,q'}`, producing
+   both p and q indices. The 3-fold isometry sums over (α, p) only. The q index (column
+   output) is not handled by the isometry as stated.
+
+3. **The off-diagonal terms involve spatial link products, not just CG coefficients.**
+   Even if orthonormality makes CG cross-terms vanish, the spatial link products
+   `(ρ s1 A1) b1 a1 · ... · (ρ s3 B3) d3 c3` are complex and depend on the indices.
+   The non-negativity is NOT simply "off-diagonal terms vanish, diagonal terms are |C|² ≥ 0"
+   because the diagonal terms involve complex spatial link products, not just |C|².
+
+4. **The non-negativity is GLOBAL, not single-site.** The single-site 3D integral is NOT
+   non-negative off-diagonal (confirmed by `cg_unitarity_nonneg` only handling the diagonal
+   case). The non-negativity emerges only after summing over ALL temporal links (the full
+   cascade), with the isometry collapsing the FULL sum. A single-site lemma is insufficient.
+
+5. **Term explosion in the full cascade.** The 3D cascade has exponential term growth
+   (each site produces a SUM of CG products, not a single character). The isometry collapses
+   this at the END, but the intermediate bookkeeping (12 nested sums per site, composed across
+   sites) may be intractable in Lean without an abstract tensor-network formulation.
+
+6. **The `character_expansion_nonneg_shared` scaffold requires a separable kernel.** The
+   scaffold needs `K(x,y,z) = ∑_i a(z,i)·Φ_i(z,x)·conj(Φ_i(z,y))` with `a ≥ 0`. In 3D, the
+   kernel after the single-site integral is NOT directly separable — it's a sum of CG products
+   (complex coefficients). The isometry is the mechanism that REORGANIZES the kernel into the
+   separable form, but formalizing this reorganization requires the full cascade.
+
+**Honest verdict:** B.2e is the HARDEST part of Step B. The 3-fold isometry is a necessary
+ingredient but is NOT sufficient — it has a structural mismatch with the single-site integral
+(row-only vs row+column, p-only vs p+q, shared ν). The non-negativity is global (not
+single-site), and the full cascade has term explosion. This is "known but unformalized" —
+substantial multi-session effort, not open math, and NOT a quick win.
+
+### Structural obstacle: the isometry–integral mismatch
+
+The key obstacle identified in this session is the STRUCTURAL MISMATCH between the 3-fold
+isometry (as proven) and the single-site integral:
+
+**The 3-fold isometry** (proven, `cgME_3fold_isometry_normSq`):
+```
+∑_{α,p} |∑_{a1,a2,a3} C(α,p; a1,a2,a3) · v(a1,a2,a3)|² = ∑_{a1,a2,a3} |v(a1,a2,a3)|²
+```
+where `C(α,p; a1,a2,a3) = ∑_{ν,r} cgME s1 s2 ν a1 a2 r · cgME ν s3 α r a3 p`.
+
+**The single-site integral** (proven, `single_site_3D_luscher_integral`):
+```
+∫ 6 MEs dμ = ∑_{ν,r,s,ν',r',s',α,p,q} U(ν,r,s,α,p,q) · (1/dims α) · V(ν',r',s',α,p,q)
+```
+where `U = C_part(ν,r,α,p; a) · conj(C_part(ν,s,α,q; b))` and
+`V = conj(C_part(ν',r',α,p; c)) · C_part(ν',s',α,q; d)`.
+
+The mismatch:
+- **Row vs row+column:** The isometry handles row indices (a1,a2,a3) only. The integral
+  has both row (a1,a2,a3) and column (b1,b2,b3) indices.
+- **p vs p+q:** The isometry sums over (α,p). The integral has both p and q (from Schur
+  orthogonality `δ_{p,p'} · δ_{q,q'}`).
+- **Shared ν:** In the integral, the row part (r) and column part (s) share the same ν.
+  In the isometry, ν is summed independently for each application.
+
+**Resolution path:** A "6-fold isometry" (or "full 3-fold isometry") that handles both
+row and column indices is needed. This would be:
+```
+∑_{α,p,q} |∑_{a1,a2,a3,b1,b2,b3} C_full(α,p,q; a,b) · v(a,b)|² = ∑_{a,b} |v(a,b)|²
+```
+where `C_full(α,p,q; a,b) = ∑_{ν,r,s} cgME s1 s2 ν a1 a2 r · conj(cgME s1 s2 ν b1 b2 s) ·
+cgME ν s3 α r a3 p · conj(cgME ν s3 α s b3 q)`.
+
+**Key finding (session 129):** The 6-fold isometry IS a consequence of the 3-fold isometry,
+via the TENSOR PRODUCT argument. The 6-fold CG map is `B ⊗ conj(B)`, where `B` is the 3-fold
+CG map (an isometry, `B* B = I`). Since `conj(B)` is also an isometry (`conj(B)* conj(B) =
+conj(B* B) = conj(I) = I`), the tensor product `B ⊗ conj(B)` is an isometry:
+`(B ⊗ conj(B))* (B ⊗ conj(B)) = (B* B) ⊗ (conj(B)* conj(B)) = I ⊗ I = I`.
+
+**IMPORTANT:** This uses `conj(B)`, NOT `B*` (the adjoint). The adjoint would require
+`B B* = I` (co-isometry / completeness), which is NOT given. But `conj(B)` (elementwise
+conjugation) only requires `B* B = I` (isometry), which IS given by the 3-fold isometry.
+
+**Formalization challenge:** The direct expansion approach (expanding |w|² and applying
+orthonormality) gets STUCK because the intermediate representation α is SHARED between the
+row part (p) and the column part (q). The sum `∑_α f(α) · g(α)` cannot be separated into
+`[∑_α f(α)] · [∑_α g(α)]`. The tensor product approach (abstract linear algebra) is needed
+instead, but requires connecting the abstract tensor product to the concrete ℓ² norm.
+
+**Two formalization approaches:**
+- **(a) Direct expansion:** Expand |w|², exchange sums, apply orthonormality. STUCK on
+  shared α. May require a 4-fold CG product / 6j symbol decomposition. ~500+ lines.
+- **(b) Tensor product:** Prove `B ⊗ conj(B)` is an isometry using abstract linear algebra
+  (`LinearMap.tensorProduct`), then connect to concrete ℓ² norm. Requires showing the ℓ²
+  norm of a tensor product vector equals the product of ℓ² norms. ~300 lines + infrastructure.
+
+**Recommendation:** Approach (b) is more tractable. The key lemma is: "if B is an isometry
+(B* B = I), then B ⊗ conj(B) is an isometry." This is a Mathlib-candidate result (general
+linear algebra, independent of Yang-Mills).
+
+### Formalization plan for B.2e
+
+**Step B.2e.1:** Prove the 6-fold isometry (`cgME_3fold_isometry_full_normSq`):
+```
+∑_{α,p,q} |∑_{a1,a2,a3,b1,b2,b3} C_full(α,p,q; a,b) · v(a,b)|² = ∑_{a,b} |v(a,b)|²
+```
+This is the key ingredient that matches the single-site integral structure. It can be
+proved by applying the 3-fold isometry twice (rows then columns), using the factorization
+of orthonormality.
+
+**Step B.2e.2:** Prove a "generalized cg_unitarity_nonneg" that handles the off-diagonal
+case (different row and column indices, same reps) by using the 6-fold isometry to show
+the full sum (over all 12 indices) is ≥ 0. This is the single-site non-negativity lemma
+that generalizes `cg_unitarity_nonneg` from the diagonal case to the full case.
+
+**Step B.2e.3:** Connect the single-site non-negativity to the full cascade. This requires
+showing that the transfer matrix kernel (after the full cascade) has the separable form
+`K(x,y,z) = ∑_i a(z,i)·Φ_i(z,x)·conj(Φ_i(z,y))` with `a ≥ 0`, which allows applying
+`character_expansion_nonneg_shared`. This is the hardest step (term explosion).
+
+**Step B.2e.4:** Replace `transferMatrixPositivity_axiom` with the proved lemma, reducing
+axioms 6→5.
+
+**Estimated effort:** B.2e.1 (~300 lines, comparable to the 3-fold isometry) is the most
+tractable and should be the next formalization target. B.2e.2 (~200 lines) depends on
+B.2e.1. B.2e.3 is the hardest (term explosion, may require abstract tensor-network
+formulation) and may span multiple sessions. B.2e.4 is straightforward once B.2e.3 is done.
+
+### Current codebase state
+
+- **Git**: clean working tree. Latest commit: 9153ebe.
+- **Build**: GREEN — `lake build` completes successfully (3008 jobs), 0 errors, 0 sorries.
+- **Axiom count**: still 6. B.2e has NOT been started — this session was analysis only.
+- **Key files**: `CGUnitarity.lean` (3 isometries, all GREEN), `Site3DIntegral.lean`
+  (single-site integral + diagonal non-negativity, GREEN), `CleanFactorization.lean`
+  (character expansion, GREEN), `LuscherDecomposition.lean` (T = V^{1/2}·U·V^{1/2}, GREEN).
