@@ -662,3 +662,30 @@ result even though it does not directly apply to the current proof path.
 
 **Submittability.** Good candidate IF formalized — clean linear algebra, no analysis. Would
 need a proper Lean formalization and absence check before submission.
+
+
+---
+
+## Integrated kernel is PSD (kernel of positive type) - session 132
+
+**Statement.** For any phi : X -> T -> C and measure mu on T, the integrated kernel
+K(x, y) = integral of phi(x, t)*conj(phi(y, t)) dmu(t) is positive-semidefinite:
+sum_{x in s} sum_{y in s} c x * conj(c y) * K x y >= 0 for finite s and c : X -> C.
+
+**Proof.** Gram / sum-of-squares: sum c conj(c) K = integral of |sum_x c_x phi(x,t)|^2 dmu >= 0.
+Formalized as integrated_kernel_psd in Proofs/PositiveDefinite/IntegratedKernel.lean. Depends
+ONLY on [propext, Classical.choice, Quot.sound] - no custom axioms, no character theory.
+
+**Why novel / absent from Mathlib.** General "kernel of positive type from a feature map into
+L2" fact. Mathlib has Matrix.PosSemidef and inner-product machinery, but a packaged
+"integrated/Gram kernel is PSD" lemma for Bochner integrals may be absent. Absence check
+(grep/Loogle) needed before claiming novelty. Status: embedded (proven, in-project).
+
+**Use in this project.** Provable core of Step B.2e.2 (design doc 8.11.96). NOTE: NOT sufficient
+by itself to close transferMatrixPositivity_axiom - the kernel here is the double integral
+integral phi(x,t) conj(phi(y,t)), while reflection positivity needs the single integral with the
+geometric reflection theta (the c' != conj(c) obstacle). See design doc 8.11.96 Findings 2-3.
+
+Also formalized this session: integral_prod_repCharacter_conj (paired character orthogonality
+for product measures), the paired analogue of integral_prod_repCharacter_trivial. Depends on
+characterOrthogonality (existing axiom).

@@ -9162,3 +9162,57 @@ T ≥ 0, hence ⟨g, Tg⟩ ≥ 0.
 - **No code changes** in session 131 — this session was analysis and design doc only.
 - **Key insight**: the separable decomposition (`interface_product_character_expansion`) makes
   temporal interface link integrals trivial, eliminating the need for 6-character integrals.
+
+## §8.11.96 — Session 132 (2026-08-21): B.2e.2 adversarial self-check + the provable core
+
+### Adversarial self-check (required before significant proof work)
+
+Before formalizing B.2e.2, we steelman the case that approach (a) is a dead end.  This is a
+genuine search for failure modes, not a re-affirmation of the plan.
+
+**Finding 1 — the abstract "PD kernel from separable expansion + integration" lemma IS provable,
+but it is NOT what reflection positivity needs.**  The clean abstract statement is: if
+`φ : (L → SU N) → ℂ` has a separable character expansion `φ(g) = ∑_w F(w)·∏_l χ_{w(l)}(g_l)` with
+`F(w) ≥ 0`, and `L = L_keep ⊔ L_int`, then the integrated kernel
+`K(x, y) = ∫ φ(x ⊕ t)·conj(φ(y ⊕ t)) dμ(t)` is PSD.  Proof: expand both factors, integrate over
+`L_int` by character orthogonality (`∫ χ_a conj(χ_b) = δ_{a,b}`), which forces `w|_int = w'|_int`;
+grouping by the restriction `v = w|_int` gives `K(x,y) = ∑_v B_v(x)·conj(B_v(y))` with
+`B_v(x) = ∑_{w: w|_int=v} F(w)·∏_{l∈L_keep} χ_{w(l)}(x_l)` — a sum of rank-1 PSD kernels, hence PSD
+(this is exactly the Gram-matrix argument already formalized as
+`reflection_positivity_reorganization` / `multi_link_gram_psd_nonneg` in `Separable.lean`).
+
+**Finding 2 — the gap to reflection positivity is the `conj`.**  The abstract lemma's kernel is
+`∫ φ(x,t)·conj(φ(y,t)) dμ(t)` — a DOUBLE integral with a conjugated second factor.  Reflection
+positivity is the SINGLE integral `∫ f(U)·f(θU)·K(U) dμ(U)` with the geometric reflection `θ`.
+Because the test function `f` is real-valued, `f(θU) = conj(f(θU))`, so the RP integral IS a PD
+quadratic form `∫∫ g(u)·conj(g(u'))·K_T(u,u')` — but ONLY IF the transfer-matrix kernel `K_T`
+is itself a PD kernel.  The abstract lemma does NOT establish that `K_T` is PD, because `K_T`
+involves the reflection `θ` (via `u' = mergePosInterface(V⁺, σ(u⁰))`), not the group
+multiplication `g⁻¹·h` that the PD property is about.
+
+**Finding 3 — the `c' ≠ conj(c)` obstacle is precisely this gap, restated.**  After the change of
+variables `V⁺ = reflect(U⁻)`, the negative-link character factor becomes `Φ_{w*}(V⁺)` (dual
+representations on temporal links), NOT `conj(Φ_w(V⁺))`.  So the per-mode integrand is
+`A_w · A_{w*}`, not `|A_w|²`.  The abstract Gram-matrix lemma gives `∑_v |B_v|² ≥ 0` only when the
+two factors share the SAME mode `w`; the reflection pairs `w` with `w*`, breaking the
+rank-1 structure.  The claim in §8.11.95 that "the answer is YES via the Lüscher decomposition"
+glosses over exactly this: the Lüscher VUV factorization separates spatial from temporal, but the
+temporal operator `U` still couples `w` to `w*` through the interface action.
+
+**Conclusion of self-check.**  Approach (a) is NOT a dead end, but the "PD kernel from separable
+expansion + integration" lemma must be stated and proved in a form that ACCOUNTS for the
+reflection pairing `w ↔ w*`.  The naive abstract version (Finding 1) is true but insufficient.
+The correct target lemma is: the transfer-matrix kernel `K_T(u, u')` — AFTER the VUV factorization
+and the trivial temporal-link integrals — is a PD kernel in the spatial-interface links, where the
+`w ↔ w*` pairing is resolved by the PD property of the FULL Boltzmann factor (which IS PD on the
+product group, by `PositiveDefinite.prod` + `plaquetteBoltzmannPD`).  Whether this PD property
+survives the non-homomorphic plaquette map (Finding from §8.11.95) is the real crux and is NOT
+yet resolved.
+
+### What session 132 formalizes
+
+The provable core (Finding 1): the abstract "integrated separable kernel is PSD" lemma.  This is
+genuine, reusable, and a Mathlib candidate — but it is explicitly NOT sufficient by itself to
+close `transferMatrixPositivity_axiom` (Finding 2/3).  It is the correct first milestone of B.2e.2:
+it isolates exactly the part that IS handled by the separable expansion + character orthogonality,
+so that the remaining work (the `w ↔ w*` reflection pairing) is sharply localized.
