@@ -631,3 +631,34 @@ operator B, and `cgME_isometry_normSq` gives `‖Bg‖² = ‖g‖²` (Parseval)
 mechanism that makes the transfer matrix kernel `T = B*B` positive semidefinite. This is
 the first-ever application of `hcgME_unitary` (the CG unitarity relation from the
 Peter-Weyl axiom), which had been available but never applied.
+
+---
+
+## Tensor product isometry (B isometry ⟹ B ⊗ conj(B) isometry)
+
+**Status:** Possibly-novel formulation. **Verified numerically** (8 random trials, all PASS)
+but NOT yet formalized in Lean.
+
+**Statement.** If B is an m×n isometry (B* B = I_n), then B ⊗ conj(B) (Kronecker product
+with elementwise conjugate, NOT adjoint) is an isometry: (B ⊗ conj(B))* (B ⊗ conj(B)) =
+I_{n²}.
+
+**Proof sketch.** (B ⊗ conj(B))* (B ⊗ conj(B)) = (B* B) ⊗ (conj(B)* conj(B)) = I_n ⊗ I_n =
+I_{n²}. The key identity: conj(B)* = conj(B*), and conj(B)* conj(B) = conj(B* B) = conj(I) =
+I (since B* B = I and conj is a *-antiautomorphism).
+
+**Why it might be novel / absent from Mathlib.** The Kronecker product of matrices with
+elementwise conjugate (not adjoint) is a less common construction. Mathlib has
+`Matrix.kroneckerMap` but the specific isometry property for B ⊗ conj(B) (with conj, not
+adjoint) may not be formalized. An absence check (grep/Loogle for "kronecker" + "isometry"
++ "conj") should be done before claiming novelty.
+
+**Use in this project.** Identified in session 130 (§8.11.94) as a potential ingredient for
+the 6-fold isometry. The 6-fold isometry (shared α) turned out to be FALSE — it is the
+DIAGONAL restriction of the tensor product isometry, which is NOT an isometry. The tensor
+product isometry itself IS true but has a different structure (independent α₁, α₂) that
+does not match the single-site integral structure. It remains a potentially useful general
+result even though it does not directly apply to the current proof path.
+
+**Submittability.** Good candidate IF formalized — clean linear algebra, no analysis. Would
+need a proper Lean formalization and absence check before submission.

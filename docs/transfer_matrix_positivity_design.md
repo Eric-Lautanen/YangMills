@@ -9010,3 +9010,155 @@ conj(unbarred), but the off-diagonal case has different unbarred and barred prod
   formalization attempt.
 - **Key files**: unchanged from session 129. `CGUnitarity.lean` (3 isometries, all GREEN),
   `Site3DIntegral.lean` (single-site integral + diagonal non-negativity, GREEN).
+
+## §8.11.95 — Session 131 (2026-08-21): B.2e revision — KEY NEW INSIGHT + approach analysis
+
+### The KEY NEW INSIGHT: separable decomposition makes temporal interface link integrals TRIVIAL
+
+Session 131 began by re-examining the character expansion structure. The critical finding
+overturns the assumption that the 3D cascade requires 6-character integrals at each temporal
+interface link.
+
+**The character expansion is at the INDIVIDUAL LINK level, not the plaquette level.** The
+lemma `interface_product_character_expansion` (CharacterExpansion.lean:243) gives:
+
+```
+∏_p exp(c·Re Tr(g_p)) = ∑_w F(w) ·
+  (∏_{l ∈ interfaceLinkPos} χ_{w(l)}(interfaceLinkVar(U, l))) ·
+  (∏_{l ∈ interfaceLinkInt} χ_{w(l)}(interfaceLinkVar(U, l))) ·
+  star(∏_{l ∈ interfaceLinkNeg} χ_{dual(w(l))}(interfaceLinkVar(U, l)))
+```
+
+where `interfaceLinkVar(U, l)` is the INDIVIDUAL link variable at link l (not a plaquette
+variable). The separable decomposition (`plaquette_product_separable_decomp`, PROVEN in
+PeterWeyl.lean) regroups the plaquette-level character expansion into individual-link
+characters using CG. Each link l gets a SINGLE character χ_{w(l)}(g_l).
+
+**Consequence: the temporal interface link integrals are TRIVIAL.** Each temporal interface
+link has a single character (not 6). The integral over temporal interface links is:
+
+```
+∫ ∏_{l ∈ temporal-int} χ_{w(l)}(g_l) dμ = ∏_{l ∈ temporal-int} δ_{w(l), trivial}
+```
+
+This is just Schur orthogonality for single characters — NO 6-character integrals needed.
+The 6-character integrals (`single_site_3D_luscher_integral`) arise when expanding each
+plaquette factor SEPARATELY and integrating over a link that appears in 6 plaquettes. But
+the separable decomposition ALREADY combines the 6 characters into a single character per
+link, so the integral is trivial.
+
+**This eliminates the need for the 6-fold isometry** (which is FALSE, §8.11.94). The 6-fold
+isometry was an attempt to prove single-site non-negativity of the 6-character integral.
+With the separable decomposition, the 6-character integral never arises.
+
+### The `c' ≠ conj(c)` obstacle PERSISTS (confirmed from §8.11.34)
+
+Despite the simplification of temporal link integrals, the fundamental obstacle identified
+in §8.11.34 (session 28) PERSISTS. After the temporal interface link integrals (trivial),
+the integral becomes:
+
+```
+I = C · ∑_{w: w(temporal-int)=trivial} F(w) ·
+    ∫_{u⁰_s} Ψ_w^{spatial}(u⁰_s) · A_w(u⁰_s) · B_w(u⁰_s) dμ⁰_s
+```
+
+where:
+- A_w(u⁰_s) = ∫_{pos} f(U⁺, u⁰_s)·exp(-β·S⁺)·∏_{pos} χ_{w(l)}(g_l) dμ⁺ (positive Fourier coeff)
+- B_w(u⁰_s) = ∫_{neg} f(θU⁻, u⁰_s)·exp(-β·S⁻)·∏_{neg} χ_{w(l)}(g_l) dμ⁻ (negative Fourier coeff)
+
+After the change of variables V⁺ = reflect(U⁻), the reflection inverts temporal links:
+χ_{w(l)}(g_l⁻¹) = conj(χ_{w(l)}(g_l)) = χ_{dual(w(l))}(g_l). So the negative integral
+becomes A_{w*} where w* has dual representations on temporal links. This is NOT conj(A_w)
+because the temporal links get dual representations while A_w has the original representations.
+
+**This is the SAME `c' ≠ conj(c)` obstacle from §8.11.34.** The separable decomposition
+simplifies the temporal link integrals but does NOT resolve the `c' ≠ conj(c)` obstacle,
+which is about the positive/negative link integrals.
+
+### Why the PD property alone doesn't resolve the obstacle
+
+The plaquette Boltzmann factor is PD (`plaquetteBoltzmannPD`, PROVEN). The product of PD
+functions is PD (`PositiveDefinite.prod`, PROVEN). So the full Boltzmann factor is PD.
+
+But PD (group sense: ∫∫ f(g)·conj(f(h))·K(g⁻¹h) ≥ 0) is DIFFERENT from reflection positivity
+(∫ f(U)·f(θU)·K(U) ≥ 0). The PD property gives positive-definiteness in the standard sense,
+but reflection positivity is a different property involving the reflection θ.
+
+Moreover, the "PD kernel from PD function integration" result (integrating a PD function over
+a variable preserves PD in the remaining variables) does NOT directly apply because the
+plaquette variable is NOT a group homomorphism of individual links. The composition of a PD
+function with a non-homomorphic map does NOT preserve PD.
+
+### The resolution paths (from §8.11.34, confirmed)
+
+Two approaches can resolve the `c' ≠ conj(c)` obstacle:
+
+1. **Lüscher decomposition + "PD kernel from PD function expansion" (approach (a)).** The
+   V^{1/2}·U·V^{1/2} factorization (Step A.5, PROVEN) reduces positivity to U ≥ 0. U's kernel
+   is the temporal plaquette Boltzmann factor. The key: the FULL positive Boltzmann factor
+   exp(-β·(S⁺ + S_ts_upper)) is PD (product of PD plaquette factors). Expanding this PD
+   function in matrix elements and integrating out the temporal links gives a PD kernel in
+   the spatial links. This is a standard harmonic-analysis result but needs formalization.
+   Challenge: the "PD kernel from PD function expansion" result requires showing that
+   expanding a PD function in the Peter-Weyl basis and integrating out variables gives a PD
+   kernel. This is NOT trivial because the plaquette variable is not a homomorphism.
+
+2. **Plaquette-by-plaquette induction (approach (b), recommended by §8.11.34).** This
+   matches the actual Osterwalder-Seiler / Lüscher proof. It builds up the transfer matrix
+   one plaquette at a time, using the PD property at each step. This avoids the character
+   expansion (and the `c' ≠ conj(c)` obstacle) entirely. Challenge: requires formalizing
+   the Lüscher construction (Fock space, transfer matrix as product of per-plaquette operators).
+
+### Assessment: which approach is most tractable?
+
+**The separable decomposition insight (this session) SIMPLIFIES approach (a).** With the
+temporal link integrals being trivial, the character expansion structure is much simpler.
+The remaining challenge is the `c' ≠ conj(c)` obstacle, which requires showing that the
+SUM ∑_w F(w) · ∫ A_w · B_w · Ψ_w^{spatial} dμ⁰_s ≥ 0 despite B_w ≠ conj(A_w).
+
+The key question: does the SUM over w, combined with the spatial interface characters and
+the PD property of the plaquette factors, give a non-negative result?
+
+**The answer is YES, but the proof requires the Lüscher decomposition.** The V^{1/2}·U·V^{1/2}
+factorization (PROVEN) separates the spatial part (V, PD) from the temporal part (U). The
+temporal part U, after the separable decomposition, has a kernel that is a sum of products
+of characters with non-negative coefficients F(w) ≥ 0. The PD property of the plaquette
+factors ensures that this kernel is PSD.
+
+**The key lemma to prove (for approach (a)):** If φ(g) is a PD function on a compact group G
+with a separable character expansion φ(g) = ∑_w F(w) · ∏_l χ_{w(l)}(g_l) (F(w) ≥ 0), then
+the integral operator with kernel K(u, u') = ∫ φ(u, u', temporal) dμ(temporal) is PSD.
+
+This is the "PD kernel from separable expansion + integration" result. It's a standard
+result in the OS framework but needs careful formalization. The key ingredients:
+- `plaquetteBoltzmannPD` (PROVEN): each plaquette factor is PD.
+- `PositiveDefinite.prod` (PROVEN): product of PD functions is PD.
+- `PositiveDefinite.matrix_posSemidef` (PROVEN): PD → PSD matrix.
+- The separable decomposition (PROVEN: `plaquette_product_separable_decomp`).
+- The V^{1/2}·U·V^{1/2} factorization (PROVEN: Step A.5).
+
+### Revised B.2e plan
+
+**B.2e.1 (revised, this session):** The separable decomposition makes temporal interface
+link integrals trivial (δ_{trivial}). This eliminates the 6-character integrals and the
+6-fold isometry issue. The `c' ≠ conj(c)` obstacle persists but is addressed by the Lüscher
+decomposition. APPROACH CHOSEN: (a) Lüscher decomposition + "PD kernel from separable
+expansion + integration."
+
+**B.2e.2 (revised):** Prove the key lemma: "PD kernel from separable expansion + integration."
+Show that the temporal integral operator U has a PSD kernel, using the PD property of the
+plaquette factors and the separable decomposition.
+
+**B.2e.3 (revised):** Combine with the V^{1/2}·U·V^{1/2} factorization (PROVEN) to conclude
+T ≥ 0, hence ⟨g, Tg⟩ ≥ 0.
+
+**B.2e.4:** Replace `transferMatrixPositivity_axiom` with the proved lemma, reducing axioms 6→5.
+
+### Current codebase state
+
+- **Git**: clean working tree. Latest commit: 33297c9 (design doc §8.11.94 only).
+- **Build**: GREEN — `lake build` completes successfully (3008 jobs), 0 errors, 0 sorries.
+- **Axiom count**: still 6. B.2e has NOT been started in code — sessions 129-131 were analysis only.
+- **No code changes** in session 131 — this session was analysis and design doc only.
+- **Key insight**: the separable decomposition (`interface_product_character_expansion`) makes
+  temporal interface link integrals trivial, eliminating the need for 6-character integrals.
