@@ -206,3 +206,40 @@ lemma repMatrixElement_inv (ρ : G →* Matrix (Fin n) (Fin n) ℂ)
 
 #print axioms repMatrixElement_inv
 
+/-- **Non-negative finite sums of characters are positive-definite.**
+For a finite index set `s`, non-negative real coefficients `c i ≥ 0`, and
+unitary representations `ρ i` (of possibly varying dimensions `dims i`), the
+function `g ↦ ∑ i ∈ s, (c i : ℂ) · χ_{ρ i}(g)` is positive-definite.
+
+This is the PD-form of the resolution of the `c' ≠ conj(c)` obstacle
+(§8.11.97): the crossing-plaquette Boltzmann factor `exp(β·ReTr(U_p))` has a
+character expansion with non-negative coefficients, hence is a PD function of
+the plaquette WORD `U_p`.  Since the lattice reflection maps the
+negative-side plaquette word to the inverse of the positive-side word, the
+reflection-positivity kernel is `k((W⁻)⁻¹ · W⁺)` with `k` PD — exactly the PD
+kernel form `∑ c_i·conj(c_j)·k(g_i⁻¹·g_j) ≥ 0`.  No PD-transfer through a
+non-homomorphic plaquette map is needed: PD is required only in the word
+variable, and `(W⁻, W⁺) ↦ (W⁻)⁻¹·W⁺` is the group operation on the pair.
+Proof: induction on `s` using `PositiveDefinite.zero`,
+`PositiveDefinite.add`, `PositiveDefinite.smul_nonneg`, and
+`repCharacter_positiveDefinite`.  0 sorries, 0 new axioms. -/
+lemma positiveDefinite_finset_sum_repCharacter
+    {G : Type*} [Group G] {ι : Type*} (s : Finset ι) (c : ι → ℝ)
+    (hc : ∀ i ∈ s, 0 ≤ c i) (dims : ι → ℕ)
+    (ρ : ∀ i, G →* Matrix (Fin (dims i)) (Fin (dims i)) ℂ)
+    (hU : ∀ i, IsUnitaryRepresentation (ρ i)) :
+    PositiveDefinite (fun g => ∑ i ∈ s, (c i : ℂ) * repCharacter (ρ i) g) := by
+  classical
+  induction s using Finset.induction with
+  | empty =>
+    simp only [Finset.sum_empty]
+    exact PositiveDefinite.zero
+  | insert a s ha ih =>
+    apply PositiveDefinite.congr (funext fun g => Finset.sum_insert ha)
+    exact PositiveDefinite.add
+      (PositiveDefinite.smul_nonneg (hc a (Finset.mem_insert_self a s))
+        (repCharacter_positiveDefinite (ρ a) (hU a)))
+      (ih (fun i hi => hc i (Finset.mem_insert_of_mem hi)))
+
+#print axioms positiveDefinite_finset_sum_repCharacter
+

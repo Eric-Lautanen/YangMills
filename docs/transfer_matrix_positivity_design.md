@@ -9216,3 +9216,78 @@ genuine, reusable, and a Mathlib candidate — but it is explicitly NOT sufficie
 close `transferMatrixPositivity_axiom` (Finding 2/3).  It is the correct first milestone of B.2e.2:
 it isolates exactly the part that IS handled by the separable expansion + character orthogonality,
 so that the remaining work (the `w ↔ w*` reflection pairing) is sharply localized.
+
+## §8.11.97 — Session 133 (2026-08-21): the `c' ≠ conj(c)` obstacle RESOLVED (mathematically)
+
+### The question
+
+Does the `w ↔ w*` reflection pairing preserve non-negativity?  Session 132's self-check
+(§8.11.96, Finding 3) localized the crux: after the change of variables `V⁺ = reflect(U⁻)`,
+the per-mode integrand is `A_w · A_{w*}`, not `|A_w|²`.
+
+### Finding 1 — at the individual-link CHARACTER level, the answer is NO (term-by-term)
+
+The σ-inversion lemma (`fourierCoeffNeg_thetaReindex_eq_star_fourierCoeffPos`, PROVEN, session 17)
+gives `B_w(u⁰) = conj(A_{θw}(σ(u⁰)))`, and σ-invisibility (`fourierCoeffPos_sigma_invisible`,
+PROVEN, session 53) removes the σ.  So the sum is `∑_w F(w)·A_w·conj(A_{θw})`.  Reindexing by the
+involution `θ` (where it is one) proves the sum is REAL, but NOT non-negative: with two modes,
+`a₁·conj(a₂) + a₂·conj(a₁) = 2·Re(a₁·conj(a₂))` can be negative.  Non-negativity at the
+character level is GLOBAL only, and no reindexing argument can prove it.  This confirms
+§8.11.96 Finding 3: the separable individual-link expansion CANNOT resolve the obstacle.
+
+### Finding 2 — at the plaquette-word MATRIX-ELEMENT level, the answer is YES, and the
+### pairing is EXACT conjugation (already in the codebase)
+
+The resolution is the standard Osterwalder–Seiler mechanism, and its two ingredients were
+ALREADY formalized (sessions 41–52, `PositiveDefiniteIntegral/CascadeNonneg.lean`):
+
+1. `repCharacter_trace_expand` (PROVEN): `χ_ν(W·V) = ∑_{a,b} (ρ_ν W)_{ab}·conj((ρ_ν V⁻¹)_{ab})`.
+   At the plaquette-word level the reflection is GROUP INVERSION (the crossing plaquette word
+   `W_p` maps to its mirror word with reversed order and inverted links, i.e. `W_p⁻¹`), and for
+   unitary representations inversion IS conjugation (`repMatrixElement_inv`).  The pairing is
+   `D_{ab}(W⁺) ↔ conj(D_{ab}(W⁺))` with the SAME representation and the SAME indices — no
+   `w ↔ w*` mismatch arises.  The obstacle was an artifact of expanding at the individual-link
+   character level.
+2. `character_kernel_integral_nonneg` (PROVEN): for any non-negative coefficients,
+   `∫∫ f(W)·f(V⁻¹)·∑_ν coeff_ν·χ_ν(W·V) ≥ 0` — the sum-of-squares conclusion, via
+   `character_expansion_nonneg` with `θ = inv`.
+
+### Finding 3 — the PD-property worry of §8.11.95 is also resolved
+
+§8.11.95 worried that "PD does not transfer through the non-homomorphic plaquette map."
+This is true but IRRELEVANT: PD is needed only in the plaquette WORD variable, not in the
+individual links.  The crossing-plaquette Boltzmann factor `exp(β·ReTr(U_p))` is a PD function
+of the word `U_p` (non-negative character expansion + `positiveDefinite_finset_sum_repCharacter`,
+this session), and the reflection-positivity kernel is `k((W⁻)⁻¹·W⁺)` — exactly the PD kernel
+form `k(g⁻¹·h)` — because reflection maps `W⁻ ↦ (W⁺)⁻¹`.  The map `(W⁻, W⁺) ↦ (W⁻)⁻¹·W⁺` is the
+group operation on the pair, not a non-homomorphic plaquette map.
+
+### What session 133 formalizes (0 sorries, 0 new axioms, build GREEN 3008 jobs)
+
+1. `repCharacter_mul_inv_eq_sum_matrixElement_conj` (CascadeNonneg.lean): the exact
+   "reflection = inversion = conjugation" identity
+   `χ(g·h⁻¹) = ∑_{a,b} (ρ g)_{ab}·conj((ρ h)_{ab})` — one-line corollary of
+   `repCharacter_trace_expand`.  `#print axioms` = `[propext, Classical.choice, Quot.sound]`.
+2. `positiveDefinite_finset_sum_repCharacter` (RepCharacter.lean): non-negative finite sums
+   `∑_i c_i·χ_{ρ_i}` (varying dimensions) are positive-definite.
+   `#print axioms` = `[propext, Classical.choice, Quot.sound]`.
+
+### What REMAINS (the lattice bridge — B.2e.3, genuinely open formalization, not open math)
+
+The mathematical content of the obstacle is resolved; what remains is the (substantial)
+assembly connecting the abstract group-level lemmas to the lattice transfer matrix:
+
+- (i) Identify each crossing plaquette variable as a word `U_p = W_p⁺·(W_p⁻)⁻¹` in the
+  positive/negative + interface links (word-level, not plaquette-variable-level).
+- (ii) Show the lattice reflection maps `W_p⁻ ↦ (W_p⁺)⁻¹` (word reversal + link inversion;
+  partial ingredients exist via `reflectPosToNeg` and the σ-inversion lemmas).
+- (iii) Non-negativity of the character-expansion coefficients of `exp(β·ReTr)` — check
+  whether this is an axiom/hypothesis in the current setup (`hcoeff`-style hypotheses exist
+  in `ReflectionPositivity/CharacterExpansion.lean`).
+- (iv) Assembly: Fubini over the two halves + interface, then
+  `character_kernel_integral_nonneg` (or `integrated_kernel_psd`) per crossing plaquette,
+  combined with the PROVEN `transferMatrixReflected_VUV_factorization`.
+
+**Honest status:** the `c' ≠ conj(c)` obstacle is resolved as MATHEMATICS (the mechanism is
+identified and its key steps are formalized), but `transferMatrixPositivity_axiom` is NOT yet
+replaced — steps (i)–(iv) are open formalization work.  Axiom count: still 6.

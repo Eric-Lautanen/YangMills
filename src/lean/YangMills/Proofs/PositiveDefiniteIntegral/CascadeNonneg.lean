@@ -48,6 +48,32 @@ lemma repCharacter_trace_expand
   have h := repMatrixElement_inv ρ hU V a b
   rw [h, Complex.conj_conj]
 
+/-- **Reflection pairing = conjugation (the `c' ≠ conj(c)` resolution).**
+For a unitary representation, the character of a "reflected" word `g · h⁻¹`
+factors into matrix elements with an EXACT conjugate pairing:
+
+    χ(g · h⁻¹) = ∑_a ∑_b (ρ g)_{ab} · conj((ρ h)_{ab})
+
+This is the precise point where the geometric reflection (which inverts the
+crossing plaquette word, `W_p ↦ W_p⁻¹`) becomes complex conjugation.  At the
+individual-link CHARACTER level the reflection pairs mode `w` with its dual
+`w*` (the `c' ≠ conj(c)` obstacle, §8.11.34/§8.11.96), which does NOT preserve
+non-negativity term-by-term.  At the plaquette-word MATRIX-ELEMENT level the
+pairing is `D_{ab}(g) ↔ conj(D_{ab}(h))` with the SAME indices `(a, b)`, so the
+kernel `K(g, h) = χ(g·h⁻¹)` is a Gram kernel and non-negativity is a sum of
+squares (via `character_expansion_nonneg` / `character_kernel_integral_nonneg`).
+Immediate corollary of `repCharacter_trace_expand` at `V = h⁻¹`.
+0 sorries, 0 new axioms. -/
+lemma repCharacter_mul_inv_eq_sum_matrixElement_conj
+    {G : Type*} [Group G] {n : ℕ} (ρ : G →* Matrix (Fin n) (Fin n) ℂ)
+    (hU : IsUnitaryRepresentation ρ) (g h : G) :
+    repCharacter ρ (g * h⁻¹) =
+      ∑ a : Fin n, ∑ b : Fin n, (ρ g) a b * conj ((ρ h) a b) := by
+  have h := repCharacter_trace_expand ρ hU g h⁻¹
+  rwa [inv_inv] at h
+
+#print axioms repCharacter_mul_inv_eq_sum_matrixElement_conj
+
 /-- **Step 4: the cascade integral is non-negative.**  The kernel
 `K(W,V) = ∑_ν cg(s₁,s₂,ν)·cg(t₁,t₂,ν)·(1/dims ν)·χ_ν(W·V)` (the output
 of `luscher_2site_2D_cascade_charlevel`) integrated against
