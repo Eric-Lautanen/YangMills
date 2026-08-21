@@ -9418,7 +9418,23 @@ Quot.sound] only):
   (The last index is `θ(n+e_ν)`; `reflectSite_addVector_comm` converts to `θn + e_ν` when
   needed downstream.)
 
-Build GREEN (3008 jobs), 0 sorries, axiom count still 6.  Next: step (ii) — the
-matrix-element factorization `χ_R(word) = ∑_{kl} D^R_{kl}(W_int(u))·conj(D^R_{kl}(W_pos(u')))`
-using `repCharacter_mul_inv_eq_sum_matrixElement_conj` + `map_mul` + `repMatrixElement_inv`
-applied to the word from `plaquetteProduct_extendToFullConfig_crossing`.
+Build GREEN (3008 jobs), 0 sorries, axiom count still 6.
+
+**Step (ii) group-level factorization also FORMALIZED (session 134, same commit series):**
+`repCharacter_crossing_word_eq_sum_matrixElement_conj` in
+`Proofs/PositiveDefiniteIntegral/CascadeNonneg.lean`:
+
+    χ(a⁻¹·b·c⁻¹·d⁻¹) = ∑_{k,l} (ρ (b·c⁻¹))_{kl} · conj((ρ (a·d))_{kl})
+
+for any unitary rep `ρ`.  Proof: both sides equal `Tr(ρ(d⁻¹·a⁻¹·b·c⁻¹))` — LHS by
+cyclicity of trace (`Matrix.trace_mul_comm`), RHS by the Frobenius identity
+`∑_{kl} X_{kl}·conj(Y_{kl}) = Tr(Yᴴ·X)` plus unitarity `(ρ(a·d))ᴴ = ρ(d⁻¹)·ρ(a⁻¹)`.
+Axioms [propext, Classical.choice, Quot.sound] only.  With
+`a = V⁺_{θn,0}`, `b = u_{n+e₀,ν}`, `c = u_{n+e₀+e_ν,0}`, `d = V⁺_{θ(n+e_ν),ν}` this is
+exactly `χ_R(word) = ∑_{kl} D^R_{kl}(W_int(u))·conj(D^R_{kl}(W_pos(V⁺)))` with
+`W_int(x) = x_{n+e₀,ν}·(x_{n+e₀+e_ν,0})⁻¹`, `W_pos(x) = x_{θn,0}·x_{θ(n+e_ν),ν}`.
+
+Remaining: (ii′) combine steps (i)+(ii) into the per-plaquette lattice identity
+(`repCharacter (plaquetteProduct …) = ∑_{kl} …`); (iii) thread `hcoeff` non-negativity;
+(iv) assembly (matrix-element σ-inversion, σ-invisibility, interface Schur
+orthogonality, then `integrated_kernel_psd` / `crossingPlaquette_kernel_psd`).

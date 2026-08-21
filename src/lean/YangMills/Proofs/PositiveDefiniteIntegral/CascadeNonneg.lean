@@ -74,6 +74,52 @@ lemma repCharacter_mul_inv_eq_sum_matrixElement_conj
 
 #print axioms repCharacter_mul_inv_eq_sum_matrixElement_conj
 
+/-- **Crossing plaquette word factorization** (B.2e.3 step (ii), §8.11.99/§8.11.100).
+The character of the crossing plaquette word `a⁻¹·b·c⁻¹·d⁻¹` factors as a
+matrix-element pairing of the two half-words `b·c⁻¹` (interface links) and `a·d`
+(positive links):
+
+    χ(a⁻¹·b·c⁻¹·d⁻¹) = ∑_{k,l} (ρ (b·c⁻¹))_{kl} · conj((ρ (a·d))_{kl}).
+
+Proof: both sides equal `Tr(ρ(d⁻¹·a⁻¹·b·c⁻¹))` — the LHS by cyclicity of trace,
+the RHS by the Frobenius identity `∑_{kl} X_{kl}·conj(Y_{kl}) = Tr(Yᴴ·X)` plus
+unitarity `(ρ (a·d))ᴴ = ρ(d⁻¹)·ρ(a⁻¹)`.  0 sorries, 0 new axioms. -/
+lemma repCharacter_crossing_word_eq_sum_matrixElement_conj
+    {G : Type*} [Group G] {n : ℕ} (ρ : G →* Matrix (Fin n) (Fin n) ℂ)
+    (hU : IsUnitaryRepresentation ρ) (a b c d : G) :
+    repCharacter ρ (a⁻¹ * b * c⁻¹ * d⁻¹) =
+      ∑ k : Fin n, ∑ l : Fin n,
+        (ρ (b * c⁻¹)) k l * conj ((ρ (a * d)) k l) := by
+  have hCT : ∀ g : G, (ρ g)ᴴ = ρ g⁻¹ := by
+    intro g
+    rw [conjTranspose_eq_inv_of_unitary (hU g)]
+    have hmul : ρ g * ρ g⁻¹ = 1 := by
+      rw [← ρ.map_mul, show g * g⁻¹ = 1 from by simp, ρ.map_one]
+    exact Matrix.inv_eq_right_inv hmul
+  have hFrob : ∀ (X Y : Matrix (Fin n) (Fin n) ℂ),
+      (∑ k : Fin n, ∑ l : Fin n, X k l * conj (Y k l)) = Matrix.trace (Yᴴ * X) := by
+    intro X Y
+    simp only [Matrix.trace, Matrix.diag, Matrix.mul_apply, Matrix.conjTranspose_apply]
+    conv_rhs => rw [Finset.sum_comm]
+    apply Finset.sum_congr rfl; intro k _
+    apply Finset.sum_congr rfl; intro l _
+    rw [mul_comm, starRingEnd_apply]
+  have hL : repCharacter ρ (a⁻¹ * b * c⁻¹ * d⁻¹) =
+      Matrix.trace (ρ a⁻¹ * ρ b * ρ c⁻¹ * ρ d⁻¹) := by
+    simp [repCharacter, MonoidHom.map_mul]
+  have hrot : Matrix.trace (ρ a⁻¹ * ρ b * ρ c⁻¹ * ρ d⁻¹) =
+      Matrix.trace (ρ d⁻¹ * ρ a⁻¹ * ρ b * ρ c⁻¹) := by
+    calc Matrix.trace (ρ a⁻¹ * ρ b * ρ c⁻¹ * ρ d⁻¹)
+        = Matrix.trace (ρ d⁻¹ * (ρ a⁻¹ * ρ b * ρ c⁻¹)) :=
+          Matrix.trace_mul_comm _ _
+      _ = Matrix.trace (ρ d⁻¹ * ρ a⁻¹ * ρ b * ρ c⁻¹) := by
+          rw [← mul_assoc, ← mul_assoc]
+  have hY : (ρ (a * d))ᴴ = ρ d⁻¹ * ρ a⁻¹ := by
+    rw [ρ.map_mul, Matrix.conjTranspose_mul, hCT d, hCT a]
+  rw [hL, hFrob _ _, hY, ρ.map_mul b c⁻¹, hrot, ← mul_assoc]
+
+#print axioms repCharacter_crossing_word_eq_sum_matrixElement_conj
+
 /-- **Step 4: the cascade integral is non-negative.**  The kernel
 `K(W,V) = ∑_ν cg(s₁,s₂,ν)·cg(t₁,t₂,ν)·(1/dims ν)·χ_ν(W·V)` (the output
 of `luscher_2site_2D_cascade_charlevel`) integrated against
