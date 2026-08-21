@@ -8901,3 +8901,112 @@ formulation) and may span multiple sessions. B.2e.4 is straightforward once B.2e
 - **Key files**: `CGUnitarity.lean` (3 isometries, all GREEN), `Site3DIntegral.lean`
   (single-site integral + diagonal non-negativity, GREEN), `CleanFactorization.lean`
   (character expansion, GREEN), `LuscherDecomposition.lean` (T = V^{1/2}·U·V^{1/2}, GREEN).
+
+## §8.11.94 — Session 130 (2026-08-21): B.2e.1 adversarial self-check — 6-fold isometry is FALSE
+
+### Critical finding: the 6-fold isometry is FALSE (dimension obstruction)
+
+Session 129 (§8.11.93) identified the 6-fold isometry as the key ingredient for B.2e.1,
+to be proved via the tensor product argument: "if B is an isometry (B* B = I), then
+B ⊗ conj(B) is an isometry." Session 130 began by **adversarially verifying this claim
+numerically before formalizing it.** The result is a **critical negative finding**.
+
+**The abstract tensor product claim IS true.** If B is an m×n isometry (B* B = I_n), then
+B ⊗ conj(B) (Kronecker product with elementwise conjugate, NOT adjoint) is an isometry:
+(B ⊗ conj(B))* (B ⊗ conj(B)) = (B* B) ⊗ (conj(B)* conj(B)) = I_n ⊗ I_n = I_{n²}.
+This was verified numerically for 8 random trials (various m, n) — all PASS.
+
+**But the 6-fold isometry as stated in §8.11.93 is NOT the tensor product isometry.** The
+6-fold isometry has a SHARED intermediate representation α (and shared ν):
+```
+∑_{α,p,q} |∑_{a,b} C_full(α,p,q; a,b) · v(a,b)|² = ∑_{a,b} |v(a,b)|²
+```
+where C_full(α,p,q; a,b) = ∑_{ν,r,s} cgME s1 s2 ν a1 a2 r · conj(cgME s1 s2 ν b1 b2 s) ·
+cgME ν s3 α r a3 p · conj(cgME ν s3 α s b3 q).
+
+The tensor product isometry has INDEPENDENT α₁, α₂ (and independent ν, ν'):
+```
+∑_{α₁,p,α₂,q} |∑_{a,b} B(α₁,p;a) · conj(B(α₂,q;b)) · v(a,b)|² = ∑_{a,b} |v(a,b)|²
+```
+where B(α,p;a) = ∑_ν cgME s1 s2 ν a1 a2 r · cgME ν s3 α r a3 p.
+
+**The shared α in the 6-fold isometry creates a FUNDAMENTAL DIMENSION OBSTRUCTION:**
+- Input dimension: (a1,a2,a3,b1,b2,b3) → [dims(s1)·dims(s2)·dims(s3)]² = D²
+- 6-fold output dimension: (α,p,q) → ∑_α dims(α)²
+- Tensor product output dimension: (α₁,p,α₂,q) → (∑_α dims(α))² = D²
+
+By the power-mean inequality, ∑_α dims(α)² < (∑_α dims(α))² = D² whenever there is more
+than one α (i.e., whenever V_{s1} ⊗ V_{s2} ⊗ V_{s3} is not irreducible). So the 6-fold
+output dimension is STRICTLY LESS than the input dimension, making the isometry
+(C* C = I) IMPOSSIBLE.
+
+**Concrete example (SU(2), s1=s2=s3=spin-1, dim 3):**
+- V₁⊗V₁⊗V₁ = V₀ ⊕ 3V₁ ⊕ 2V₂ ⊕ V₃ (dim 27)
+- Input dim: 27² = 729
+- 6-fold output dim: 1² + 3² + 5² + 7² = 84 (sum over DISTINCT α, no multiplicity)
+- 84 < 729 → 6-fold isometry IMPOSSIBLE
+- Tensor product output dim: 27² = 729 → tensor product isometry POSSIBLE
+
+**Numerical verification (concrete CG-like example):** A test with s1=s2=s3 (dim 2),
+ν∈{0,1} (dim 2), α∈{2..9} (dim 1, 8 outputs) was constructed satisfying all hypotheses
+(hcgME_unitary, hcgME_cross_rep, 3-fold isometry all PASS). The 6-fold isometry
+(C6* C6 = I₆₄) FAILED, while the tensor product isometry (B3⊗conj(B3))* (B3⊗conj(B3))
+= I₆₄ PASSED. The 6-fold map C6 was confirmed to equal the DIAGONAL (α₁=α₂) restriction
+of the tensor product B3⊗conj(B3), and this diagonal restriction is NOT an isometry.
+
+### Why the shared α arises and cannot be avoided
+
+The shared α in the single-site integral comes from **Schur orthogonality**: the integral
+∫ (ρ_α g)_{pq} conj((ρ_β g)_{p'q'}) dμ = (1/dims α) δ_{αβ} δ_{pp'} δ_{qq'}. This forces
+α = β (shared α) between the unbarred and barred CG products. The shared ν comes from
+the CG decomposition: both the row part (r) and column part (s) use the SAME intermediate
+representation ν from the first CG application.
+
+The tensor product isometry has independent ν, ν' and independent α₁, α₂, which does NOT
+match the single-site integral structure. The cross_rep orthogonality makes cross-terms
+(ν≠ν') vanish when SUMMED OVER α, but the single-site integral has a FIXED α (not summed),
+so the cross-terms do NOT vanish.
+
+### Implications for the B.2e plan
+
+**B.2e.1 (prove 6-fold isometry) is ABANDONED** — the statement is FALSE. The design doc
+§8.11.93 plan was based on a false premise (conflating the shared-α 6-fold isometry with
+the independent-α tensor product isometry).
+
+**The single-site integral is NOT non-negative off-diagonal.** This confirms §8.11.93
+point 4: the non-negativity is GLOBAL (emerges only after the full cascade), not
+single-site. The diagonal case (|C|² ≥ 0) works because the barred CG product equals
+conj(unbarred), but the off-diagonal case has different unbarred and barred products.
+
+### Alternative approaches identified
+
+1. **Operator-level approach (T = B* B):** Define the transfer matrix T as an operator on
+   L²(G^spatial) and show T = B* B using the CG decomposition, where B is the "CG transform"
+   operator. The 3-fold isometry (B* B = I) is already proven. This gives T ≥ 0 directly
+   without needing the 6-fold isometry. The challenge is connecting the abstract operator
+   formulation to the concrete integral.
+
+2. **Tensor product isometry at the cascade level:** The full cascade integrates over ALL
+   temporal links. Different sites have INDEPENDENT α's (different temporal links), so the
+   tensor product isometry (independent α₁, α₂) might apply at the cascade level, even
+   though it doesn't apply at the single-site level. The challenge is term explosion.
+
+3. **Direct cascade non-negativity:** Show that the full cascade kernel K(g,h) =
+   ∑_w F(w) ∏_l K_w(g_l, h_l) is positive-definite, using the 3-fold isometry to collapse
+   each site's contribution. The challenge is the exponential term growth.
+
+4. **Multiplicity-aware formulation:** The 6-fold isometry fails because the output
+   dimension (∑ dims²) is too small. If multiplicity indices were included in the output
+   (dim = ∑ m_α² dims(α)²), the dimension might work out. But the current formalization
+   (cgME) does not have multiplicity indices, so this would require restructuring.
+
+### Current codebase state
+
+- **Git**: clean working tree. Latest commit: aab1478 (design doc only, session 129).
+- **Build**: GREEN — `lake build` completes successfully (3008 jobs), 0 errors, 0 sorries.
+- **Axiom count**: still 6. B.2e has NOT been started in code — sessions 129-130 were
+  analysis only.
+- **No code changes** in this session — the 6-fold isometry was found FALSE before any
+  formalization attempt.
+- **Key files**: unchanged from session 129. `CGUnitarity.lean` (3 isometries, all GREEN),
+  `Site3DIntegral.lean` (single-site integral + diagonal non-negativity, GREEN).
