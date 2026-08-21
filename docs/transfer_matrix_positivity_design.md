@@ -9439,6 +9439,16 @@ Remaining: (ii′) combine steps (i)+(ii) into the per-plaquette lattice identit
 `repCharacter_plaquetteProduct_extendToFullConfig_crossing` in Bridge.lean (direct
 rewrite by (i) + `exact` by (ii); axioms [propext, Classical.choice, Quot.sound]).
 Bridge.lean now imports `PositiveDefiniteIntegral.CascadeNonneg`.
-Remaining: (iii) thread `hcoeff` non-negativity;
-(iv) assembly (matrix-element σ-inversion, σ-invisibility, interface Schur
+Remaining: (iii) thread `hcoeff` non-negativity — **DONE (session 134)**:
+`crossingWordInt` / `crossingWordPos` (named half-words),
+`repCharacter_plaquetteProduct_crossing_eq_halfWords` (restatement of (ii′)), and
+`crossing_plaquette_boltzmann_matrixElement_expansion` in Bridge.lean:
+
+    exp(c·Re Tr(word)) = ∑_s coeff_s · ∑_{k,l} (ρ_s (W_int u))_{kl}·conj((ρ_s (W_pos V⁺))_{kl})
+
+with `coeff_s ≥ 0` (from `plaquette_boltzmann_character_expansion_single`; Bridge.lean now
+also imports `PeterWeyl.Separable`).  Axioms: [propext, Classical.choice, Quot.sound,
+peterWeyl_clebschGordan_plaquette] — the last is one of the existing 6 axioms (the
+character-expansion input), NOT new.  Axiom count unchanged (6).
+Remaining: (iv) assembly (matrix-element σ-inversion, σ-invisibility, interface Schur
 orthogonality, then `integrated_kernel_psd` / `crossingPlaquette_kernel_psd`).

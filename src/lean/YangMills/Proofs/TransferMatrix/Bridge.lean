@@ -4,6 +4,7 @@
 
 import YangMills.Proofs.TransferMatrix.Step5
 import YangMills.Proofs.PositiveDefiniteIntegral.CascadeNonneg
+import YangMills.Proofs.PeterWeyl.Separable
 
 open Set
 open Matrix
@@ -335,6 +336,88 @@ lemma repCharacter_plaquetteProduct_extendToFullConfig_crossing
   exact repCharacter_crossing_word_eq_sum_matrixElement_conj ρ hU _ _ _ _
 
 #print axioms repCharacter_plaquetteProduct_extendToFullConfig_crossing
+
+/-- The interface half-word of a crossing plaquette based at `n` (signedTime `-1`),
+directions `(0, ν)`: `W_int(x) = x_{n+e₀,ν}·(x_{n+e₀+e_ν,0})⁻¹`. -/
+noncomputable def crossingWordInt (N T L : ℕ) [NeZero T] [NeZero L]
+    (n : PeriodicSite T L) (hn : signedTime T n.time = -1) (ν : Fin 4) (hν : ν ≠ 0)
+    (u : PosInterfaceConfig N T L) : SU N :=
+  u ⟨(AddVector.addVector n 0, ν),
+      Finset.mem_union_right (positiveSites T L)
+        (mem_interfaceSites_of_signedTime_eq_zero
+          (signedTime_addVector_zero_of_eq_neg_one T L n hn))⟩ *
+    (u ⟨(AddVector.addVector (AddVector.addVector n 0) ν, 0),
+        Finset.mem_union_right (positiveSites T L)
+          (mem_interfaceSites_of_signedTime_eq_zero
+            (signedTime_addVector_zero_spatial_of_eq_neg_one T L n ν hν hn))⟩)⁻¹
+
+/-- The positive half-word of a crossing plaquette based at `n` (signedTime `-1`),
+directions `(0, ν)`: `W_pos(x) = x_{θn,0}·x_{θ(n+e_ν),ν}`. -/
+noncomputable def crossingWordPos (N T L : ℕ) [NeZero T] [NeZero L] (hT : Odd T)
+    (n : PeriodicSite T L) (hn : signedTime T n.time = -1) (ν : Fin 4) (hν : ν ≠ 0)
+    (V_plus : FiniteLinkConfig N (PeriodicSite T L) (positiveSites T L)) : SU N :=
+  V_plus ⟨(ReflectSite.reflectSite n, 0),
+      reflectSite_mem_positive_of_negative hT
+        (mem_negativeSites_of_signedTime_eq_neg_one hn)⟩ *
+    V_plus ⟨(ReflectSite.reflectSite (AddVector.addVector n ν), ν),
+      reflectSite_mem_positive_of_negative hT
+        (mem_negativeSites_of_signedTime_eq_neg_one
+          (by rw [signedTime_addVector_spatial T L n ν hν]; exact hn))⟩
+
+/-- Restatement of `repCharacter_plaquetteProduct_extendToFullConfig_crossing` in terms of
+the named half-words `crossingWordInt` / `crossingWordPos`. -/
+lemma repCharacter_plaquetteProduct_crossing_eq_halfWords
+    (N T L : ℕ) [NeZero T] [NeZero L] (hT : Odd T)
+    {dim : ℕ} (ρ : SU N →* Matrix (Fin dim) (Fin dim) ℂ)
+    (hU : IsUnitaryRepresentation ρ)
+    (V_plus : FiniteLinkConfig N (PeriodicSite T L) (positiveSites T L))
+    (u : PosInterfaceConfig N T L)
+    (n : PeriodicSite T L) (hn : signedTime T n.time = -1)
+    (ν : Fin 4) (hν : ν ≠ 0) :
+    repCharacter ρ
+        (plaquetteProduct N (extendToFullConfig N T L (reflectPosToNeg N T L V_plus) u)
+          n 0 ν) =
+      ∑ k : Fin dim, ∑ l : Fin dim,
+        (ρ (crossingWordInt N T L n hn ν hν u)) k l *
+        conj ((ρ (crossingWordPos N T L hT n hn ν hν V_plus)) k l) :=
+  repCharacter_plaquetteProduct_extendToFullConfig_crossing N T L hT ρ hU V_plus u n hn ν hν
+
+/-- **Crossing plaquette Boltzmann factor expansion** (B.2e.3 step (iii), §8.11.100).
+The single-plaquette Boltzmann factor `exp(c · Re Tr(word))` (`c ≥ 0`) of a crossing
+plaquette in the merged configuration expands as a non-negative character sum, and each
+character factors into the matrix-element pairing of the interface and positive
+half-words:
+
+  `exp(c·Re Tr(word)) = ∑_s coeff_s · ∑_{k,l} (ρ_s (W_int u))_{kl}·conj((ρ_s (W_pos V⁺))_{kl})`
+
+with `coeff_s ≥ 0`.  Combines `plaquette_boltzmann_character_expansion_single` (hcoeff
+threading) with `repCharacter_plaquetteProduct_crossing_eq_halfWords`.
+0 sorries, 0 new axioms. -/
+lemma crossing_plaquette_boltzmann_matrixElement_expansion
+    (N T L : ℕ) [NeZero T] [NeZero L] (hT : Odd T) (c : ℝ) (hc : 0 ≤ c)
+    (n : PeriodicSite T L) (hn : signedTime T n.time = -1) (ν : Fin 4) (hν : ν ≠ 0) :
+    ∃ (ι : Type) (hι : Fintype ι) (dims : ι → ℕ)
+      (ρ : ∀ i, SU N →* Matrix (Fin (dims i)) (Fin (dims i)) ℂ)
+      (hU : ∀ i, IsUnitaryRepresentation (ρ i))
+      (coeff : ι → ℝ) (hcoeff : ∀ s, 0 ≤ coeff s),
+      ∀ (V_plus : FiniteLinkConfig N (PeriodicSite T L) (positiveSites T L))
+        (u : PosInterfaceConfig N T L),
+        (Real.exp (c * (Matrix.trace ((plaquetteProduct N
+            (extendToFullConfig N T L (reflectPosToNeg N T L V_plus) u) n 0 ν : SU N) :
+            Matrix (Fin N) (Fin N) ℂ)).re) : ℂ) =
+          ∑ s : ι, (coeff s : ℂ) * ∑ k : Fin (dims s), ∑ l : Fin (dims s),
+            (ρ s (crossingWordInt N T L n hn ν hν u)) k l *
+            conj ((ρ s (crossingWordPos N T L hT n hn ν hν V_plus)) k l) := by
+  obtain ⟨ι, hι, dims, ρ, hU, _hMeas, _hIrr, _hDims, coeff, hcoeff, hexp⟩ :=
+    plaquette_boltzmann_character_expansion_single N c hc
+  letI : Fintype ι := hι
+  refine ⟨ι, hι, dims, ρ, hU, coeff, hcoeff, fun V_plus u => ?_⟩
+  rw [hexp]
+  apply Finset.sum_congr rfl; intro s _
+  rw [repCharacter_plaquetteProduct_crossing_eq_halfWords N T L hT (ρ s) (hU s)
+    V_plus u n hn ν hν]
+
+#print axioms crossing_plaquette_boltzmann_matrixElement_expansion
 
 /-- The positive-link character factor `Φ_w(U⁺) = ∏_{l ∈ L_U} χ_{w(l)}(U⁺_l)`.
 The `if hpos` guards the site-membership proof needed to index `U⁺` (a positive-site
