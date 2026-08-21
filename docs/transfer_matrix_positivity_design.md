@@ -9291,3 +9291,42 @@ assembly connecting the abstract group-level lemmas to the lattice transfer matr
 **Honest status:** the `c' ≠ conj(c)` obstacle is resolved as MATHEMATICS (the mechanism is
 identified and its key steps are formalized), but `transferMatrixPositivity_axiom` is NOT yet
 replaced — steps (i)–(iv) are open formalization work.  Axiom count: still 6.
+
+## §8.11.98 — Session 133 continued: the crossing-plaquette kernel is PSD (group-level OS)
+
+### What this formalizes
+
+New file `src/lean/YangMills/Proofs/PositiveDefinite/PSDKernel.lean` (0 sorries, 0 custom
+axioms — `#print axioms` = `[propext, Classical.choice, Quot.sound]` throughout):
+
+1. `IsPSDKernel K` — a kernel `K : X → X → ℂ` is Hermitian + PSD (sum form, mirroring
+   `PositiveDefinite`), with `IsPSDKernel.congr`, `isPSDKernel_one`,
+   `IsPSDKernel.matrix_posSemidef` (mirrors `PositiveDefinite.matrix_posSemidef`).
+2. `IsPSDKernel.mul` — Schur product theorem for kernels (via `Matrix.PosSemidef.hadamard`,
+   mirroring `PositiveDefinite.mul`); `isPSDKernel_prod` — finite products of PSD kernels.
+3. `PositiveDefinite.pullback_sum` / `PositiveDefinite.isPSDKernel_pullback` — a PD function
+   `k : G → ℂ` pulls back along ANY map `g : X → G` to the PSD kernel
+   `K(x, y) = k((g x)⁻¹ · g y)`.  The proof partitions the double sum into fibers of `g`
+   (`Finset.sum_fiberwise_of_maps_to` twice) and applies PD on `s.image g`.
+   **No homomorphism property of `g` is needed** — this is the formal resolution of the
+   §8.11.95 worry that "PD does not transfer through the non-homomorphic plaquette map":
+   PD is required only in the plaquette-WORD variable, and the word enters through the group
+   operation `(x, y) ↦ (W x)⁻¹ · W y` on the pair.
+4. `crossingPlaquette_kernel_psd` — the crossing-plaquette kernel
+   `K(x, y) = ∏_{p ∈ sP} k_p((W_p x)⁻¹ · W_p y)` is PSD whenever each `k_p` is PD
+   (e.g. a non-negative character sum, by `positiveDefinite_finset_sum_repCharacter`).
+   This is the exact group-level content of the Osterwalder–Seiler crossing-plaquette
+   argument, with the word maps `W_p` abstract.
+
+### Status of the B.2e.3 lattice bridge after this session
+
+- Group-level machinery: **COMPLETE** (this file + `repCharacter_mul_inv_eq_sum_matrixElement_conj`
+  + `positiveDefinite_finset_sum_repCharacter` + `character_kernel_integral_nonneg`).
+- Remaining (lattice plumbing, open formalization not open math):
+  (i) identify each interface/crossing plaquette word in
+  `extendToFullConfig (reflectPosToNeg V⁺) u` as `W_p(u-side) · (W_p(V⁺-side))⁻¹`;
+  (ii) the reflection = word-inversion identity at the word level (trace-level versions exist:
+  `trace_plaquetteProduct_reflect_*` in FullBoltzmannPD.lean);
+  (iii) non-negativity of the `exp(β·ReTr)` character coefficients (`hcoeff`-style hypotheses
+  exist in `ReflectionPositivity/CharacterExpansion.lean`);
+  (iv) Fubini assembly + `transferMatrixReflected_VUV_factorization` (PROVEN) → `T ≥ 0`.
