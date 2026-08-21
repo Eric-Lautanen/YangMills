@@ -9395,3 +9395,30 @@ interface links (the `charFactorInt` factor).  This is the precise assembly path
 
 **Honest status:** group-level OS machinery COMPLETE and formalized; lattice bridge steps
 (i)–(iv) remain open formalization (not open math).  Axiom count: still 6.
+
+## §8.11.100 — Session 134: step (i) FORMALIZED — crossing plaquette word evaluation
+
+The per-plaquette word evaluation of §8.11.99 is now PROVEN in
+`Proofs/TransferMatrix/Bridge.lean` (0 sorries, axioms [propext, Classical.choice,
+Quot.sound] only):
+
+- `extendToFullConfig_apply_neg` / `extendToFullConfig_apply_int`: pointwise evaluation of
+  the merged config on negative-site links (→ `U_minus`) and interface-site links (→ `u`).
+- `signedTime_succ_of_eq_neg_one`: `signedTime t = -1 → signedTime (t+1) = 0`
+  (via `t.val = T - 1`, hence `t + 1 = 0` in `ZMod T`).
+- `addVector_zero_time` / `addVector_spatial_time`: time coordinates of `n + e₀` / `n + e_ν`.
+- `signedTime_addVector_zero_of_eq_neg_one`, `signedTime_addVector_zero_spatial_of_eq_neg_one`,
+  `signedTime_addVector_spatial`, `mem_negativeSites_of_signedTime_eq_neg_one`,
+  `mem_interfaceSites_of_signedTime_eq_zero`: site-classification helpers.
+- **`plaquetteProduct_extendToFullConfig_crossing`**: for `signedTime n = -1`, `ν ≠ 0`,
+
+      plaquetteProduct (extendToFullConfig (reflectPosToNeg V⁺) u) n 0 ν
+        = (V⁺_{θn,0})⁻¹ · u_{n+e₀,ν} · (u_{n+e₀+e_ν,0})⁻¹ · (V⁺_{θ(n+e_ν),ν})⁻¹.
+
+  (The last index is `θ(n+e_ν)`; `reflectSite_addVector_comm` converts to `θn + e_ν` when
+  needed downstream.)
+
+Build GREEN (3008 jobs), 0 sorries, axiom count still 6.  Next: step (ii) — the
+matrix-element factorization `χ_R(word) = ∑_{kl} D^R_{kl}(W_int(u))·conj(D^R_{kl}(W_pos(u')))`
+using `repCharacter_mul_inv_eq_sum_matrixElement_conj` + `map_mul` + `repMatrixElement_inv`
+applied to the word from `plaquetteProduct_extendToFullConfig_crossing`.

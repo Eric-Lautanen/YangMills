@@ -142,6 +142,157 @@ lemma interfaceLinkVar_extendToFullConfig_neg' (N T L : ℕ) [NeZero T] [NeZero 
 #print axioms interfaceLinkVar_extendToFullConfig_neg'
 #print axioms interfaceLinkVar_extendToFullConfig_neg'
 
+/-! ### Crossing plaquette word evaluation (B.2e.3 step (i), §8.11.99)
+
+The crossing plaquette based at a site `n` with `signedTime = -1` in directions `(0, ν)`
+(`ν ≠ 0`) has two temporal links (one negative, one interface) and two spatial links
+(one interface, one negative).  In the merged configuration
+`extendToFullConfig (reflectPosToNeg V⁺) u` its plaquette word evaluates to
+
+  `(V⁺_{θn,0})⁻¹ · u_{n+e₀,ν} · (u_{n+e₀+e_ν,0})⁻¹ · (V⁺_{θ(n+e_ν),ν})⁻¹`.
+
+This is the per-plaquette word evaluation lemma of §8.11.99 step (i). -/
+
+/-- Pointwise evaluation of `extendToFullConfig` on a negative-site link. -/
+lemma extendToFullConfig_apply_neg (N T L : ℕ) [NeZero T] [NeZero L]
+    (U_minus : FiniteLinkConfig N (PeriodicSite T L) (negativeSites T L))
+    (u : PosInterfaceConfig N T L)
+    (n : PeriodicSite T L) (μ : Fin 4) (hneg : n ∈ negativeSites T L) :
+    (extendToFullConfig N T L U_minus u).value n μ = U_minus ⟨(n, μ), hneg⟩ := by
+  have hnpos : n ∉ positiveSites T L := by
+    have hdisj : Disjoint (positiveSites T L) (negativeSites T L) := by
+      unfold positiveSites negativeSites
+      rw [Finset.disjoint_filter]; intro m hm hpos hneg'; linarith
+    exact fun h => Finset.disjoint_left.mp hdisj h hneg
+  simp only [extendToFullConfig, extendLinkVariable, mergeConfigurations,
+    dif_pos (Finset.mem_univ n), dif_neg hnpos, dif_pos hneg]
+
+/-- Pointwise evaluation of `extendToFullConfig` on an interface-site link. -/
+lemma extendToFullConfig_apply_int (N T L : ℕ) [NeZero T] [NeZero L]
+    (U_minus : FiniteLinkConfig N (PeriodicSite T L) (negativeSites T L))
+    (u : PosInterfaceConfig N T L)
+    (n : PeriodicSite T L) (μ : Fin 4) (hint : n ∈ interfaceSites T L) :
+    (extendToFullConfig N T L U_minus u).value n μ =
+      u ⟨(n, μ), Finset.mem_union_right (positiveSites T L) hint⟩ := by
+  have hnpos : n ∉ positiveSites T L := by
+    have hdisj : Disjoint (positiveSites T L) (interfaceSites T L) := by
+      unfold positiveSites interfaceSites
+      rw [Finset.disjoint_filter]; intro m hm hpos hzero; linarith
+    exact fun h => Finset.disjoint_left.mp hdisj h hint
+  have hnneg : n ∉ negativeSites T L := by
+    have hdisj : Disjoint (negativeSites T L) (interfaceSites T L) := by
+      unfold negativeSites interfaceSites
+      rw [Finset.disjoint_filter]; intro m hm hneg hzero; linarith
+    exact fun h => Finset.disjoint_left.mp hdisj h hint
+  simp only [extendToFullConfig, extendLinkVariable, mergeConfigurations,
+    dif_pos (Finset.mem_univ n), dif_neg hnpos, dif_neg hnneg]
+
+/-- If `t` has signed time `-1`, then `t + 1` has signed time `0`. -/
+lemma signedTime_succ_of_eq_neg_one (T : ℕ) [NeZero T] (t : ZMod T)
+    (h : signedTime T t = -1) : signedTime T (t + 1) = 0 := by
+  have hval : t.val = T - 1 := by
+    have hlt := ZMod.val_lt t
+    by_cases hle : t.val ≤ (T - 1) / 2
+    · have hpos : signedTime T t = (t.val : ℤ) := dif_pos hle
+      rw [hpos] at h; omega
+    · have hneg : signedTime T t = (t.val : ℤ) - (T : ℤ) := dif_neg hle
+      rw [hneg] at h; omega
+  have ht1 : t + 1 = (0 : ZMod T) := by
+    have ht : t = ((T - 1 : ℕ) : ZMod T) := by
+      apply ZMod.val_injective T
+      rw [hval, ZMod.val_natCast, Nat.mod_eq_of_lt (Nat.sub_lt (NeZero.pos T) Nat.one_pos)]
+    rw [ht]
+    have hcast : ((T - 1 : ℕ) : ZMod T) = ((T : ℕ) : ZMod T) - 1 := by
+      rw [Nat.cast_sub (NeZero.pos T), Nat.cast_one]
+    rw [hcast, sub_add_cancel, ZMod.natCast_self]
+  rw [ht1]; simp [signedTime, ZMod.val_zero]
+
+/-- The time coordinate of `n + e₀`. -/
+lemma addVector_zero_time (T L : ℕ) (n : PeriodicSite T L) :
+    (AddVector.addVector n (0 : Fin 4) : PeriodicSite T L).time = n.time + 1 := by
+  show (addVectorPeriodic T L n 0).time = n.time + 1
+  simp [addVectorPeriodic]
+
+/-- The time coordinate of `n + e_ν` for spatial `ν`. -/
+lemma addVector_spatial_time (T L : ℕ) (n : PeriodicSite T L) (ν : Fin 4) (hν : ν ≠ 0) :
+    (AddVector.addVector n ν : PeriodicSite T L).time = n.time :=
+  addVectorPeriodic_time_of_ne_zero T L n ν hν
+
+lemma signedTime_addVector_zero_of_eq_neg_one (T L : ℕ) [NeZero T]
+    (n : PeriodicSite T L) (hn : signedTime T n.time = -1) :
+    signedTime T (AddVector.addVector n (0 : Fin 4) : PeriodicSite T L).time = 0 := by
+  rw [addVector_zero_time]; exact signedTime_succ_of_eq_neg_one T n.time hn
+
+lemma signedTime_addVector_zero_spatial_of_eq_neg_one (T L : ℕ) [NeZero T]
+    (n : PeriodicSite T L) (ν : Fin 4) (hν : ν ≠ 0) (hn : signedTime T n.time = -1) :
+    signedTime T (AddVector.addVector (AddVector.addVector n (0 : Fin 4)) ν :
+      PeriodicSite T L).time = 0 := by
+  rw [addVector_spatial_time T L _ ν hν]
+  exact signedTime_addVector_zero_of_eq_neg_one T L n hn
+
+lemma signedTime_addVector_spatial (T L : ℕ) (n : PeriodicSite T L) (ν : Fin 4)
+    (hν : ν ≠ 0) :
+    signedTime T (AddVector.addVector n ν : PeriodicSite T L).time =
+      signedTime T n.time := by
+  rw [addVector_spatial_time T L n ν hν]
+
+lemma mem_negativeSites_of_signedTime_eq_neg_one {T L : ℕ} [NeZero T] [NeZero L]
+    {n : PeriodicSite T L} (h : signedTime T n.time = -1) : n ∈ negativeSites T L := by
+  simp only [negativeSites, Finset.mem_filter, Finset.mem_univ, true_and]
+  rw [h]; norm_num
+
+lemma mem_interfaceSites_of_signedTime_eq_zero {T L : ℕ} [NeZero T] [NeZero L]
+    {n : PeriodicSite T L} (h : signedTime T n.time = 0) : n ∈ interfaceSites T L := by
+  simp only [interfaceSites, Finset.mem_filter, Finset.mem_univ, true_and]
+  exact h
+
+/-- **Crossing plaquette word evaluation** (§8.11.99 step (i)).  For a crossing plaquette
+based at `n` with `signedTime n = -1` in directions `(0, ν)` (`ν ≠ 0`), the plaquette
+product in the merged configuration `extendToFullConfig (reflectPosToNeg V⁺) u` is
+
+  `(V⁺_{θn,0})⁻¹ · u_{n+e₀,ν} · (u_{n+e₀+e_ν,0})⁻¹ · (V⁺_{θ(n+e_ν),ν})⁻¹`. -/
+lemma plaquetteProduct_extendToFullConfig_crossing (N T L : ℕ) [NeZero T] [NeZero L]
+    (hT : Odd T)
+    (V_plus : FiniteLinkConfig N (PeriodicSite T L) (positiveSites T L))
+    (u : PosInterfaceConfig N T L)
+    (n : PeriodicSite T L) (hn : signedTime T n.time = -1)
+    (ν : Fin 4) (hν : ν ≠ 0) :
+    plaquetteProduct N (extendToFullConfig N T L (reflectPosToNeg N T L V_plus) u) n 0 ν =
+      (V_plus ⟨(ReflectSite.reflectSite n, 0),
+          reflectSite_mem_positive_of_negative hT
+            (mem_negativeSites_of_signedTime_eq_neg_one hn)⟩)⁻¹ *
+      u ⟨(AddVector.addVector n 0, ν),
+          Finset.mem_union_right (positiveSites T L)
+            (mem_interfaceSites_of_signedTime_eq_zero
+              (signedTime_addVector_zero_of_eq_neg_one T L n hn))⟩ *
+      (u ⟨(AddVector.addVector (AddVector.addVector n 0) ν, 0),
+          Finset.mem_union_right (positiveSites T L)
+            (mem_interfaceSites_of_signedTime_eq_zero
+              (signedTime_addVector_zero_spatial_of_eq_neg_one T L n ν hν hn))⟩)⁻¹ *
+      (V_plus ⟨(ReflectSite.reflectSite (AddVector.addVector n ν), ν),
+          reflectSite_mem_positive_of_negative hT
+            (mem_negativeSites_of_signedTime_eq_neg_one
+              (by rw [signedTime_addVector_spatial T L n ν hν]; exact hn))⟩)⁻¹ := by
+  have h1 : n ∈ negativeSites T L := mem_negativeSites_of_signedTime_eq_neg_one hn
+  have h2 : AddVector.addVector n (0 : Fin 4) ∈ interfaceSites T L :=
+    mem_interfaceSites_of_signedTime_eq_zero (signedTime_addVector_zero_of_eq_neg_one T L n hn)
+  have h3 : AddVector.addVector (AddVector.addVector n (0 : Fin 4)) ν ∈ interfaceSites T L :=
+    mem_interfaceSites_of_signedTime_eq_zero
+      (signedTime_addVector_zero_spatial_of_eq_neg_one T L n ν hν hn)
+  have h4 : AddVector.addVector n ν ∈ negativeSites T L :=
+    mem_negativeSites_of_signedTime_eq_neg_one
+      (by rw [signedTime_addVector_spatial T L n ν hν]; exact hn)
+  unfold plaquetteProduct
+  rw [extendToFullConfig_apply_neg N T L _ u n 0 h1,
+    extendToFullConfig_apply_int N T L _ u _ ν h2,
+    extendToFullConfig_apply_int N T L _ u _ 0 h3,
+    extendToFullConfig_apply_neg N T L _ u _ ν h4,
+    reflectPosToNeg_apply N T L hT V_plus h1 0,
+    reflectPosToNeg_apply N T L hT V_plus h4 ν]
+  simp only [if_neg hν, if_true]
+
+#print axioms plaquetteProduct_extendToFullConfig_crossing
+
 /-- The positive-link character factor `Φ_w(U⁺) = ∏_{l ∈ L_U} χ_{w(l)}(U⁺_l)`.
 The `if hpos` guards the site-membership proof needed to index `U⁺` (a positive-site
 config) at a link `l`; for `l ∈ interfaceLinkPos` the guard is always true.
