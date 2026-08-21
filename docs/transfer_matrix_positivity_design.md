@@ -9330,3 +9330,68 @@ axioms — `#print axioms` = `[propext, Classical.choice, Quot.sound]` throughou
   (iii) non-negativity of the `exp(β·ReTr)` character coefficients (`hcoeff`-style hypotheses
   exist in `ReflectionPositivity/CharacterExpansion.lean`);
   (iv) Fubini assembly + `transferMatrixReflected_VUV_factorization` (PROVEN) → `T ≥ 0`.
+
+## §8.11.99 — Session 133 continued: step (i) groundwork — the crossing plaquette word analysis
+
+### The per-plaquette computation (NOT yet formalized — analysis only)
+
+The merged config in `transferMatrixReflected_VUV_factorization` is
+`extendToFullConfig (reflectPosToNeg V⁺) u`: positive+interface links from the bra `u`,
+negative links from `reflectPosToNeg V⁺` (ket).  The crossing plaquettes (corners straddling
+`t = 0`) are based at `n` with `signedTime n = -1`, directions `(0, ν)`, `ν ≠ 0`.  Its word
+`U(n,0)·U(n+e₀,ν)·U(n+e₀+e_ν,0)⁻¹·U(n+e_ν,ν)⁻¹` evaluates in the merged config (via
+`reflectPosToNeg_apply`: negative temporal links invert, negative spatial links are
+unchanged) to
+
+    (V⁺_{θn,0})⁻¹ · u_{n+e₀,ν} · (u_{n+e₀+e_ν,0})⁻¹ · (V⁺_{θn+e_ν,ν})⁻¹
+
+where `θ = reflectSite` (maps `t=-1 ↦ t=+1`, fixes spatial coords).  Note: plaquettes with
+corners `{0,1}` have all links positive+interface, hence depend ONLY on `u` (they are
+multiplication-operator factors, harmless for positivity — they must be tracked into the
+`S⁺(u)/2 + S⁺(u')/2` bookkeeping or shown symmetric).
+
+### The matrix-element factorization (the OS mechanism, per crossing plaquette)
+
+Grouping the word as `A·B⁻¹` with `A = U(n,0)·U(n+e₀,ν)`, `B = U(n+e_ν,ν)·U(n+e₀+e_ν,0)`
+and expanding `χ_R(A·B⁻¹) = ∑_{ij} D^R_{ij}(A)·conj(D^R_{ij}(B))`
+(`repCharacter_mul_inv_eq_sum_matrixElement_conj`, session 133), then multiplying out
+`D(A)`, `D(B)` and resumming over the internal indices gives the clean form:
+
+    χ_R(crossing word) = ∑_{k,l} D^R_{kl}(W_int(u)) · conj(D^R_{kl}(W_pos(u')))
+
+with the TWO DIFFERENT word maps on `PosInterfaceConfig`:
+- `W_int(x) = x_{n+e₀,ν} · (x_{n+e₀+e_ν,0})⁻¹`  (INTERFACE links of `x`: spatial then
+  temporal-inverse at `t = 0`),
+- `W_pos(x) = x_{θn,0} · x_{θn+e_ν,ν}`  (POSITIVE links of `x`: temporal then spatial at
+  `t = 1`).
+
+**KEY OBSERVATION (resolves the apparent Gram-structure failure).**  `W_int ≠ W_pos` as
+functions, so the per-plaquette kernel is NOT naively a Gram kernel in `(u, u')`.  But the
+full RP quadratic form integrates the bra positive links `U⁺` and ket positive links `V⁺`
+INDEPENDENTLY, and `D^R_{kl}(W_int(u))` depends only on the INTERFACE links `u⁰` of `u`
+(not on `U⁺`).  So the `U⁺` integral produces a scalar `A(u⁰) := ∫ dU⁺ ψ(u)·E(u)`
+(`E` = bra-side Boltzmann factors), while the `V⁺` integral produces
+`B_{Rkl}(u⁰) := ∫ dV⁺ ψ(u')·E'(u')·conj(D^R_{kl}(W_pos(u')))`.  The form becomes
+
+    ∑_{R,k,l} c_R · ∫_{u⁰} A(u⁰)·D^R_{kl}(W_int(u⁰))·B_{Rkl}(u⁰) dμ⁰.
+
+The relation `B_{Rkl}(u⁰) = conj(A_{...}(σ u⁰))` is EXACTLY the proven σ-inversion lemma
+(`fourierCoeffNeg_thetaReindex_eq_star_fourierCoeffPos`, session 17) lifted from characters
+to matrix elements, and the final `u⁰` integral is evaluated by Schur orthogonality on the
+interface links (the `charFactorInt` factor).  This is the precise assembly path for step (iv).
+
+### What this means for the remaining formalization (steps i–iv)
+
+- (i) Formalize the per-plaquette word evaluation above (merged config, `reflectPosToNeg_apply`
+  + `Finset.prod_bij`-style link bookkeeping).  Bounded but finicky.
+- (ii) The matrix-element factorization `χ_R = ∑_{kl} D(W_int)·conj(D(W_pos))` — group-level
+  ingredients all PROVEN (`repCharacter_mul_inv_eq_sum_matrixElement_conj`, `map_mul`,
+  `repMatrixElement_inv`); the work is the lattice word bookkeeping from (i).
+- (iii) Coefficient non-negativity: `hcoeff`-style hypotheses exist
+  (`ReflectionPositivity/CharacterExpansion.lean`); must be threaded through.
+- (iv) Assembly: matrix-element σ-inversion (lift Lemma 3 from `repCharacter` to
+  matrix elements), σ-invisibility (`fourierCoeffPos_sigma_invisible`, PROVEN), interface
+  Schur orthogonality, then `integrated_kernel_psd` / `crossingPlaquette_kernel_psd`.
+
+**Honest status:** group-level OS machinery COMPLETE and formalized; lattice bridge steps
+(i)–(iv) remain open formalization (not open math).  Axiom count: still 6.
