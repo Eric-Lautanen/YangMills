@@ -689,3 +689,28 @@ geometric reflection theta (the c' != conj(c) obstacle). See design doc 8.11.96 
 Also formalized this session: integral_prod_repCharacter_conj (paired character orthogonality
 for product measures), the paired analogue of integral_prod_repCharacter_trivial. Depends on
 characterOrthogonality (existing axiom).
+
+---
+
+## N+1. Crossing-word matrix-element factorization + Frobenius trace identity (session 134/135)
+
+**Status:** Embedded (proven, in-project, 0 sorries, axioms [propext, Classical.choice, Quot.sound]).
+
+**Statements.**
+- `repCharacter_crossing_word_eq_sum_matrixElement_conj` (PositiveDefiniteIntegral/CascadeNonneg.lean):
+  for a unitary rep `ρ`, `χ(a⁻¹·b·c⁻¹·d⁻¹) = ∑_{k,l} (ρ (b·c⁻¹))_{kl} · conj((ρ (a·d))_{kl})`.
+- Underlying Frobenius identity used in the proof: for complex matrices,
+  `∑_{k,l} X_{kl}·conj(Y_{kl}) = Tr(Yᴴ·X)`.
+- `reTrace_crossing` (TransferMatrix/Bridge.lean): for `A b c D : SU N`,
+  `ReTr(A⁻¹·b·c⁻¹·D⁻¹) = ReTr((A·D)⁻¹·(b·c⁻¹))` (pure trace cyclicity).
+
+**Novelty / absence check.** The Frobenius identity is essentially the Frobenius inner product
+on matrices; Mathlib has Frobenius/`Matrix.inner` machinery and `trace_conjTranspose_mul`-type
+lemmas (grep of Mathlib/LinearAlgebra/Matrix shows `trace_conjTranspose_mul_self_eq_zero_iff`
+and related), so the bare identity is **likely present in some form** — borderline, do NOT claim
+novelty without a Loogle check of the exact `∑_{kl} X_{kl} conj(Y_{kl}) = Tr(Yᴴ X)` form.
+`reTrace_crossing` is a special case of trace cyclicity (`Matrix.trace_mul_comm` /
+`trace_mul_rotate`), so **NOT novel** — logged only for completeness.  The genuinely
+project-specific (and possibly worth keeping) content is the *crossing-word* packaging
+`χ(a⁻¹bc⁻¹d⁻¹) = ∑_{kl} D(b c⁻¹)_{kl} conj(D(a d)_{kl})`, which is the Osterwalder–Seiler
+half-word pairing; a Loogle/absence check is needed before any submission claim.

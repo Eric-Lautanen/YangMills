@@ -9452,3 +9452,48 @@ peterWeyl_clebschGordan_plaquette] — the last is one of the existing 6 axioms 
 character-expansion input), NOT new.  Axiom count unchanged (6).
 Remaining: (iv) assembly (matrix-element σ-inversion, σ-invisibility, interface Schur
 orthogonality, then `integrated_kernel_psd` / `crossingPlaquette_kernel_psd`).
+
+## §8.11.101 — Session 135 (2026-08-21): step (iv-a) FORMALIZED — PD-kernel-pullback form
+
+**Step (iv-a) is DONE** (commit d64e157, Bridge.lean, 0 sorries, axioms
+[propext, Classical.choice, Quot.sound] — no new axioms, count still 6):
+
+- `reTrace_crossing (A b c D : SU N)`: pure trace cyclicity
+  `ReTr(A⁻¹·b·c⁻¹·D⁻¹) = ReTr((A·D)⁻¹·(b·c⁻¹))`.  Proof: `mul_inv_rev` to get
+  `(A·D)⁻¹ = D⁻¹·A⁻¹`, push the `SU N → Matrix` coercion through the products with
+  `simp only [Submonoid.coe_mul]` (NOTE: `SU N = Matrix.specialUnitaryGroup` is a
+  **Submonoid**, so the coe lemma is `Submonoid.coe_mul`, NOT `Subgroup.coe_mul`; an
+  earlier attempt with `Subgroup.coe_mul` made no progress, and a `show`-based defeq
+  approach timed out on `isDefEq`), then `Matrix.trace_mul_comm` + `noncomm_ring`.
+- `crossing_plaquette_boltzmann_eq_pd_kernel`: for a crossing plaquette (signedTime
+  `n = -1`, directions `(0, ν)`, `ν ≠ 0`),
+  `exp(c·Re Tr(word)) = exp(c·Re Tr((W_pos V⁺)⁻¹ · W_int u))`
+  where `word = plaquetteProduct (extendToFullConfig (reflectPosToNeg V⁺) u) n 0 ν`.
+  This is exactly the **PD-kernel-pullback form** `k_c((W x)⁻¹·W y)` with
+  `k_c(g) = exp(c·Re Tr g)`, `x = V⁺` (ket), `y = u` (bra), `W x = crossingWordPos`,
+  `W y = crossingWordInt`.  Proof: rewrite by `plaquetteProduct_extendToFullConfig_crossing`
+  (step i), then `congrArg (fun x => Real.exp (c * x)) (reTrace_crossing N _ _ _ _)` —
+  the metavars unify because `crossingWordPos`/`crossingWordInt` unfold (defeq) to the
+  same link factors with the same membership-proof terms as the crossing word.
+
+**Significance.**  This is the matrix-element lift of the reflection = inversion
+mechanism (§8.11.97), realized at the level of the Boltzmann factor rather than the
+character.  Combined with `plaquette_boltzmann_character_expansion_single` (which gives
+`k_c = ∑_s coeff_s·χ_{ρ_s}` with `coeff_s ≥ 0`, hence `PositiveDefinite k_c` by
+`positiveDefinite_finset_sum_repCharacter`), each crossing-plaquette factor is a PD
+function evaluated at `(W_pos V⁺)⁻¹·W_int u`.  The product over crossing plaquettes is
+then a PSD kernel in `(V⁺, u)` by `crossingPlaquette_kernel_psd` (PSDKernel.lean).
+
+**Remaining for step (iv):**
+- (iv-b) Assemble the full interface Boltzmann factor `exp(-β·S_int)` as a product over
+  crossing plaquettes of the (iv-a) factors (via
+  `exp_neg_beta_wilsonActionOSInterface_eq_prod_abstract`, coupling `c = β²/N ≥ 0`),
+  restricted to the crossing subset (signedTime `n = -1`, `μ = 0`, `ν ≠ 0`); the
+  non-crossing interface plaquettes (corners `{0,1}`, all positive+interface links)
+  depend only on `u` and are multiplication-operator factors to be tracked into the
+  `S⁺`-bookkeeping.  Apply `crossingPlaquette_kernel_psd` to get the PSD kernel.
+- (iv-c) Final assembly: connect the PSD kernel to the RP quadratic form
+  `∫ G(U)·G(θU)` via `transferMatrixReflected_VUV_factorization` (PROVEN) +
+  `integral_G_thetaG_eq_inner_g_Tg` (PROVEN) + the bra/ket conjugation relation
+  (σ-invisibility `fourierCoeffPos_sigma_invisible`, PROVEN), then replace
+  `transferMatrixPositivity_axiom` (axiom count 6 → 5).
