@@ -9435,6 +9435,10 @@ exactly `χ_R(word) = ∑_{kl} D^R_{kl}(W_int(u))·conj(D^R_{kl}(W_pos(V⁺)))` 
 `W_int(x) = x_{n+e₀,ν}·(x_{n+e₀+e_ν,0})⁻¹`, `W_pos(x) = x_{θn,0}·x_{θ(n+e_ν),ν}`.
 
 Remaining: (ii′) combine steps (i)+(ii) into the per-plaquette lattice identity
-(`repCharacter (plaquetteProduct …) = ∑_{kl} …`); (iii) thread `hcoeff` non-negativity;
+(`repCharacter (plaquetteProduct …) = ∑_{kl} …`) — **DONE (session 134)**:
+`repCharacter_plaquetteProduct_extendToFullConfig_crossing` in Bridge.lean (direct
+rewrite by (i) + `exact` by (ii); axioms [propext, Classical.choice, Quot.sound]).
+Bridge.lean now imports `PositiveDefiniteIntegral.CascadeNonneg`.
+Remaining: (iii) thread `hcoeff` non-negativity;
 (iv) assembly (matrix-element σ-inversion, σ-invisibility, interface Schur
 orthogonality, then `integrated_kernel_psd` / `crossingPlaquette_kernel_psd`).

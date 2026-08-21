@@ -3,6 +3,7 @@
 -/
 
 import YangMills.Proofs.TransferMatrix.Step5
+import YangMills.Proofs.PositiveDefiniteIntegral.CascadeNonneg
 
 open Set
 open Matrix
@@ -292,6 +293,48 @@ lemma plaquetteProduct_extendToFullConfig_crossing (N T L : ℕ) [NeZero T] [NeZ
   simp only [if_neg hν, if_true]
 
 #print axioms plaquetteProduct_extendToFullConfig_crossing
+
+/-- **Per-plaquette matrix-element factorization** (B.2e.3 step (ii′), §8.11.100).
+Combining the crossing plaquette word evaluation
+(`plaquetteProduct_extendToFullConfig_crossing`) with the group-level factorization
+(`repCharacter_crossing_word_eq_sum_matrixElement_conj`): the character of a crossing
+plaquette word in the merged configuration is the matrix-element pairing
+
+  `χ_R(word) = ∑_{k,l} (ρ (W_int u))_{kl} · conj((ρ (W_pos V⁺))_{kl})`
+
+with `W_int(x) = x_{n+e₀,ν}·(x_{n+e₀+e_ν,0})⁻¹` (interface links) and
+`W_pos(x) = x_{θn,0}·x_{θ(n+e_ν),ν}` (positive links).  0 sorries, 0 new axioms. -/
+lemma repCharacter_plaquetteProduct_extendToFullConfig_crossing
+    (N T L : ℕ) [NeZero T] [NeZero L] (hT : Odd T)
+    {dim : ℕ} (ρ : SU N →* Matrix (Fin dim) (Fin dim) ℂ)
+    (hU : IsUnitaryRepresentation ρ)
+    (V_plus : FiniteLinkConfig N (PeriodicSite T L) (positiveSites T L))
+    (u : PosInterfaceConfig N T L)
+    (n : PeriodicSite T L) (hn : signedTime T n.time = -1)
+    (ν : Fin 4) (hν : ν ≠ 0) :
+    repCharacter ρ
+        (plaquetteProduct N (extendToFullConfig N T L (reflectPosToNeg N T L V_plus) u)
+          n 0 ν) =
+      ∑ k : Fin dim, ∑ l : Fin dim,
+        (ρ (u ⟨(AddVector.addVector n 0, ν),
+                Finset.mem_union_right (positiveSites T L)
+                  (mem_interfaceSites_of_signedTime_eq_zero
+                    (signedTime_addVector_zero_of_eq_neg_one T L n hn))⟩ *
+            (u ⟨(AddVector.addVector (AddVector.addVector n 0) ν, 0),
+                Finset.mem_union_right (positiveSites T L)
+                  (mem_interfaceSites_of_signedTime_eq_zero
+                    (signedTime_addVector_zero_spatial_of_eq_neg_one T L n ν hν hn))⟩)⁻¹)) k l *
+        conj ((ρ (V_plus ⟨(ReflectSite.reflectSite n, 0),
+                  reflectSite_mem_positive_of_negative hT
+                    (mem_negativeSites_of_signedTime_eq_neg_one hn)⟩ *
+                V_plus ⟨(ReflectSite.reflectSite (AddVector.addVector n ν), ν),
+                  reflectSite_mem_positive_of_negative hT
+                    (mem_negativeSites_of_signedTime_eq_neg_one
+                      (by rw [signedTime_addVector_spatial T L n ν hν]; exact hn))⟩)) k l) := by
+  rw [plaquetteProduct_extendToFullConfig_crossing N T L hT V_plus u n hn ν hν]
+  exact repCharacter_crossing_word_eq_sum_matrixElement_conj ρ hU _ _ _ _
+
+#print axioms repCharacter_plaquetteProduct_extendToFullConfig_crossing
 
 /-- The positive-link character factor `Φ_w(U⁺) = ∏_{l ∈ L_U} χ_{w(l)}(U⁺_l)`.
 The `if hpos` guards the site-membership proof needed to index `U⁺` (a positive-site
