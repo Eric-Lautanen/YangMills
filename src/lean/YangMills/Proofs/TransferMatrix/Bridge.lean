@@ -419,6 +419,54 @@ lemma crossing_plaquette_boltzmann_matrixElement_expansion
 
 #print axioms crossing_plaquette_boltzmann_matrixElement_expansion
 
+/-- **Trace cyclicity for the crossing word** (B.2e.3 step (iv-a), helper).
+For any `A b c D : SU N`, the real trace of the four-factor crossing word
+`A⁻¹·b·c⁻¹·D⁻¹` equals that of `(A·D)⁻¹·(b·c⁻¹)`.  This is pure trace cyclicity:
+`Tr(A⁻¹·b·c⁻¹·D⁻¹) = Tr(D⁻¹·A⁻¹·b·c⁻¹) = Tr((A·D)⁻¹·(b·c⁻¹))`, using
+`Matrix.trace_mul_comm` and `(A·D)⁻¹ = D⁻¹·A⁻¹` (`mul_inv_rev`).  It is the
+trace-level content that puts the crossing plaquette Boltzmann factor into the
+PD-kernel-pullback form `k((W_pos)⁻¹·W_int)`.  0 sorries, 0 new axioms. -/
+lemma reTrace_crossing (N : ℕ) (A b c D : SU N) :
+    (Matrix.trace ((A⁻¹ * b * c⁻¹ * D⁻¹ : SU N) : Matrix (Fin N) (Fin N) ℂ)).re =
+    (Matrix.trace (((A * D)⁻¹ * (b * c⁻¹) : SU N) : Matrix (Fin N) (Fin N) ℂ)).re := by
+  have hinv : ((A * D)⁻¹ : SU N) = D⁻¹ * A⁻¹ := mul_inv_rev A D
+  have htr : Matrix.trace ((A⁻¹ * b * c⁻¹ * D⁻¹ : SU N) : Matrix (Fin N) (Fin N) ℂ) =
+      Matrix.trace (((A * D)⁻¹ * (b * c⁻¹) : SU N) : Matrix (Fin N) (Fin N) ℂ) := by
+    rw [hinv]
+    simp only [Submonoid.coe_mul]
+    rw [Matrix.trace_mul_comm]
+    congr 1
+    noncomm_ring
+  rw [htr]
+
+#print axioms reTrace_crossing
+
+/-- **Crossing plaquette Boltzmann factor in PD-kernel-pullback form** (B.2e.3 step
+(iv-a), §8.11.99).  For a crossing plaquette based at `n` (signedTime `-1`), directions
+`(0, ν)`, the Boltzmann factor `exp(c·Re Tr(word))` in the merged configuration equals
+the PD function `k_c(g) = exp(c·Re Tr(g))` evaluated at `(W_pos V⁺)⁻¹ · W_int u` — the
+PD kernel form `k((W x)⁻¹·W y)` with `x = V⁺` (ket) and `y = u` (bra).  This is the
+matrix-element lift of the reflection = inversion mechanism: the reflection
+`reflectPosToNeg` turns the ket word into the inverse of the positive half-word, and
+trace cyclicity (`reTrace_crossing`) collects the four link factors into the two
+half-words.  0 sorries, 0 new axioms. -/
+lemma crossing_plaquette_boltzmann_eq_pd_kernel (N T L : ℕ) [NeZero T] [NeZero L]
+    (hT : Odd T) (c : ℝ)
+    (V_plus : FiniteLinkConfig N (PeriodicSite T L) (positiveSites T L))
+    (u : PosInterfaceConfig N T L)
+    (n : PeriodicSite T L) (hn : signedTime T n.time = -1)
+    (ν : Fin 4) (hν : ν ≠ 0) :
+    Real.exp (c * Complex.re (Matrix.trace ((plaquetteProduct N
+        (extendToFullConfig N T L (reflectPosToNeg N T L V_plus) u) n 0 ν : SU N) :
+        Matrix (Fin N) (Fin N) ℂ))) =
+    Real.exp (c * Complex.re (Matrix.trace (
+        ((crossingWordPos N T L hT n hn ν hν V_plus)⁻¹ *
+          crossingWordInt N T L n hn ν hν u : SU N) : Matrix (Fin N) (Fin N) ℂ))) := by
+  rw [plaquetteProduct_extendToFullConfig_crossing N T L hT V_plus u n hn ν hν]
+  exact congrArg (fun x => Real.exp (c * x)) (reTrace_crossing N _ _ _ _)
+
+#print axioms crossing_plaquette_boltzmann_eq_pd_kernel
+
 /-- The positive-link character factor `Φ_w(U⁺) = ∏_{l ∈ L_U} χ_{w(l)}(U⁺_l)`.
 The `if hpos` guards the site-membership proof needed to index `U⁺` (a positive-site
 config) at a link `l`; for `l ∈ interfaceLinkPos` the guard is always true.
