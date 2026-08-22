@@ -9572,3 +9572,17 @@ family:
 Family (c) is the periodic lattice's second OS interface; it is handled by the SAME
 reflection mechanism (the seam is reflection-invariant), but it must be included in
 the assembly — the `rest` is not purely bookkeeping.
+
+**Step (iv-b2′) DONE (session 136, commit 36600c6, Bridge.lean, 0 sorries):**
+`CrossingPlaquette T L` subtype (+ `Fintype` instance) and
+`crossing_prod_boltzmann_matrixElement_expansion`: the product over ALL crossing
+plaquettes of `exp(c·Re Tr(word_p))` equals
+`∑_{w : CrossingPlaquette → ι} (∏_p coeff_{w p}) · ∏_p ∑_{k,l}
+(ρ_{w p} (W_int^p u))_{kl} · conj((ρ_{w p} (W_pos^p V⁺))_{kl})` with `coeff ≥ 0`.
+Proof: shared expansion datum from `plaquette_boltzmann_character_expansion_single`
+(plaquette-independent), per-plaquette rewrite by
+`repCharacter_plaquetteProduct_crossing_eq_halfWords`, then `Finset.prod_univ_sum`
++ `Finset.prod_mul_distrib`.  Axioms: [propext, Classical.choice, Quot.sound,
+peterWeyl_clebschGordan_plaquette] — the last is one of the existing 6 axioms.
+Axiom count unchanged (6).  Remaining: (iv-b3′) matrix-element σ-inversion lift +
+interface Schur orthogonality + σ-invisibility → sum-of-squares; then (iv-c).
