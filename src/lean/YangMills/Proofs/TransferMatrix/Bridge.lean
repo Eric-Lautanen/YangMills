@@ -1117,3 +1117,101 @@ lemma transfer_matrix_fubini_character_expansion
 
 #print axioms transfer_matrix_fubini_character_expansion
 
+/-! ### B.2e.3 step (iv-b1): crossing/non-crossing split of the interface Boltzmann factor
+
+The interface Boltzmann factor `exp(-β·S_int(U))` for
+`U = extendToFullConfig (reflectPosToNeg V⁺) u` splits as a product over the
+**crossing plaquettes** (based at `signedTime = -1`, directions `(0, ν)`, `ν ≠ 0`) —
+each in the PD-kernel-pullback form `exp(-β²)·k_c((W_pos V⁺)⁻¹·W_int u)` of step (iv-a) —
+times a **rest** product over all remaining plaquette indices (non-crossing interface
+plaquettes, which depend only on `u`, plus the reversed-orientation and degenerate
+plaquettes, plus the non-interface plaquettes contributing `1`). -/
+
+/-- A crossing plaquette index: based at a site of signed time `-1`, with first
+direction temporal (`μ = 0`) and second direction spatial (`ν ≠ 0`). -/
+abbrev isCrossingPlaquetteIdx (T L : ℕ) [NeZero T] [NeZero L] (p : PlaquetteIndex T L) : Prop :=
+  p.2.1 = 0 ∧ signedTime T p.1.time = -1 ∧ p.2.2 ≠ 0
+
+/-- The time coordinate of `n + e₀` (`addVectorPeriodic` form). -/
+lemma addVectorPeriodic_zero_time (T L : ℕ) [NeZero T] [NeZero L] (n : PeriodicSite T L) :
+    (addVectorPeriodic T L n 0).time = n.time + 1 := by
+  simp [addVectorPeriodic]
+
+/-- If `n` has signed time `-1`, then `n + e₀` has signed time `0`
+(`addVectorPeriodic` form). -/
+lemma signedTime_addVectorPeriodic_zero_of_eq_neg_one (T L : ℕ) [NeZero T] [NeZero L]
+    (n : PeriodicSite T L) (hn : signedTime T n.time = -1) :
+    signedTime T (addVectorPeriodic T L n 0).time = 0 := by
+  rw [addVectorPeriodic_zero_time]; exact signedTime_succ_of_eq_neg_one T n.time hn
+
+/-- A crossing plaquette is an interface plaquette: its corners have signed times
+`{-1, 0, 0, -1}`, so they are neither all positive nor all negative. -/
+lemma isInterfacePlaquette_of_crossing (T L : ℕ) [NeZero T] [NeZero L]
+    (n : PeriodicSite T L) (hn : signedTime T n.time = -1) (ν : Fin 4) (hν : ν ≠ 0) :
+    isInterfacePlaquette T L n 0 ν := by
+  have h0 : signedTime T (addVectorPeriodic T L n 0).time = 0 :=
+    signedTime_addVectorPeriodic_zero_of_eq_neg_one T L n hn
+  refine ⟨?_, ?_⟩
+  · rintro ⟨h1, -⟩
+    rw [hn] at h1; norm_num at h1
+  · rintro ⟨-, h2, -, -⟩
+    rw [h0] at h2; norm_num at h2
+
+#print axioms isInterfacePlaquette_of_crossing
+
+/-- Triple products over plaquette indices as a single product over `PlaquetteIndex`. -/
+lemma prod_plaquetteIndex_eq_triple (T L : ℕ) [NeZero T] [NeZero L]
+    (g : PeriodicSite T L → Fin 4 → Fin 4 → ℝ) :
+    (∏ p : PlaquetteIndex T L, g p.1 p.2.1 p.2.2) =
+    ∏ n : PeriodicSite T L, ∏ μ : Fin 4, ∏ ν : Fin 4, g n μ ν := by
+  rw [← Finset.univ_product_univ, Finset.prod_product]
+  apply Finset.prod_congr rfl; intro n _
+  rw [← Finset.univ_product_univ, Finset.prod_product]
+
+/-- Split a product over `PlaquetteIndex` into crossing and non-crossing parts. -/
+lemma prod_plaquetteIndex_split_crossing (T L : ℕ) [NeZero T] [NeZero L]
+    (F : PlaquetteIndex T L → ℝ) :
+    (∏ p : PlaquetteIndex T L, F p) =
+    (∏ p ∈ Finset.univ.filter (isCrossingPlaquetteIdx T L), F p) *
+    (∏ p ∈ Finset.univ.filter (fun q => ¬ isCrossingPlaquetteIdx T L q), F p) := by
+  classical
+  exact (Finset.prod_filter_mul_prod_filter_not Finset.univ
+    (isCrossingPlaquetteIdx T L) F).symm
+
+/-- **Interface Boltzmann factor: crossing/rest split** (B.2e.3 step (iv-b1)).
+For `U = extendToFullConfig (reflectPosToNeg V⁺) u`, the interface Boltzmann factor
+`exp(-β·S_int(U))` equals the product over crossing plaquettes of the PD-kernel-pullback
+factors `exp(-β²)·k_c((W_pos V⁺)⁻¹·W_int u)` (step (iv-a),
+`crossing_plaquette_boltzmann_eq_pd_kernel`), times the rest product over all
+non-crossing plaquette indices.  0 sorries, 0 new axioms. -/
+lemma interface_boltzmann_eq_crossing_mul_rest (N T L : ℕ) (β : ℝ) [NeZero T] [NeZero L]
+    (hT : Odd T)
+    (V_plus : FiniteLinkConfig N (PeriodicSite T L) (positiveSites T L))
+    (u : PosInterfaceConfig N T L) :
+    Real.exp (-β * wilsonActionOSInterface N T L β
+        (extendToFullConfig N T L (reflectPosToNeg N T L V_plus) u)) =
+    (∏ p ∈ Finset.univ.filter (isCrossingPlaquetteIdx T L),
+        if h : signedTime T p.1.time = -1 ∧ p.2.2 ≠ 0 then
+          Real.exp (-(β * β)) * Real.exp ((β * β / N) * Complex.re (Matrix.trace (
+            ((crossingWordPos N T L hT p.1 h.1 p.2.2 h.2 V_plus)⁻¹ *
+              crossingWordInt N T L p.1 h.1 p.2.2 h.2 u : SU N) :
+              Matrix (Fin N) (Fin N) ℂ)))
+        else 1) *
+    (∏ p ∈ Finset.univ.filter (fun q => ¬ isCrossingPlaquetteIdx T L q),
+        if isInterfacePlaquette T L p.1 p.2.1 p.2.2 then
+          Real.exp (-(β * β)) * Real.exp ((β * β / N) * Complex.re (Matrix.trace (
+            (plaquetteProduct N (extendToFullConfig N T L (reflectPosToNeg N T L V_plus) u)
+              p.1 p.2.1 p.2.2 : SU N) : Matrix (Fin N) (Fin N) ℂ)))
+        else 1) := by
+  classical
+  rw [exp_neg_beta_wilsonActionOSInterface_eq_prod_abstract]
+  rw [← prod_plaquetteIndex_eq_triple, prod_plaquetteIndex_split_crossing]
+  congr 1
+  apply Finset.prod_congr rfl; intro p hp
+  obtain ⟨-, hμ, hn, hν⟩ := Finset.mem_filter.mp hp
+  rw [dif_pos ⟨hn, hν⟩, hμ,
+    if_pos (isInterfacePlaquette_of_crossing T L p.1 hn p.2.2 hν),
+    crossing_plaquette_boltzmann_eq_pd_kernel N T L hT (β * β / N) V_plus u p.1 hn p.2.2 hν]
+
+#print axioms interface_boltzmann_eq_crossing_mul_rest
+
