@@ -9497,3 +9497,78 @@ then a PSD kernel in `(V⁺, u)` by `crossingPlaquette_kernel_psd` (PSDKernel.le
   `integral_G_thetaG_eq_inner_g_Tg` (PROVEN) + the bra/ket conjugation relation
   (σ-invisibility `fourierCoeffPos_sigma_invisible`, PROVEN), then replace
   `transferMatrixPositivity_axiom` (axiom count 6 → 5).
+
+## §8.11.102 — Session 136 (2026-08-22): step (iv-b1) FORMALIZED + a CORRECTION to the (iv-b) plan
+
+**Step (iv-b1) DONE** (commit e5648ec, Bridge.lean, 0 sorries, axioms
+[propext, Classical.choice, Quot.sound] — count still 6):
+
+- `isCrossingPlaquetteIdx T L p` : `p.2.1 = 0 ∧ signedTime T p.1.time = -1 ∧ p.2.2 ≠ 0`.
+- `addVectorPeriodic_zero_time`, `signedTime_addVectorPeriodic_zero_of_eq_neg_one`
+  (`addVectorPeriodic`-forms; the existing `addVector_zero_time` is stated via
+  `AddVector.addVector`, which does not `rw`-match `addVectorPeriodic` occurrences).
+- `isInterfacePlaquette_of_crossing`: crossing plaquettes are interface plaquettes
+  (corners `{-1,0,0,-1}`).
+- `prod_plaquetteIndex_eq_triple`: `∏ p : PlaquetteIndex, g p.1 p.2.1 p.2.2 =
+  ∏ n ∏ μ ∏ ν, g n μ ν` (via `← Finset.univ_product_univ` + `Finset.prod_product` twice).
+- `prod_plaquetteIndex_split_crossing`: product split via
+  `Finset.prod_filter_mul_prod_filter_not` — NOTE: its statement is
+  `(∏ filter p) * (∏ filter ¬p) = ∏ s` (split on the LEFT), so use `.symm`/explicit
+  application; a bare `rw` in either direction failed (HOU + DecidablePred synthesis).
+- **`interface_boltzmann_eq_crossing_mul_rest`**: for
+  `U = extendToFullConfig (reflectPosToNeg V⁺) u`,
+  `exp(-β·S_int(U)) = (∏ p crossing, exp(-β²)·k_c((W_pos V⁺)⁻¹·W_int u)) · (rest)`,
+  where `rest` is the product over non-crossing plaquette indices of the original
+  if-interface factors.  Proof: `exp_neg_beta_wilsonActionOSInterface_eq_prod_abstract`
+  + the two product lemmas + per-plaquette rewrite by
+  `crossing_plaquette_boltzmann_eq_pd_kernel` (iv-a).  `classical` needed for the
+  filter `DecidablePred` instances.
+
+**CORRECTION to the (iv-b) plan (adversarial self-check, report plainly).**  The
+§8.11.101 plan "the product over crossing plaquettes is a PSD kernel in `(V⁺, u)` by
+`crossingPlaquette_kernel_psd`" is **mathematically incorrect as stated**.
+`crossingPlaquette_kernel_psd` requires a SINGLE word map `W : P → X → G` on a single
+space, giving `K(x,y) = k((W x)⁻¹·W y)`.  The actual crossing factor is the MIXED
+kernel `K(y,x) = k_c(W_pos(y)⁻¹·W_int(x))` with `W_pos ≠ W_int`
+(§8.11.99 already noted this).  Such a mixed kernel is **not even Hermitian** in
+general: Hermiticity would require `k(A_y⁻¹B_x) = k(A_x⁻¹B_y)` for all achievable
+values, and since `W_pos`, `W_int` are (essentially) independent surjective word maps,
+this forces `k` constant — false for `k_c = exp(c·ReTr)`.  Hence no
+`crossingPlaquette_kernel_psd` application to the mixed kernel is possible, and the
+per-orientation crossing product is NOT a PSD kernel in `(V⁺, u)`.
+
+**The correct path (already in §8.11.99, KEY OBSERVATION)** is the INTEGRATED
+assembly: positivity holds only after the independent `U⁺`/`V⁺` integrals collapse
+the matrix-element factors to scalars over the shared interface config `u⁰`, where
+the σ-inversion lemma (`B_{Rkl}(u⁰) = conj(A(σ u⁰))`) + σ-invisibility give
+`∫_{u⁰} |A|² ≥ 0`.  `crossingPlaquette_kernel_psd` remains true and useful as
+group-level machinery, but it does NOT apply to the crossing kernel directly.
+Step (iv-b) is therefore REPLACED by:
+- (iv-b2′) per-crossing-plaquette matrix-element expansion of the Boltzmann factor
+  (DONE: `crossing_plaquette_boltzmann_matrixElement_expansion`, session 134) —
+  what remains is the product version over the crossing Finset;
+- (iv-b3′) matrix-element σ-inversion lift (Lemma 3 from `repCharacter` to matrix
+  elements) + interface Schur orthogonality + σ-invisibility, giving the
+  sum-of-squares form of the RP quadratic form.
+
+**Honest status:** (iv-b1) verified (compiled, axioms checked).  The correction above
+is an ANALYSIS (believed true, elementary linear algebra), not yet reflected in any
+Lean statement — no Lean claim was made or removed.  Axiom count: still 6.
+
+**Additional observation (rest-product composition).**  The `rest` product in
+`interface_boltzmann_eq_crossing_mul_rest` is NOT entirely `u`-only.  Besides the
+`{0,1}`-corner plaquettes (based at `signedTime n = 0`, all links positive/interface,
+`u`-only — harmless multiplication-operator factors), it contains three MIXED
+(`V⁺`/`u`) families, each needing the same matrix-element treatment as the crossing
+family:
+(a) reversed-orientation crossings `(n, ν, 0)` with `signedTime n = -1`, `ν ≠ 0`
+    (word `V₁·V₂⁻¹·u₁⁻¹·u₂⁻¹`, PD-pullback form `k_c((V₂V₁⁻¹)⁻¹·(u₁⁻¹u₂⁻¹))` by
+    cyclicity — same mixed-kernel caveat);
+(b) degenerate temporal plaquettes `(n, 0, 0)` with `signedTime n = -1` (corners
+    `{-1,0,1,0}`, word `(V⁺_{θn,0})⁻¹·u·u⁻¹·u⁻¹`);
+(c) **wraparound plaquettes** based at `signedTime n = (T-1)/2` (the second,
+    periodicity-induced interface): `(n, 0, ν)` or `(n, ν, 0)` — corners straddle the
+    seam `t = (T-1)/2 ↔ -(T-1)/2`, links mixed positive/negative.
+Family (c) is the periodic lattice's second OS interface; it is handled by the SAME
+reflection mechanism (the seam is reflection-invariant), but it must be included in
+the assembly — the `rest` is not purely bookkeeping.
