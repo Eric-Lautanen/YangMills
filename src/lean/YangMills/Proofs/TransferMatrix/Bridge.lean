@@ -1215,3 +1215,66 @@ lemma interface_boltzmann_eq_crossing_mul_rest (N T L : ℕ) (β : ℝ) [NeZero 
 
 #print axioms interface_boltzmann_eq_crossing_mul_rest
 
+/-- Crossing plaquettes as a subtype of `PlaquetteIndex`. -/
+abbrev CrossingPlaquette (T L : ℕ) [NeZero T] [NeZero L] : Type :=
+  {p : PlaquetteIndex T L // isCrossingPlaquetteIdx T L p}
+
+noncomputable instance (T L : ℕ) [NeZero T] [NeZero L] :
+    Fintype (CrossingPlaquette T L) := by
+  classical
+  exact inferInstanceAs (Fintype {p : PlaquetteIndex T L // isCrossingPlaquetteIdx T L p})
+
+/-- **Crossing-product matrix-element expansion** (B.2e.3 step (iv-b2'), §8.11.102).
+The product over all crossing plaquettes of the Boltzmann factors
+`exp(c·Re Tr(word_p))` (`c ≥ 0`) in the merged configuration expands as a
+non-negative-coefficient sum over assignments `w : CrossingPlaquette → ι` of products
+of per-plaquette matrix-element pairings of the interface and positive half-words:
+
+  `∏_p exp(c·Re Tr(word_p)) = ∑_w (∏_p coeff_{w p}) · ∏_p ∑_{k,l}
+      (ρ_{w p} (W_int^p u))_{kl} · conj((ρ_{w p} (W_pos^p V⁺))_{kl})`
+
+with `coeff_s ≥ 0`.  A single shared expansion datum `(ι, dims, ρ, coeff)` suffices
+for all plaquettes since `plaquette_boltzmann_character_expansion_single` is
+plaquette-independent.  This is the product-level input for the integrated
+sum-of-squares assembly (the corrected (iv-b) path of §8.11.102).
+0 sorries, 0 new axioms. -/
+lemma crossing_prod_boltzmann_matrixElement_expansion
+    (N T L : ℕ) [NeZero T] [NeZero L] (hT : Odd T) (c : ℝ) (hc : 0 ≤ c) :
+    ∃ (ι : Type) (hι : Fintype ι) (dims : ι → ℕ)
+      (ρ : ∀ i, SU N →* Matrix (Fin (dims i)) (Fin (dims i)) ℂ)
+      (hU : ∀ i, IsUnitaryRepresentation (ρ i))
+      (coeff : ι → ℝ) (hcoeff : ∀ s, 0 ≤ coeff s),
+      ∀ (V_plus : FiniteLinkConfig N (PeriodicSite T L) (positiveSites T L))
+        (u : PosInterfaceConfig N T L),
+        (∏ p : CrossingPlaquette T L,
+          (Real.exp (c * Complex.re (Matrix.trace ((plaquetteProduct N
+            (extendToFullConfig N T L (reflectPosToNeg N T L V_plus) u) p.1.1 0 p.1.2.2 : SU N) :
+            Matrix (Fin N) (Fin N) ℂ))) : ℂ)) =
+        ∑ w : CrossingPlaquette T L → ι,
+          (∏ p : CrossingPlaquette T L, (coeff (w p) : ℂ)) *
+          (∏ p : CrossingPlaquette T L, ∑ k : Fin (dims (w p)), ∑ l : Fin (dims (w p)),
+            (ρ (w p) (crossingWordInt N T L p.1.1 p.2.2.1 p.1.2.2 p.2.2.2 u)) k l *
+            conj ((ρ (w p) (crossingWordPos N T L hT p.1.1 p.2.2.1 p.1.2.2 p.2.2.2 V_plus)) k l)) := by
+  classical
+  obtain ⟨ι, hι, dims, ρ, hU, _hMeas, _hIrr, _hDims, coeff, hcoeff, hexp⟩ :=
+    plaquette_boltzmann_character_expansion_single N c hc
+  letI : Fintype ι := hι
+  refine ⟨ι, hι, dims, ρ, hU, coeff, hcoeff, fun V_plus u => ?_⟩
+  have hper : ∀ p : CrossingPlaquette T L,
+      (Real.exp (c * Complex.re (Matrix.trace ((plaquetteProduct N
+        (extendToFullConfig N T L (reflectPosToNeg N T L V_plus) u) p.1.1 0 p.1.2.2 : SU N) :
+        Matrix (Fin N) (Fin N) ℂ))) : ℂ) =
+      ∑ s : ι, (coeff s : ℂ) * ∑ k : Fin (dims s), ∑ l : Fin (dims s),
+        (ρ s (crossingWordInt N T L p.1.1 p.2.2.1 p.1.2.2 p.2.2.2 u)) k l *
+        conj ((ρ s (crossingWordPos N T L hT p.1.1 p.2.2.1 p.1.2.2 p.2.2.2 V_plus)) k l) := by
+    intro p
+    rw [hexp]
+    apply Finset.sum_congr rfl; intro s _
+    rw [repCharacter_plaquetteProduct_crossing_eq_halfWords N T L hT (ρ s) (hU s)
+      V_plus u p.1.1 p.2.2.1 p.1.2.2 p.2.2.2]
+  rw [Finset.prod_congr rfl (fun p _ => hper p), Finset.prod_univ_sum]
+  apply Finset.sum_congr rfl; intro w _
+  rw [Finset.prod_mul_distrib]
+
+#print axioms crossing_prod_boltzmann_matrixElement_expansion
+
