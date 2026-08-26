@@ -9586,3 +9586,53 @@ Proof: shared expansion datum from `plaquette_boltzmann_character_expansion_sing
 peterWeyl_clebschGordan_plaquette] — the last is one of the existing 6 axioms.
 Axiom count unchanged (6).  Remaining: (iv-b3′) matrix-element σ-inversion lift +
 interface Schur orthogonality + σ-invisibility → sum-of-squares; then (iv-c).
+
+## §8.11.103 — Session 138 (2026-08-26): step (iv-b3′) matrix-element σ-inversion lift FORMALIZED
+
+**DONE (SigmaInversion.lean, 0 sorries, all `#print axioms` = [propext, Classical.choice,
+Quot.sound]).**  The character-level Lemma 3 identity
+(`charFactorNeg_thetaReindex_eq_charFactorPos`) is lifted to individual matrix elements:
+
+- `repMatrixElement_apply_congr`: congruence for matrix elements across equal rep
+  labels, with indices compared at `.val` level (avoids "motive is not type correct"
+  when comparing through `Fin.cast`).
+- `repMatrixElement_dual_inv_eq` (time-like): `(ρ (dual i) g⁻¹) (cast b) (cast a) =
+  (ρ i) g a b` — via `repMatrixElement_inv` + `hdual_me` + `conj_conj`.  Note the
+  INDEX SWAP.
+- `repMatrixElement_dual_dual_eq` (spatial): `(ρ (dual (dual i)) g) (cast a) (cast b) =
+  (ρ i) g a b` — via double `hdual_me` + `conj_conj`.  NO index swap.
+- `matrixElemFactorPos` / `matrixElemFactorNeg`: matrix-element analogues of
+  `charFactorPos` / `charFactorNeg`, with index assignment
+  `κ : ∀ l, Fin (dims (w l)) × Fin (dims (w l))`.
+- `mem_interfaceLinkNeg_of_not_pos_not_int`: trichotomy helper.
+- `thetaReindexMatrixElem`: the index reindexing `θκ` accompanying `thetaReindex`;
+  SWAPS the index pair for negative time-like links only (matching the asymmetry of
+  the two group-level identities above).  Branch values stated at `.val` level
+  (`thetaReindexMatrixElem_neg_time_vals`, `_neg_spatial_vals`).
+- `matrixElemFactorNeg_thetaReindex_link_eq`: per-link identity (mirrors
+  `charFactorNeg_thetaReindex_link_eq`; link-evaluation parts copied verbatim).
+- `matrixElemFactorNeg_thetaReindex_eq_matrixElemFactorPos`: **main identity** —
+  `matrixElemFactorNeg dual hdims (θw) (θκ) (reflectPosToNeg V⁺) =
+  matrixElemFactorPos w κ V⁺`, via `Finset.prod_bij` over the reflection involution.
+
+**NEW HYPOTHESES (flagged per project rule 1 — lemma hypotheses, NOT axioms; no
+axiom_growth_log entry needed).**  The lift requires TWO hypotheses beyond the
+character-level `hdual`:
+1. `hdims : ∀ i, dims (dual i) = dims i` (dual preserves dimension);
+2. `hdual_me : ∀ i g a b, (ρ (dual i) g) (cast a) (cast b) = conj ((ρ i) g a b)` —
+   ELEMENTWISE dual-conjugation.  `hdual` is only the character-level (trace) version;
+   `hdual_me` implies `hdual` (take trace) but not conversely.
+
+Both are satisfied when the dual representation IS the conjugate representation
+(`ρ (dual i) g = (ρ i g).map conj` up to the `Fin.cast` reindexing), which is the
+standard choice in the SU(N) Peter–Weyl decomposition.  Category: **known but
+unformalized** (standard representation theory), NOT genuinely open math.  When the
+lift is eventually applied, the instantiation site must supply `hdims`/`hdual_me` for
+the concrete Peter–Weyl dual — this is a proof obligation there, not a new axiom.
+
+**Status:** verified (compiled, `#print axioms` checked, no sorry).  Axiom count
+unchanged: 6.  Next: combine with `crossing_prod_boltzmann_matrixElement_expansion`
+(Bridge.lean) + interface Schur orthogonality + σ-invisibility → sum-of-squares;
+word evaluations for rest-product mixed families (reversed crossings, degenerate
+`(n,0,0)`, wraparound) analogous to `plaquetteProduct_extendToFullConfig_crossing`;
+then (iv-c) final assembly.
