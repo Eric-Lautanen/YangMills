@@ -721,4 +721,107 @@ lemma matrixElemFactorNeg_thetaReindex_eq_matrixElemFactorPos
 
 #print axioms matrixElemFactorNeg_thetaReindex_eq_matrixElemFactorPos
 
+/-- The `star` version of `matrixElemFactorNeg_thetaReindex_eq_matrixElemFactorPos`. -/
+lemma matrixElemFactorNeg_thetaReindex_eq_matrixElemFactorPos_star
+    (N T L : ℕ) [NeZero T] [NeZero L] (hT : Odd T)
+    (ι : Type) (dims : ι → ℕ)
+    (ρ : ∀ i, SU N →* Matrix (Fin (dims i)) (Fin (dims i)) ℂ)
+    (h_unitary : ∀ i, IsUnitaryRepresentation (ρ i))
+    (dual : ι → ι) (hdims : ∀ i, dims (dual i) = dims i)
+    (hdual_me : ∀ i (g : SU N) (a b : Fin (dims i)),
+      (ρ (dual i) g) (Fin.cast (hdims i).symm a) (Fin.cast (hdims i).symm b) =
+        conj ((ρ i) g a b))
+    (w : InterfaceLink T L → ι)
+    (κ : ∀ l : InterfaceLink T L, Fin (dims (w l)) × Fin (dims (w l)))
+    (V_plus : FiniteLinkConfig N (PeriodicSite T L) (positiveSites T L)) :
+    star (matrixElemFactorNeg N T L ι dims ρ dual hdims (thetaReindex T L hT ι dual w)
+      (thetaReindexMatrixElem T L hT ι dims dual hdims w κ)
+      (reflectPosToNeg N T L V_plus)) =
+    star (matrixElemFactorPos N T L ι dims ρ w κ V_plus) :=
+  congrArg star (matrixElemFactorNeg_thetaReindex_eq_matrixElemFactorPos N T L hT ι dims ρ
+    h_unitary dual hdims hdual_me w κ V_plus)
+
+#print axioms matrixElemFactorNeg_thetaReindex_eq_matrixElemFactorPos_star
+
+/-- The positive matrix-element Fourier coefficient
+`A^{ME}_{w,κ}(u⁰) = ∫_{U⁺} ofReal(ψ(merge(U⁺,u⁰))·exp(-β·S⁺(merge(U⁺,u⁰))/2)) ·
+matrixElemFactorPos(w, κ, U⁺) ∂μ⁺`.
+Matrix-element analogue of `fourierCoeffPos` (Fubini.lean). -/
+noncomputable def fourierCoeffPosME (N T L : ℕ) [NeZero T] [NeZero L]
+    (β : ℝ) (ψ : PosInterfaceConfig N T L → ℝ)
+    (ι : Type) (dims : ι → ℕ)
+    (ρ : ∀ i, SU N →* Matrix (Fin (dims i)) (Fin (dims i)) ℂ)
+    (w : InterfaceLink T L → ι)
+    (κ : ∀ l : InterfaceLink T L, Fin (dims (w l)) × Fin (dims (w l)))
+    (u0 : FiniteLinkConfig N (PeriodicSite T L) (interfaceSites T L)) : ℂ :=
+  ∫ (Upos : FiniteLinkConfig N (PeriodicSite T L) (positiveSites T L)),
+    Complex.ofReal (ψ (mergePosInterface N T L Upos u0) *
+      Real.exp (-β * osPositiveOfPosInterface N T L β (mergePosInterface N T L Upos u0) / 2)) *
+    matrixElemFactorPos N T L ι dims ρ w κ Upos
+  ∂ haarMeasurePositive N T L
+
+#print axioms fourierCoeffPosME
+
+/-- The negative matrix-element Fourier coefficient
+`B^{ME}_{w,κ}(u⁰) = ∫_{V⁺} ofReal(ψ(merge(V⁺,σ(u⁰)))·exp(-β·S⁺(merge(V⁺,σ(u⁰)))/2)) ·
+star(matrixElemFactorNeg(dual, hdims, w, κ, reflectPosToNeg V⁺)) ∂μ⁺`.
+Matrix-element analogue of `fourierCoeffNeg` (Fubini.lean). -/
+noncomputable def fourierCoeffNegME (N T L : ℕ) [NeZero T] [NeZero L]
+    (β : ℝ) (ψ : PosInterfaceConfig N T L → ℝ)
+    (ι : Type) (dims : ι → ℕ)
+    (ρ : ∀ i, SU N →* Matrix (Fin (dims i)) (Fin (dims i)) ℂ)
+    (dual : ι → ι) (hdims : ∀ i, dims (dual i) = dims i)
+    (w : InterfaceLink T L → ι)
+    (κ : ∀ l : InterfaceLink T L, Fin (dims (w l)) × Fin (dims (w l)))
+    (u0 : FiniteLinkConfig N (PeriodicSite T L) (interfaceSites T L)) : ℂ :=
+  ∫ (V_plus : FiniteLinkConfig N (PeriodicSite T L) (positiveSites T L)),
+    Complex.ofReal (ψ (mergePosInterface N T L V_plus (sigmaInterface N T L u0)) *
+      Real.exp (-β * osPositiveOfPosInterface N T L β
+        (mergePosInterface N T L V_plus (sigmaInterface N T L u0)) / 2)) *
+    star (matrixElemFactorNeg N T L ι dims ρ dual hdims w κ (reflectPosToNeg N T L V_plus))
+  ∂ haarMeasurePositive N T L
+
+#print axioms fourierCoeffNegME
+
+set_option maxHeartbeats 1000000 in
+/-- **Matrix-element Fourier coefficient σ-inversion identity (step iv-b3′, Fourier
+level).**  The negative matrix-element Fourier coefficient at the reindexed weight and
+indices `(θw, θκ)` equals the conjugate of the positive matrix-element Fourier
+coefficient at `σ(u⁰)`:
+`fourierCoeffNegME(θw, θκ, u⁰) = star(fourierCoeffPosME(w, κ, σ(u⁰)))`.
+
+This is the matrix-element lift of
+`fourierCoeffNeg_thetaReindex_eq_star_fourierCoeffPos`, and is exactly the relation
+`B_{Rkl}(u⁰) = conj(A(σ u⁰))` of the integrated assembly (§8.11.99 KEY OBSERVATION).
+Proof: `star` commutes with the integral (`integral_conj`) and distributes over the
+product with the real Boltzmann prefactor (`star_mul'` + `conj_ofReal`), reducing to
+the pointwise identity `matrixElemFactorNeg_thetaReindex_eq_matrixElemFactorPos_star`.
+0 sorries, 0 custom axioms. -/
+lemma fourierCoeffNegME_thetaReindex_eq_star_fourierCoeffPosME
+    (N T L : ℕ) (β : ℝ) [NeZero T] [NeZero L] (hT : Odd T)
+    (ψ : PosInterfaceConfig N T L → ℝ)
+    (ι : Type) (dims : ι → ℕ)
+    (ρ : ∀ i, SU N →* Matrix (Fin (dims i)) (Fin (dims i)) ℂ)
+    (h_unitary : ∀ i, IsUnitaryRepresentation (ρ i))
+    (dual : ι → ι) (hdims : ∀ i, dims (dual i) = dims i)
+    (hdual_me : ∀ i (g : SU N) (a b : Fin (dims i)),
+      (ρ (dual i) g) (Fin.cast (hdims i).symm a) (Fin.cast (hdims i).symm b) =
+        conj ((ρ i) g a b))
+    (w : InterfaceLink T L → ι)
+    (κ : ∀ l : InterfaceLink T L, Fin (dims (w l)) × Fin (dims (w l)))
+    (u0 : FiniteLinkConfig N (PeriodicSite T L) (interfaceSites T L)) :
+    fourierCoeffNegME N T L β ψ ι dims ρ dual hdims (thetaReindex T L hT ι dual w)
+      (thetaReindexMatrixElem T L hT ι dims dual hdims w κ) u0 =
+    star (fourierCoeffPosME N T L β ψ ι dims ρ w κ (sigmaInterface N T L u0)) := by
+  simp only [fourierCoeffNegME, fourierCoeffPosME]
+  rw [← starRingEnd_apply, ← integral_conj]
+  refine integral_congr_ae (ae_of_all (haarMeasurePositive N T L) ?_)
+  intro V
+  dsimp only
+  rw [RingHom.map_mul, Complex.conj_ofReal, starRingEnd_apply,
+    matrixElemFactorNeg_thetaReindex_eq_matrixElemFactorPos_star N T L hT ι dims ρ
+      h_unitary dual hdims hdual_me w κ V]
+
+#print axioms fourierCoeffNegME_thetaReindex_eq_star_fourierCoeffPosME
+
 

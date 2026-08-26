@@ -9636,3 +9636,29 @@ unchanged: 6.  Next: combine with `crossing_prod_boltzmann_matrixElement_expansi
 word evaluations for rest-product mixed families (reversed crossings, degenerate
 `(n,0,0)`, wraparound) analogous to `plaquetteProduct_extendToFullConfig_crossing`;
 then (iv-c) final assembly.
+
+## §8.11.104 — Session 138 (2026-08-26) continued: (iv-b3′) Fourier-level lift FORMALIZED
+
+**DONE (SigmaInversion.lean, 0 sorries, axioms [propext, Classical.choice, Quot.sound]).**
+The matrix-element σ-inversion identity is lifted from the pointwise level to the
+Fourier-coefficient level, giving exactly the relation `B_{Rkl}(u⁰) = conj(A(σ u⁰))`
+of the §8.11.99 KEY OBSERVATION:
+
+- `matrixElemFactorNeg_thetaReindex_eq_matrixElemFactorPos_star`: `congrArg star` of the
+  pointwise identity.
+- `fourierCoeffPosME` / `fourierCoeffNegME`: matrix-element analogues of
+  `fourierCoeffPos` / `fourierCoeffNeg` (Fubini.lean), with index assignment `κ`.
+- **`fourierCoeffNegME_thetaReindex_eq_star_fourierCoeffPosME`**:
+  `fourierCoeffNegME(θw, θκ, u⁰) = star(fourierCoeffPosME(w, κ, σ(u⁰)))`.
+  Proof mirrors the character-level version: `integral_conj` + `star_mul'` +
+  `conj_ofReal` reduce to the pointwise star identity.
+
+**Status:** verified (compiled, `#print axioms` checked, no sorry).  Axiom count: 6.
+Remaining for the sum-of-squares assembly: (1) matrix-element σ-invisibility of
+`fourierCoeffPosME` (should follow from `g_posInterface_sigma_invisible` +
+`osPositiveOfPosInterface_sigma_invariant` exactly as `fourierCoeffPos_sigma_invisible`
+did, since `matrixElemFactorPos` depends only on `U⁺`); (2) bridging the per-link index
+assignment `κ` to the crossing expansion's per-plaquette internal indices `(k,l)` via
+the half-word structure (`crossingWordInt`/`crossingWordPos`); (3) interface Schur
+orthogonality on the `charFactorInt` factor; (4) word evaluations for the rest-product
+mixed families; (5) (iv-c) final assembly.
