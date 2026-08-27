@@ -561,6 +561,179 @@ lemma repCharacter_plaquetteProduct_crossing_reversed_eq_halfWords
 
 #print axioms repCharacter_plaquetteProduct_crossing_reversed_eq_halfWords
 
+/-- If `t` has signed time `-1`, then `t + 2` has signed time `1` (needs `T ≥ 3`,
+which follows from `Odd T` plus the impossibility of `signedTime = -1` for `T = 1`). -/
+lemma signedTime_add_two_of_eq_neg_one (T : ℕ) [NeZero T] (hT : Odd T) (t : ZMod T)
+    (h : signedTime T t = -1) : signedTime T (t + 2) = 1 := by
+  have hval : t.val = T - 1 := by
+    have hlt := ZMod.val_lt t
+    by_cases hle : t.val ≤ (T - 1) / 2
+    · have hpos : signedTime T t = (t.val : ℤ) := dif_pos hle
+      rw [hpos] at h; omega
+    · have hneg : signedTime T t = (t.val : ℤ) - (T : ℤ) := dif_neg hle
+      rw [hneg] at h; omega
+  have hT3 : 3 ≤ T := by
+    rcases hT with ⟨k, hk⟩
+    by_contra hcon
+    push_neg at hcon
+    have hT1 : T = 1 := by omega
+    have hv0 : t.val = 0 := by
+      have h2 := ZMod.val_lt t
+      omega
+    have hle : t.val ≤ (T - 1) / 2 := by omega
+    have hst : signedTime T t = (t.val : ℤ) := dif_pos hle
+    rw [hst, hv0] at h
+    norm_num at h
+  have ht2 : t + 2 = (1 : ZMod T) := by
+    have ht : t = ((T - 1 : ℕ) : ZMod T) := by
+      apply ZMod.val_injective T
+      rw [hval, ZMod.val_natCast, Nat.mod_eq_of_lt (Nat.sub_lt (NeZero.pos T) Nat.one_pos)]
+    rw [ht]
+    have hcast : ((T - 1 : ℕ) : ZMod T) = ((T : ℕ) : ZMod T) - 1 := by
+      rw [Nat.cast_sub (NeZero.pos T), Nat.cast_one]
+    rw [hcast, ZMod.natCast_self, zero_sub]
+    ring
+  rw [ht2]
+  haveI : Fact (1 < T) := ⟨by omega⟩
+  have h1val : (1 : ZMod T).val = 1 := ZMod.val_one T
+  have hle1 : (1 : ZMod T).val ≤ (T - 1) / 2 := by rw [h1val]; omega
+  have hst1 : signedTime T (1 : ZMod T) = ((1 : ZMod T).val : ℤ) := dif_pos hle1
+  rw [hst1, h1val]
+  norm_num
+
+#print axioms signedTime_add_two_of_eq_neg_one
+
+/-- The time coordinate of `n + 2e₀` has signed time `1` when `n` has signed time `-1`. -/
+lemma signedTime_addVector_zero_twice_of_eq_neg_one (T L : ℕ) [NeZero T] (hT : Odd T)
+    (n : PeriodicSite T L) (hn : signedTime T n.time = -1) :
+    signedTime T (AddVector.addVector (AddVector.addVector n (0 : Fin 4)) (0 : Fin 4) :
+      PeriodicSite T L).time = 1 := by
+  rw [addVector_zero_time, addVector_zero_time,
+    show n.time + 1 + 1 = n.time + 2 from by ring]
+  exact signedTime_add_two_of_eq_neg_one T hT n.time hn
+
+#print axioms signedTime_addVector_zero_twice_of_eq_neg_one
+
+/-- A site with signed time `1` is a positive site. -/
+lemma mem_positiveSites_of_signedTime_eq_one {T L : ℕ} [NeZero T] [NeZero L]
+    {n : PeriodicSite T L} (h : signedTime T n.time = 1) : n ∈ positiveSites T L := by
+  simp only [positiveSites, Finset.mem_filter, Finset.mem_univ, true_and]
+  rw [h]; norm_num
+
+#print axioms mem_positiveSites_of_signedTime_eq_one
+
+/-- Pointwise evaluation of `extendToFullConfig` on a positive-site link. -/
+lemma extendToFullConfig_apply_pos (N T L : ℕ) [NeZero T] [NeZero L]
+    (U_minus : FiniteLinkConfig N (PeriodicSite T L) (negativeSites T L))
+    (u : PosInterfaceConfig N T L)
+    (n : PeriodicSite T L) (μ : Fin 4) (hpos : n ∈ positiveSites T L) :
+    (extendToFullConfig N T L U_minus u).value n μ =
+      u ⟨(n, μ), Finset.mem_union_left (interfaceSites T L) hpos⟩ := by
+  simp only [extendToFullConfig, extendLinkVariable, mergeConfigurations,
+    dif_pos (Finset.mem_univ n), dif_pos hpos]
+
+#print axioms extendToFullConfig_apply_pos
+
+/-- **Degenerate temporal plaquette word evaluation** (rest-product family (b),
+§8.11.102).  For a degenerate plaquette based at `n` with `signedTime n = -1` in
+directions `(0, 0)`, the plaquette product in the merged configuration
+`extendToFullConfig (reflectPosToNeg V⁺) u` is
+
+  `(V⁺_{θn,0})⁻¹ · u_{n+e₀,0} · (u_{n+2e₀,0})⁻¹ · (u_{n+e₀,0})⁻¹`.
+
+(Links: `(n,0)` negative temporal — inverted by reflection; `(n+e₀,0)` interface;
+`(n+2e₀,0)` positive — from `u`'s positive part; `(n+e₀,0)` interface again.) -/
+lemma plaquetteProduct_extendToFullConfig_degenerate (N T L : ℕ) [NeZero T] [NeZero L]
+    (hT : Odd T)
+    (V_plus : FiniteLinkConfig N (PeriodicSite T L) (positiveSites T L))
+    (u : PosInterfaceConfig N T L)
+    (n : PeriodicSite T L) (hn : signedTime T n.time = -1) :
+    plaquetteProduct N (extendToFullConfig N T L (reflectPosToNeg N T L V_plus) u) n 0 0 =
+      (V_plus ⟨(ReflectSite.reflectSite n, 0),
+          reflectSite_mem_positive_of_negative hT
+            (mem_negativeSites_of_signedTime_eq_neg_one hn)⟩)⁻¹ *
+      u ⟨(AddVector.addVector n 0, 0),
+          Finset.mem_union_right (positiveSites T L)
+            (mem_interfaceSites_of_signedTime_eq_zero
+              (signedTime_addVector_zero_of_eq_neg_one T L n hn))⟩ *
+      (u ⟨(AddVector.addVector (AddVector.addVector n 0) 0, 0),
+          Finset.mem_union_left (interfaceSites T L)
+            (mem_positiveSites_of_signedTime_eq_one
+              (signedTime_addVector_zero_twice_of_eq_neg_one T L hT n hn))⟩)⁻¹ *
+      (u ⟨(AddVector.addVector n 0, 0),
+          Finset.mem_union_right (positiveSites T L)
+            (mem_interfaceSites_of_signedTime_eq_zero
+              (signedTime_addVector_zero_of_eq_neg_one T L n hn))⟩)⁻¹ := by
+  have h1 : n ∈ negativeSites T L := mem_negativeSites_of_signedTime_eq_neg_one hn
+  have h2 : AddVector.addVector n (0 : Fin 4) ∈ interfaceSites T L :=
+    mem_interfaceSites_of_signedTime_eq_zero (signedTime_addVector_zero_of_eq_neg_one T L n hn)
+  have h3 : AddVector.addVector (AddVector.addVector n (0 : Fin 4)) (0 : Fin 4) ∈
+      positiveSites T L :=
+    mem_positiveSites_of_signedTime_eq_one
+      (signedTime_addVector_zero_twice_of_eq_neg_one T L hT n hn)
+  unfold plaquetteProduct
+  rw [extendToFullConfig_apply_neg N T L _ u n 0 h1,
+    extendToFullConfig_apply_int N T L _ u _ 0 h2,
+    extendToFullConfig_apply_pos N T L _ u _ 0 h3,
+    reflectPosToNeg_apply N T L hT V_plus h1 0]
+  simp only [if_true]
+
+#print axioms plaquetteProduct_extendToFullConfig_degenerate
+
+/-- The bra half-word of a degenerate temporal plaquette `(n,0,0)` (signedTime `-1`):
+`W_A(x) = x_{n+e₀,0} · (x_{n+2e₀,0})⁻¹` (interface link times positive-link inverse). -/
+noncomputable def degenerateWordA (N T L : ℕ) [NeZero T] [NeZero L] (hT : Odd T)
+    (n : PeriodicSite T L) (hn : signedTime T n.time = -1)
+    (u : PosInterfaceConfig N T L) : SU N :=
+  u ⟨(AddVector.addVector n 0, 0),
+      Finset.mem_union_right (positiveSites T L)
+        (mem_interfaceSites_of_signedTime_eq_zero
+          (signedTime_addVector_zero_of_eq_neg_one T L n hn))⟩ *
+  (u ⟨(AddVector.addVector (AddVector.addVector n 0) 0, 0),
+      Finset.mem_union_left (interfaceSites T L)
+        (mem_positiveSites_of_signedTime_eq_one
+          (signedTime_addVector_zero_twice_of_eq_neg_one T L hT n hn))⟩)⁻¹
+
+/-- The ket/bra half-word of a degenerate temporal plaquette `(n,0,0)`:
+`W_B = V⁺_{θn,0} · u_{n+e₀,0}` (reflected ket link times interface link). -/
+noncomputable def degenerateWordB (N T L : ℕ) [NeZero T] [NeZero L] (hT : Odd T)
+    (n : PeriodicSite T L) (hn : signedTime T n.time = -1)
+    (V_plus : FiniteLinkConfig N (PeriodicSite T L) (positiveSites T L))
+    (u : PosInterfaceConfig N T L) : SU N :=
+  V_plus ⟨(ReflectSite.reflectSite n, 0),
+      reflectSite_mem_positive_of_negative hT
+        (mem_negativeSites_of_signedTime_eq_neg_one hn)⟩ *
+  u ⟨(AddVector.addVector n 0, 0),
+      Finset.mem_union_right (positiveSites T L)
+        (mem_interfaceSites_of_signedTime_eq_zero
+          (signedTime_addVector_zero_of_eq_neg_one T L n hn))⟩
+
+/-- **Degenerate plaquette matrix-element factorization** (rest-product family (b),
+§8.11.102).  The character of the degenerate word `(V⁺)⁻¹·u₁·u₂⁻¹·u₁⁻¹` is already in
+the `a⁻¹·b·c⁻¹·d⁻¹` pattern of `repCharacter_crossing_word_eq_sum_matrixElement_conj`
+(with `a = V⁺_{θn,0}`, `b = u₁`, `c = u₂`, `d = u₁`):
+
+  `χ(word) = ∑_{k,l} (ρ (W_A u))_{kl} · conj((ρ (W_B V⁺ u))_{kl})`.
+
+0 sorries, 0 new axioms. -/
+lemma repCharacter_plaquetteProduct_degenerate_eq_halfWords
+    (N T L : ℕ) [NeZero T] [NeZero L] (hT : Odd T)
+    {dim : ℕ} (ρ : SU N →* Matrix (Fin dim) (Fin dim) ℂ)
+    (hU : IsUnitaryRepresentation ρ)
+    (V_plus : FiniteLinkConfig N (PeriodicSite T L) (positiveSites T L))
+    (u : PosInterfaceConfig N T L)
+    (n : PeriodicSite T L) (hn : signedTime T n.time = -1) :
+    repCharacter ρ
+        (plaquetteProduct N (extendToFullConfig N T L (reflectPosToNeg N T L V_plus) u)
+          n 0 0) =
+      ∑ k : Fin dim, ∑ l : Fin dim,
+        (ρ (degenerateWordA N T L hT n hn u)) k l *
+        conj ((ρ (degenerateWordB N T L hT n hn V_plus u)) k l) := by
+  rw [plaquetteProduct_extendToFullConfig_degenerate N T L hT V_plus u n hn]
+  exact repCharacter_crossing_word_eq_sum_matrixElement_conj ρ hU _ _ _ _
+
+#print axioms repCharacter_plaquetteProduct_degenerate_eq_halfWords
+
 /-- **Crossing plaquette Boltzmann factor expansion** (B.2e.3 step (iii), §8.11.100).
 The single-plaquette Boltzmann factor `exp(c · Re Tr(word))` (`c ≥ 0`) of a crossing
 plaquette in the merged configuration expands as a non-negative character sum, and each

@@ -9695,3 +9695,31 @@ as the forward crossings:
 Remaining rest-product families: (b) degenerate temporal plaquettes `(n, 0, 0)` at
 `signedTime n = -1`; (c) wraparound plaquettes at the second interface
 `signedTime n = (T-1)/2`.  Then: κ-bridging, interface Schur orthogonality, (iv-c).
+
+## §8.11.106 — Session 138 (2026-08-27) continued: rest-product family (b) FORMALIZED
+
+**DONE (Bridge.lean, 0 sorries, axioms [propext, Classical.choice, Quot.sound]).**
+The degenerate temporal plaquettes `(n, 0, 0)` at `signedTime n = -1` — rest-product
+mixed family (b) of §8.11.102 — now have word evaluation + half-word factorization:
+
+- `signedTime_add_two_of_eq_neg_one`: `signedTime T t = -1 → signedTime T (t+2) = 1`
+  (needs `T ≥ 3`, from `Odd T` + impossibility of `signedTime = -1` at `T = 1`).
+- `signedTime_addVector_zero_twice_of_eq_neg_one`, `mem_positiveSites_of_signedTime_eq_one`,
+  `extendToFullConfig_apply_pos` (positive-site link evaluation — new; the crossing
+  families only needed the neg/int versions).
+- `plaquetteProduct_extendToFullConfig_degenerate`: word evaluation
+  `(V⁺_{θn,0})⁻¹ · u_{n+e₀,0} · (u_{n+2e₀,0})⁻¹ · (u_{n+e₀,0})⁻¹`.
+  (Note: the third link is a POSITIVE-site link, drawn from `u`'s positive part —
+  so this family's half-words mix ket/bra variables differently from the crossing
+  families.)
+- `degenerateWordA` / `degenerateWordB`: half-words `W_A = u₁·u₂⁻¹`,
+  `W_B = V⁺_{θn,0}·u₁`.
+- `repCharacter_plaquetteProduct_degenerate_eq_halfWords`:
+  `χ(word) = ∑_{k,l} (ρ (W_A u))_{kl} · conj((ρ (W_B V⁺ u))_{kl})` — the word is
+  ALREADY in the `a⁻¹·b·c⁻¹·d⁻¹` pattern, so
+  `repCharacter_crossing_word_eq_sum_matrixElement_conj` applies directly (no cyclic
+  rotation needed, unlike family (a)).
+
+**Status:** verified (compiled, `#print axioms` checked, no sorry).  Axiom count: 6.
+Remaining rest-product family: (c) wraparound plaquettes at `signedTime n = (T-1)/2`.
+Then: κ-bridging, interface Schur orthogonality, (iv-c) final assembly.
