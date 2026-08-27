@@ -382,6 +382,185 @@ lemma repCharacter_plaquetteProduct_crossing_eq_halfWords
         conj ((ρ (crossingWordPos N T L hT n hn ν hν V_plus)) k l) :=
   repCharacter_plaquetteProduct_extendToFullConfig_crossing N T L hT ρ hU V_plus u n hn ν hν
 
+/-- **Reversed-crossing plaquette word evaluation** (rest-product family (a),
+§8.11.102).  For a plaquette based at `n` with `signedTime n = -1` in directions
+`(ν, 0)` (`ν ≠ 0` spatial — the REVERSED orientation of a crossing plaquette), the
+plaquette product in the merged configuration
+`extendToFullConfig (reflectPosToNeg V⁺) u` is
+
+  `V⁺_{θn,ν} · (V⁺_{θ(n+e_ν),0})⁻¹ · (u_{n+e_ν+e₀,ν})⁻¹ · (u_{n+e₀,0})⁻¹`.
+
+(Links: `(n,ν)` negative spatial — unchanged by reflection; `(n+e_ν,0)` negative
+temporal — inverted; `(n+e_ν+e₀,ν)`, `(n+e₀,0)` interface — from `u`.) -/
+lemma plaquetteProduct_extendToFullConfig_crossing_reversed (N T L : ℕ) [NeZero T]
+    [NeZero L] (hT : Odd T)
+    (V_plus : FiniteLinkConfig N (PeriodicSite T L) (positiveSites T L))
+    (u : PosInterfaceConfig N T L)
+    (n : PeriodicSite T L) (hn : signedTime T n.time = -1)
+    (ν : Fin 4) (hν : ν ≠ 0) :
+    plaquetteProduct N (extendToFullConfig N T L (reflectPosToNeg N T L V_plus) u) n ν 0 =
+      V_plus ⟨(ReflectSite.reflectSite n, ν),
+          reflectSite_mem_positive_of_negative hT
+            (mem_negativeSites_of_signedTime_eq_neg_one hn)⟩ *
+      (V_plus ⟨(ReflectSite.reflectSite (AddVector.addVector n ν), 0),
+          reflectSite_mem_positive_of_negative hT
+            (mem_negativeSites_of_signedTime_eq_neg_one
+              (by rw [signedTime_addVector_spatial T L n ν hν]; exact hn))⟩)⁻¹ *
+      (u ⟨(AddVector.addVector (AddVector.addVector n ν) 0, ν),
+          Finset.mem_union_right (positiveSites T L)
+            (mem_interfaceSites_of_signedTime_eq_zero
+              (signedTime_addVector_zero_of_eq_neg_one T L _
+                (by rw [signedTime_addVector_spatial T L n ν hν]; exact hn)))⟩)⁻¹ *
+      (u ⟨(AddVector.addVector n 0, 0),
+          Finset.mem_union_right (positiveSites T L)
+            (mem_interfaceSites_of_signedTime_eq_zero
+              (signedTime_addVector_zero_of_eq_neg_one T L n hn))⟩)⁻¹ := by
+  have h1 : n ∈ negativeSites T L := mem_negativeSites_of_signedTime_eq_neg_one hn
+  have h2 : AddVector.addVector n ν ∈ negativeSites T L :=
+    mem_negativeSites_of_signedTime_eq_neg_one
+      (by rw [signedTime_addVector_spatial T L n ν hν]; exact hn)
+  have h3 : AddVector.addVector (AddVector.addVector n ν) (0 : Fin 4) ∈ interfaceSites T L :=
+    mem_interfaceSites_of_signedTime_eq_zero
+      (signedTime_addVector_zero_of_eq_neg_one T L _
+        (by rw [signedTime_addVector_spatial T L n ν hν]; exact hn))
+  have h4 : AddVector.addVector n (0 : Fin 4) ∈ interfaceSites T L :=
+    mem_interfaceSites_of_signedTime_eq_zero (signedTime_addVector_zero_of_eq_neg_one T L n hn)
+  unfold plaquetteProduct
+  rw [extendToFullConfig_apply_neg N T L _ u n ν h1,
+    extendToFullConfig_apply_neg N T L _ u _ 0 h2,
+    extendToFullConfig_apply_int N T L _ u _ ν h3,
+    extendToFullConfig_apply_int N T L _ u _ 0 h4,
+    reflectPosToNeg_apply N T L hT V_plus h1 ν,
+    reflectPosToNeg_apply N T L hT V_plus h2 0]
+  simp only [if_neg hν, if_true]
+
+#print axioms plaquetteProduct_extendToFullConfig_crossing_reversed
+
+/-- The interface half-word of a reversed-crossing plaquette based at `n`
+(signedTime `-1`), directions `(ν, 0)`:
+`W_int^rev(x) = (x_{n+e_ν+e₀,ν})⁻¹ · (x_{n+e₀,0})⁻¹`. -/
+noncomputable def crossingRevWordInt (N T L : ℕ) [NeZero T] [NeZero L]
+    (n : PeriodicSite T L) (hn : signedTime T n.time = -1) (ν : Fin 4) (hν : ν ≠ 0)
+    (u : PosInterfaceConfig N T L) : SU N :=
+  (u ⟨(AddVector.addVector (AddVector.addVector n ν) 0, ν),
+      Finset.mem_union_right (positiveSites T L)
+        (mem_interfaceSites_of_signedTime_eq_zero
+          (signedTime_addVector_zero_of_eq_neg_one T L _
+            (by rw [signedTime_addVector_spatial T L n ν hν]; exact hn)))⟩)⁻¹ *
+  (u ⟨(AddVector.addVector n 0, 0),
+      Finset.mem_union_right (positiveSites T L)
+        (mem_interfaceSites_of_signedTime_eq_zero
+          (signedTime_addVector_zero_of_eq_neg_one T L n hn))⟩)⁻¹
+
+/-- The positive half-word of a reversed-crossing plaquette based at `n`
+(signedTime `-1`), directions `(ν, 0)`:
+`W_pos^rev(x) = x_{θ(n+e_ν),0} · (x_{θn,ν})⁻¹`. -/
+noncomputable def crossingRevWordPos (N T L : ℕ) [NeZero T] [NeZero L] (hT : Odd T)
+    (n : PeriodicSite T L) (hn : signedTime T n.time = -1) (ν : Fin 4) (hν : ν ≠ 0)
+    (V_plus : FiniteLinkConfig N (PeriodicSite T L) (positiveSites T L)) : SU N :=
+  V_plus ⟨(ReflectSite.reflectSite (AddVector.addVector n ν), 0),
+      reflectSite_mem_positive_of_negative hT
+        (mem_negativeSites_of_signedTime_eq_neg_one
+          (by rw [signedTime_addVector_spatial T L n ν hν]; exact hn))⟩ *
+  (V_plus ⟨(ReflectSite.reflectSite n, ν),
+      reflectSite_mem_positive_of_negative hT
+        (mem_negativeSites_of_signedTime_eq_neg_one hn)⟩)⁻¹
+
+/-- **Reversed-crossing matrix-element factorization** (rest-product family (a),
+§8.11.102).  The character of the reversed-crossing word
+`V₁·V₂⁻¹·u₁⁻¹·u₂⁻¹` factors as the matrix-element pairing of the half-words
+`W_int^rev = u₁⁻¹·u₂⁻¹` and `W_pos^rev = V₂·V₁⁻¹`:
+
+  `χ(word) = ∑_{k,l} (ρ (W_int^rev u))_{kl} · conj((ρ (W_pos^rev V⁺))_{kl})`.
+
+Proof: rotate the word cyclically to `V₂⁻¹·u₁⁻¹·u₂⁻¹·V₁` (`repCharacter_cyclic`),
+which is the `a⁻¹·b·c⁻¹·d⁻¹` pattern of
+`repCharacter_crossing_word_eq_sum_matrixElement_conj` with `a = V₂`, `b = u₁⁻¹`,
+`c = u₂`, `d = V₁⁻¹`.  0 sorries, 0 new axioms. -/
+lemma repCharacter_plaquetteProduct_crossing_reversed_eq_halfWords
+    (N T L : ℕ) [NeZero T] [NeZero L] (hT : Odd T)
+    {dim : ℕ} (ρ : SU N →* Matrix (Fin dim) (Fin dim) ℂ)
+    (hU : IsUnitaryRepresentation ρ)
+    (V_plus : FiniteLinkConfig N (PeriodicSite T L) (positiveSites T L))
+    (u : PosInterfaceConfig N T L)
+    (n : PeriodicSite T L) (hn : signedTime T n.time = -1)
+    (ν : Fin 4) (hν : ν ≠ 0) :
+    repCharacter ρ
+        (plaquetteProduct N (extendToFullConfig N T L (reflectPosToNeg N T L V_plus) u)
+          n ν 0) =
+      ∑ k : Fin dim, ∑ l : Fin dim,
+        (ρ (crossingRevWordInt N T L n hn ν hν u)) k l *
+        conj ((ρ (crossingRevWordPos N T L hT n hn ν hν V_plus)) k l) := by
+  rw [plaquetteProduct_extendToFullConfig_crossing_reversed N T L hT V_plus u n hn ν hν]
+  rw [show V_plus ⟨(ReflectSite.reflectSite n, ν),
+          reflectSite_mem_positive_of_negative hT
+            (mem_negativeSites_of_signedTime_eq_neg_one hn)⟩ *
+        (V_plus ⟨(ReflectSite.reflectSite (AddVector.addVector n ν), 0),
+          reflectSite_mem_positive_of_negative hT
+            (mem_negativeSites_of_signedTime_eq_neg_one
+              (by rw [signedTime_addVector_spatial T L n ν hν]; exact hn))⟩)⁻¹ *
+        (u ⟨(AddVector.addVector (AddVector.addVector n ν) 0, ν),
+          Finset.mem_union_right (positiveSites T L)
+            (mem_interfaceSites_of_signedTime_eq_zero
+              (signedTime_addVector_zero_of_eq_neg_one T L _
+                (by rw [signedTime_addVector_spatial T L n ν hν]; exact hn)))⟩)⁻¹ *
+        (u ⟨(AddVector.addVector n 0, 0),
+          Finset.mem_union_right (positiveSites T L)
+            (mem_interfaceSites_of_signedTime_eq_zero
+              (signedTime_addVector_zero_of_eq_neg_one T L n hn))⟩)⁻¹ =
+      V_plus ⟨(ReflectSite.reflectSite n, ν),
+          reflectSite_mem_positive_of_negative hT
+            (mem_negativeSites_of_signedTime_eq_neg_one hn)⟩ *
+        (V_plus ⟨(ReflectSite.reflectSite (AddVector.addVector n ν), 0),
+          reflectSite_mem_positive_of_negative hT
+            (mem_negativeSites_of_signedTime_eq_neg_one
+              (by rw [signedTime_addVector_spatial T L n ν hν]; exact hn))⟩)⁻¹ *
+        ((u ⟨(AddVector.addVector (AddVector.addVector n ν) 0, ν),
+          Finset.mem_union_right (positiveSites T L)
+            (mem_interfaceSites_of_signedTime_eq_zero
+              (signedTime_addVector_zero_of_eq_neg_one T L _
+                (by rw [signedTime_addVector_spatial T L n ν hν]; exact hn)))⟩)⁻¹ *
+        (u ⟨(AddVector.addVector n 0, 0),
+          Finset.mem_union_right (positiveSites T L)
+            (mem_interfaceSites_of_signedTime_eq_zero
+              (signedTime_addVector_zero_of_eq_neg_one T L n hn))⟩)⁻¹) from by group]
+  rw [repCharacter_cyclic ρ _ _ _]
+  rw [show (V_plus ⟨(ReflectSite.reflectSite (AddVector.addVector n ν), 0),
+          reflectSite_mem_positive_of_negative hT
+            (mem_negativeSites_of_signedTime_eq_neg_one
+              (by rw [signedTime_addVector_spatial T L n ν hν]; exact hn))⟩)⁻¹ *
+        ((u ⟨(AddVector.addVector (AddVector.addVector n ν) 0, ν),
+          Finset.mem_union_right (positiveSites T L)
+            (mem_interfaceSites_of_signedTime_eq_zero
+              (signedTime_addVector_zero_of_eq_neg_one T L _
+                (by rw [signedTime_addVector_spatial T L n ν hν]; exact hn)))⟩)⁻¹ *
+        (u ⟨(AddVector.addVector n 0, 0),
+          Finset.mem_union_right (positiveSites T L)
+            (mem_interfaceSites_of_signedTime_eq_zero
+              (signedTime_addVector_zero_of_eq_neg_one T L n hn))⟩)⁻¹) *
+        V_plus ⟨(ReflectSite.reflectSite n, ν),
+          reflectSite_mem_positive_of_negative hT
+            (mem_negativeSites_of_signedTime_eq_neg_one hn)⟩ =
+      (V_plus ⟨(ReflectSite.reflectSite (AddVector.addVector n ν), 0),
+          reflectSite_mem_positive_of_negative hT
+            (mem_negativeSites_of_signedTime_eq_neg_one
+              (by rw [signedTime_addVector_spatial T L n ν hν]; exact hn))⟩)⁻¹ *
+        (u ⟨(AddVector.addVector (AddVector.addVector n ν) 0, ν),
+          Finset.mem_union_right (positiveSites T L)
+            (mem_interfaceSites_of_signedTime_eq_zero
+              (signedTime_addVector_zero_of_eq_neg_one T L _
+                (by rw [signedTime_addVector_spatial T L n ν hν]; exact hn)))⟩)⁻¹ *
+        (u ⟨(AddVector.addVector n 0, 0),
+          Finset.mem_union_right (positiveSites T L)
+            (mem_interfaceSites_of_signedTime_eq_zero
+              (signedTime_addVector_zero_of_eq_neg_one T L n hn))⟩)⁻¹ *
+        (V_plus ⟨(ReflectSite.reflectSite n, ν),
+          reflectSite_mem_positive_of_negative hT
+            (mem_negativeSites_of_signedTime_eq_neg_one hn)⟩)⁻¹⁻¹ from by group]
+  exact repCharacter_crossing_word_eq_sum_matrixElement_conj ρ hU _ _ _ _
+
+#print axioms repCharacter_plaquetteProduct_crossing_reversed_eq_halfWords
+
 /-- **Crossing plaquette Boltzmann factor expansion** (B.2e.3 step (iii), §8.11.100).
 The single-plaquette Boltzmann factor `exp(c · Re Tr(word))` (`c ≥ 0`) of a crossing
 plaquette in the merged configuration expands as a non-negative character sum, and each

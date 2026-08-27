@@ -9671,3 +9671,27 @@ assignment `κ` to the crossing expansion's per-plaquette internal indices `(k,l
 the half-word structure (`crossingWordInt`/`crossingWordPos`); (2) interface Schur
 orthogonality on the `charFactorInt` factor; (3) word evaluations for the rest-product
 mixed families; (4) (iv-c) final assembly.
+
+## §8.11.105 — Session 138 (2026-08-26/27) continued: rest-product family (a) FORMALIZED
+
+**DONE (Bridge.lean, 0 sorries, axioms [propext, Classical.choice, Quot.sound]).**
+The reversed-orientation crossing plaquettes `(n, ν, 0)` (`signedTime n = -1`,
+`ν ≠ 0`) — rest-product mixed family (a) of §8.11.102 — now have the same treatment
+as the forward crossings:
+
+- `plaquetteProduct_extendToFullConfig_crossing_reversed`: word evaluation
+  `V⁺_{θn,ν} · (V⁺_{θ(n+e_ν),0})⁻¹ · (u_{n+e_ν+e₀,ν})⁻¹ · (u_{n+e₀,0})⁻¹`
+  (negative spatial link unchanged, negative temporal link inverted, two interface
+  links from `u`).
+- `crossingRevWordInt` / `crossingRevWordPos`: the half-words
+  `W_int^rev = u₁⁻¹·u₂⁻¹` (interface) and `W_pos^rev = V₂·V₁⁻¹` (positive).
+- `repCharacter_plaquetteProduct_crossing_reversed_eq_halfWords`:
+  `χ(word) = ∑_{k,l} (ρ (W_int^rev u))_{kl} · conj((ρ (W_pos^rev V⁺))_{kl})`.
+  Proof: cyclic rotation to the `a⁻¹·b·c⁻¹·d⁻¹` pattern of
+  `repCharacter_crossing_word_eq_sum_matrixElement_conj` with `a = V₂`, `b = u₁⁻¹`,
+  `c = u₂`, `d = V₁⁻¹` (reassociation + `inv_inv` via `group`).
+
+**Status:** verified (compiled, `#print axioms` checked, no sorry).  Axiom count: 6.
+Remaining rest-product families: (b) degenerate temporal plaquettes `(n, 0, 0)` at
+`signedTime n = -1`; (c) wraparound plaquettes at the second interface
+`signedTime n = (T-1)/2`.  Then: κ-bridging, interface Schur orthogonality, (iv-c).
