@@ -9654,11 +9654,20 @@ of the §8.11.99 KEY OBSERVATION:
   `conj_ofReal` reduce to the pointwise star identity.
 
 **Status:** verified (compiled, `#print axioms` checked, no sorry).  Axiom count: 6.
-Remaining for the sum-of-squares assembly: (1) matrix-element σ-invisibility of
-`fourierCoeffPosME` (should follow from `g_posInterface_sigma_invisible` +
-`osPositiveOfPosInterface_sigma_invariant` exactly as `fourierCoeffPos_sigma_invisible`
-did, since `matrixElemFactorPos` depends only on `U⁺`); (2) bridging the per-link index
+
+**CONTINUED (same session, commit after 1fb1d5a):** the σ-invisibility half of the
+pairing is now also formalized:
+- `fourierCoeffPosME_sigma_invisible`: `A^{ME}_{w,κ}(σ(u⁰)) = A^{ME}_{w,κ}(u⁰)` for
+  `ψ = g_posInterface f` with `f` satisfying `dependsOnlyOnPosSpatialInterface`
+  (mirrors `fourierCoeffPos_sigma_invisible`; `matrixElemFactorPos` depends only on
+  `U⁺`, so the same `g_posInterface_sigma_invisible` +
+  `osPositiveOfPosInterface_sigma_invariant` rewrites close it).
+- **`fourierCoeffNegME_thetaReindex_eq_star_fourierCoeffPosME_of_sigma_invisible`**:
+  the assembled pairing `B^{ME}_{θw,θκ}(u⁰) = star(A^{ME}_{w,κ}(u⁰))` — the exact
+  identity needed for the RP quadratic form to become a sum of `|A|²` terms.
+
+Remaining for the sum-of-squares assembly: (1) bridging the per-link index
 assignment `κ` to the crossing expansion's per-plaquette internal indices `(k,l)` via
-the half-word structure (`crossingWordInt`/`crossingWordPos`); (3) interface Schur
-orthogonality on the `charFactorInt` factor; (4) word evaluations for the rest-product
-mixed families; (5) (iv-c) final assembly.
+the half-word structure (`crossingWordInt`/`crossingWordPos`); (2) interface Schur
+orthogonality on the `charFactorInt` factor; (3) word evaluations for the rest-product
+mixed families; (4) (iv-c) final assembly.

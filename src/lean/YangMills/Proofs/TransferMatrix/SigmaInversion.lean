@@ -824,4 +824,69 @@ lemma fourierCoeffNegME_thetaReindex_eq_star_fourierCoeffPosME
 
 #print axioms fourierCoeffNegME_thetaReindex_eq_star_fourierCoeffPosME
 
+/-- **σ-invisibility of the positive matrix-element Fourier coefficient.**  When the
+test function `ψ = g_posInterface N T L hT β f` with `f` satisfying
+`dependsOnlyOnPosSpatialInterface`, `A^{ME}_{w,κ}(u⁰) = fourierCoeffPosME(w, κ, u⁰)` is
+invisible to the σ twist: `A^{ME}_{w,κ}(σ(u⁰)) = A^{ME}_{w,κ}(u⁰)`.  Mirrors
+`fourierCoeffPos_sigma_invisible`: the `u⁰`-dependence of the integrand is only through
+`g` and `S⁺` (both σ-invisible), while `matrixElemFactorPos` depends only on `U⁺`.
+Combined with `fourierCoeffNegME_thetaReindex_eq_star_fourierCoeffPosME` this gives
+`B^{ME}_{θw,θκ}(u⁰) = star(A^{ME}_{w,κ}(u⁰))` — the sum-of-squares pairing of §8.11.99.
+0 sorries, 0 custom axioms. -/
+lemma fourierCoeffPosME_sigma_invisible (hT : Odd T)
+    (β : ℝ) (f : LinkVariable (SU N) (PeriodicSite T L) → ℝ)
+    (hf : dependsOnlyOnPosSpatialInterface N T L f)
+    (ι : Type) (dims : ι → ℕ)
+    (ρ : ∀ i, SU N →* Matrix (Fin (dims i)) (Fin (dims i)) ℂ)
+    (w : InterfaceLink T L → ι)
+    (κ : ∀ l : InterfaceLink T L, Fin (dims (w l)) × Fin (dims (w l)))
+    (u0 : FiniteLinkConfig N (PeriodicSite T L) (interfaceSites T L)) :
+    fourierCoeffPosME N T L β (g_posInterface N T L hT β f) ι dims ρ w κ
+        (sigmaInterface N T L u0) =
+    fourierCoeffPosME N T L β (g_posInterface N T L hT β f) ι dims ρ w κ u0 := by
+  have hpointwise : ∀ (Upos : FiniteLinkConfig N (PeriodicSite T L) (positiveSites T L)),
+      Complex.ofReal (g_posInterface N T L hT β f (mergePosInterface N T L Upos (sigmaInterface N T L u0)) *
+        Real.exp (-β * osPositiveOfPosInterface N T L β (mergePosInterface N T L Upos (sigmaInterface N T L u0)) / 2)) *
+      matrixElemFactorPos N T L ι dims ρ w κ Upos =
+      Complex.ofReal (g_posInterface N T L hT β f (mergePosInterface N T L Upos u0) *
+        Real.exp (-β * osPositiveOfPosInterface N T L β (mergePosInterface N T L Upos u0) / 2)) *
+      matrixElemFactorPos N T L ι dims ρ w κ Upos := by
+    intro Upos
+    rw [g_posInterface_sigma_invisible N T L β hT f hf Upos u0,
+        osPositiveOfPosInterface_sigma_invariant N T L β hT Upos u0]
+  unfold fourierCoeffPosME
+  exact integral_congr_ae (ae_of_all _ hpointwise)
+
+#print axioms fourierCoeffPosME_sigma_invisible
+
+/-- **The sum-of-squares pairing (step iv-b3′, assembled).**  For the σ-invisible test
+function `ψ = g_posInterface f`, the negative matrix-element Fourier coefficient at the
+reindexed `(θw, θκ)` equals the conjugate of the positive one at the SAME `u⁰`:
+`B^{ME}_{θw,θκ}(u⁰) = star(A^{ME}_{w,κ}(u⁰))`.
+This is the exact pairing needed for the RP quadratic form to become
+`∑_{R,k,l} c_R · ∫_{u⁰} |A|² · (interface factor) ≥ 0` (§8.11.99).
+0 sorries, 0 custom axioms. -/
+lemma fourierCoeffNegME_thetaReindex_eq_star_fourierCoeffPosME_of_sigma_invisible
+    (N T L : ℕ) (β : ℝ) [NeZero T] [NeZero L] (hT : Odd T)
+    (f : LinkVariable (SU N) (PeriodicSite T L) → ℝ)
+    (hf : dependsOnlyOnPosSpatialInterface N T L f)
+    (ι : Type) (dims : ι → ℕ)
+    (ρ : ∀ i, SU N →* Matrix (Fin (dims i)) (Fin (dims i)) ℂ)
+    (h_unitary : ∀ i, IsUnitaryRepresentation (ρ i))
+    (dual : ι → ι) (hdims : ∀ i, dims (dual i) = dims i)
+    (hdual_me : ∀ i (g : SU N) (a b : Fin (dims i)),
+      (ρ (dual i) g) (Fin.cast (hdims i).symm a) (Fin.cast (hdims i).symm b) =
+        conj ((ρ i) g a b))
+    (w : InterfaceLink T L → ι)
+    (κ : ∀ l : InterfaceLink T L, Fin (dims (w l)) × Fin (dims (w l)))
+    (u0 : FiniteLinkConfig N (PeriodicSite T L) (interfaceSites T L)) :
+    fourierCoeffNegME N T L β (g_posInterface N T L hT β f) ι dims ρ dual hdims
+      (thetaReindex T L hT ι dual w) (thetaReindexMatrixElem T L hT ι dims dual hdims w κ) u0 =
+    star (fourierCoeffPosME N T L β (g_posInterface N T L hT β f) ι dims ρ w κ u0) := by
+  rw [fourierCoeffNegME_thetaReindex_eq_star_fourierCoeffPosME N T L β hT _ ι dims ρ
+    h_unitary dual hdims hdual_me w κ u0,
+    fourierCoeffPosME_sigma_invisible N T L hT β f hf ι dims ρ w κ u0]
+
+#print axioms fourierCoeffNegME_thetaReindex_eq_star_fourierCoeffPosME_of_sigma_invisible
+
 
