@@ -911,6 +911,141 @@ lemma repCharacter_plaquetteProduct_wraparound_eq_halfWords
 
 #print axioms repCharacter_plaquetteProduct_wraparound_eq_halfWords
 
+/-- **Reversed-wraparound plaquette word evaluation** (rest-product family (d),
+§8.11.108).  For a plaquette based at `n` at the far seam `signedTime n = (T-1)/2` in
+directions `(ν, 0)` (`ν ≠ 0` — the REVERSED orientation of a wraparound plaquette), the
+plaquette product in the merged configuration
+`extendToFullConfig (reflectPosToNeg V⁺) u` is
+
+  `u_{n,ν} · u_{n+e_ν,0} · (V⁺_{θ(n+e_ν+e₀),ν})⁻¹ · V⁺_{θ(n+e₀),0}`.
+
+(Links: `(n,ν)` positive spatial — from `u`; `(n+e_ν,0)` positive temporal — from `u`;
+`(n+e_ν+e₀,ν)` negative spatial — unchanged by reflection, inverted by orientation;
+`(n+e₀,0)` negative temporal — inverted by reflection AND by orientation, hence
+un-inverted.) -/
+lemma plaquetteProduct_extendToFullConfig_wraparound_reversed (N T L : ℕ) [NeZero T]
+    [NeZero L] (hT : Odd T) (hT3 : 3 ≤ T)
+    (V_plus : FiniteLinkConfig N (PeriodicSite T L) (positiveSites T L))
+    (u : PosInterfaceConfig N T L)
+    (n : PeriodicSite T L) (hn : signedTime T n.time = ((T - 1) / 2 : ℕ))
+    (ν : Fin 4) (hν : ν ≠ 0) :
+    plaquetteProduct N (extendToFullConfig N T L (reflectPosToNeg N T L V_plus) u) n ν 0 =
+      u ⟨(n, ν),
+          Finset.mem_union_left (interfaceSites T L)
+            (mem_positiveSites_of_signedTime_eq_max hT3 hn)⟩ *
+      u ⟨(AddVector.addVector n ν, 0),
+          Finset.mem_union_left (interfaceSites T L)
+            (mem_positiveSites_of_signedTime_eq_max hT3
+              (by rw [signedTime_addVector_spatial T L n ν hν]; exact hn))⟩ *
+      (V_plus ⟨(ReflectSite.reflectSite (AddVector.addVector (AddVector.addVector n ν) 0), ν),
+          reflectSite_mem_positive_of_negative hT
+            (mem_negativeSites_of_signedTime_neg_max hT3
+              (signedTime_addVector_zero_of_eq_max T L hT hT3 (AddVector.addVector n ν)
+                (by rw [signedTime_addVector_spatial T L n ν hν]; exact hn)))⟩)⁻¹ *
+      V_plus ⟨(ReflectSite.reflectSite (AddVector.addVector n 0), 0),
+          reflectSite_mem_positive_of_negative hT
+            (mem_negativeSites_of_signedTime_neg_max hT3
+              (signedTime_addVector_zero_of_eq_max T L hT hT3 n hn))⟩ := by
+  have h1 : n ∈ positiveSites T L := mem_positiveSites_of_signedTime_eq_max hT3 hn
+  have h2 : AddVector.addVector n ν ∈ positiveSites T L :=
+    mem_positiveSites_of_signedTime_eq_max hT3
+      (by rw [signedTime_addVector_spatial T L n ν hν]; exact hn)
+  have h3 : AddVector.addVector (AddVector.addVector n ν) (0 : Fin 4) ∈ negativeSites T L :=
+    mem_negativeSites_of_signedTime_neg_max hT3
+      (signedTime_addVector_zero_of_eq_max T L hT hT3 (AddVector.addVector n ν)
+        (by rw [signedTime_addVector_spatial T L n ν hν]; exact hn))
+  have h4 : AddVector.addVector n (0 : Fin 4) ∈ negativeSites T L :=
+    mem_negativeSites_of_signedTime_neg_max hT3
+      (signedTime_addVector_zero_of_eq_max T L hT hT3 n hn)
+  unfold plaquetteProduct
+  rw [extendToFullConfig_apply_pos N T L _ u n ν h1,
+    extendToFullConfig_apply_pos N T L _ u _ 0 h2,
+    extendToFullConfig_apply_neg N T L _ u _ ν h3,
+    extendToFullConfig_apply_neg N T L _ u _ 0 h4,
+    reflectPosToNeg_apply N T L hT V_plus h3 ν,
+    reflectPosToNeg_apply N T L hT V_plus h4 0]
+  simp only [if_neg hν, if_true, inv_inv]
+
+#print axioms plaquetteProduct_extendToFullConfig_wraparound_reversed
+
+/-- The `A` half-word of a reversed-wraparound plaquette `(n, ν, 0)` at the far seam:
+`W_A = u_{n+e_ν,0} · (V⁺_{θ(n+e_ν+e₀),ν})⁻¹` (positive temporal link from `u`, then the
+reflected negative spatial link from `V⁺`, inverted). -/
+noncomputable def wraparoundRevWordA (N T L : ℕ) [NeZero T] [NeZero L] (hT : Odd T)
+    (hT3 : 3 ≤ T)
+    (n : PeriodicSite T L) (hn : signedTime T n.time = ((T - 1) / 2 : ℕ))
+    (ν : Fin 4) (hν : ν ≠ 0)
+    (V_plus : FiniteLinkConfig N (PeriodicSite T L) (positiveSites T L))
+    (u : PosInterfaceConfig N T L) : SU N :=
+  u ⟨(AddVector.addVector n ν, 0),
+      Finset.mem_union_left (interfaceSites T L)
+        (mem_positiveSites_of_signedTime_eq_max hT3
+          (by rw [signedTime_addVector_spatial T L n ν hν]; exact hn))⟩ *
+  (V_plus ⟨(ReflectSite.reflectSite (AddVector.addVector (AddVector.addVector n ν) 0), ν),
+      reflectSite_mem_positive_of_negative hT
+        (mem_negativeSites_of_signedTime_neg_max hT3
+          (signedTime_addVector_zero_of_eq_max T L hT hT3 (AddVector.addVector n ν)
+            (by rw [signedTime_addVector_spatial T L n ν hν]; exact hn)))⟩)⁻¹
+
+/-- The `B` half-word of a reversed-wraparound plaquette `(n, ν, 0)` at the far seam:
+`W_B = (u_{n,ν})⁻¹ · (V⁺_{θ(n+e₀),0})⁻¹` (positive spatial link from `u`, inverted, then
+the reflected negative temporal link from `V⁺`, inverted). -/
+noncomputable def wraparoundRevWordB (N T L : ℕ) [NeZero T] [NeZero L] (hT : Odd T)
+    (hT3 : 3 ≤ T)
+    (n : PeriodicSite T L) (hn : signedTime T n.time = ((T - 1) / 2 : ℕ))
+    (ν : Fin 4) (hν : ν ≠ 0)
+    (V_plus : FiniteLinkConfig N (PeriodicSite T L) (positiveSites T L))
+    (u : PosInterfaceConfig N T L) : SU N :=
+  (u ⟨(n, ν),
+      Finset.mem_union_left (interfaceSites T L)
+        (mem_positiveSites_of_signedTime_eq_max hT3 hn)⟩)⁻¹ *
+  (V_plus ⟨(ReflectSite.reflectSite (AddVector.addVector n 0), 0),
+      reflectSite_mem_positive_of_negative hT
+        (mem_negativeSites_of_signedTime_neg_max hT3
+          (signedTime_addVector_zero_of_eq_max T L hT hT3 n hn))⟩)⁻¹
+
+/-- **Reversed-wraparound plaquette matrix-element factorization** (rest-product family
+(d), §8.11.108).  The reversed-wraparound word `u₁·u₂·V₁⁻¹·V₂` is already in the
+`a⁻¹·b·c⁻¹·d⁻¹` pattern of `repCharacter_crossing_word_eq_sum_matrixElement_conj` (with
+`a = u₁⁻¹`, `b = u₂`, `c = V₁`, `d = V₂⁻¹`), so
+
+  `χ(word) = ∑_{k,l} (ρ (W_A V⁺ u))_{kl} · conj((ρ (W_B V⁺ u))_{kl})`.
+
+0 sorries, 0 new axioms. -/
+lemma repCharacter_plaquetteProduct_wraparound_reversed_eq_halfWords
+    (N T L : ℕ) [NeZero T] [NeZero L] (hT : Odd T) (hT3 : 3 ≤ T)
+    {dim : ℕ} (ρ : SU N →* Matrix (Fin dim) (Fin dim) ℂ)
+    (hU : IsUnitaryRepresentation ρ)
+    (V_plus : FiniteLinkConfig N (PeriodicSite T L) (positiveSites T L))
+    (u : PosInterfaceConfig N T L)
+    (n : PeriodicSite T L) (hn : signedTime T n.time = ((T - 1) / 2 : ℕ))
+    (ν : Fin 4) (hν : ν ≠ 0) :
+    repCharacter ρ
+        (plaquetteProduct N (extendToFullConfig N T L (reflectPosToNeg N T L V_plus) u)
+          n ν 0) =
+      ∑ k : Fin dim, ∑ l : Fin dim,
+        (ρ (wraparoundRevWordA N T L hT hT3 n hn ν hν V_plus u)) k l *
+        conj ((ρ (wraparoundRevWordB N T L hT hT3 n hn ν hν V_plus u)) k l) := by
+  rw [plaquetteProduct_extendToFullConfig_wraparound_reversed N T L hT hT3 V_plus u n hn ν hν]
+  simpa [wraparoundRevWordA, wraparoundRevWordB] using
+    (repCharacter_crossing_word_eq_sum_matrixElement_conj ρ hU
+      (u ⟨(n, ν), Finset.mem_union_left (interfaceSites T L)
+        (mem_positiveSites_of_signedTime_eq_max hT3 hn)⟩)⁻¹
+      (u ⟨(AddVector.addVector n ν, 0), Finset.mem_union_left (interfaceSites T L)
+        (mem_positiveSites_of_signedTime_eq_max hT3
+          (by rw [signedTime_addVector_spatial T L n ν hν]; exact hn))⟩)
+      (V_plus ⟨(ReflectSite.reflectSite (AddVector.addVector (AddVector.addVector n ν) 0), ν),
+        reflectSite_mem_positive_of_negative hT
+          (mem_negativeSites_of_signedTime_neg_max hT3
+            (signedTime_addVector_zero_of_eq_max T L hT hT3 (AddVector.addVector n ν)
+              (by rw [signedTime_addVector_spatial T L n ν hν]; exact hn)))⟩)
+      (V_plus ⟨(ReflectSite.reflectSite (AddVector.addVector n 0), 0),
+        reflectSite_mem_positive_of_negative hT
+          (mem_negativeSites_of_signedTime_neg_max hT3
+            (signedTime_addVector_zero_of_eq_max T L hT hT3 n hn))⟩)⁻¹)
+
+#print axioms repCharacter_plaquetteProduct_wraparound_reversed_eq_halfWords
+
 /-- **Crossing plaquette Boltzmann factor expansion** (B.2e.3 step (iii), §8.11.100).
 The single-plaquette Boltzmann factor `exp(c · Re Tr(word))` (`c ≥ 0`) of a crossing
 plaquette in the merged configuration expands as a non-negative character sum, and each
