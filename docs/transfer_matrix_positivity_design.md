@@ -9723,3 +9723,35 @@ mixed family (b) of §8.11.102 — now have word evaluation + half-word factoriz
 **Status:** verified (compiled, `#print axioms` checked, no sorry).  Axiom count: 6.
 Remaining rest-product family: (c) wraparound plaquettes at `signedTime n = (T-1)/2`.
 Then: κ-bridging, interface Schur orthogonality, (iv-c) final assembly.
+
+## §8.11.107 — Session 138 (2026-08-27) continued: rest-product family (c) word evaluation
+
+**DONE (Bridge.lean, 0 sorries, axioms [propext, Classical.choice, Quot.sound]).**
+The wraparound plaquettes `(n, 0, ν)` at the far seam `signedTime n = (T-1)/2` —
+rest-product mixed family (c) of §8.11.102 — now have their word evaluation:
+
+- `signedTime_succ_of_eq_max`: `signedTime T t = (T-1)/2 → signedTime T (t+1) =
+  -((T-1)/2)` (wraparound at the seam; needs `3 ≤ T` — for `T = 1` the seam coincides
+  with the `t = 0` interface; `Odd T` is needed for `2·((T-1)/2) = T-1`).
+- `signedTime_addVector_zero_of_eq_max`, `mem_positiveSites_of_signedTime_eq_max`,
+  `mem_negativeSites_of_signedTime_neg_max`.
+- `plaquetteProduct_extendToFullConfig_wraparound`: word evaluation
+  `u_{n,0} · V⁺_{θ(n+e₀),ν} · V⁺_{θ(n+e₀+e_ν),0} · (u_{n+e_ν,ν})⁻¹`.
+  **Note the third factor is UN-INVERTED**: the negative temporal link is inverted by
+  the reflection AND by the plaquette orientation (double inverse).  (An earlier draft
+  of this lemma had a spurious `⁻¹` there — caught by the build, fixed.)
+
+**Status:** verified (compiled, `#print axioms` checked, no sorry).  Axiom count: 6.
+
+**Factorization DONE (same session):** `wraparoundWordA` / `wraparoundWordB` +
+`repCharacter_plaquetteProduct_wraparound_eq_halfWords`.  The wraparound word
+`u₁·V₁·V₂·u₂⁻¹` is already in `A·B⁻¹` form with `A = u₁·V₁·V₂` (three links: positive
+temporal from `u`, then the two reflected negative links from `V⁺`) and `B = u₂` (the
+positive spatial link from `u`), so `repCharacter_mul_inv_eq_sum_matrixElement_conj`
+applies directly: `χ = ∑_{kl} (ρ(W_A))_{kl}·conj((ρ(W_B))_{kl})`.  (Note: the grouping
+is NOT `(u₁V₁)·(u₂V₂)⁻¹` as first sketched — the third factor is un-inverted, so the
+correct split is `(u₁V₁V₂)·u₂⁻¹`.)
+
+Remaining: the reversed wraparound orientation `(n, ν, 0)` at the far seam (analogous
+word evaluation + factorization); then κ-bridging (per-link index assignments vs
+per-plaquette `(k,l)`), interface Schur orthogonality, (iv-c) final assembly.
