@@ -9755,3 +9755,32 @@ correct split is `(u₁V₁V₂)·u₂⁻¹`.)
 Remaining: the reversed wraparound orientation `(n, ν, 0)` at the far seam (analogous
 word evaluation + factorization); then κ-bridging (per-link index assignments vs
 per-plaquette `(k,l)`), interface Schur orthogonality, (iv-c) final assembly.
+
+## §8.11.108 — Session 139 (2026-08-29): rest-product family (d) FORMALIZED
+
+**DONE (Bridge.lean, commit 6e44015, 0 sorries, axioms [propext, Classical.choice,
+Quot.sound]).** The reversed-wraparound plaquettes `(n, ν, 0)` at the far seam
+`signedTime n = (T-1)/2` (`ν ≠ 0`) — the last of the four rest-product mixed families
+of §8.11.102 — now have word evaluation + half-word factorization:
+
+- `plaquetteProduct_extendToFullConfig_wraparound_reversed`: word evaluation
+  `u_{n,ν} · u_{n+e_ν,0} · (V⁺_{θ(n+e_ν+e₀),ν})⁻¹ · V⁺_{θ(n+e₀),0}`.
+  (Links: `(n,ν)` positive spatial from `u`; `(n+e_ν,0)` positive temporal from `u`;
+  `(n+e_ν+e₀,ν)` negative spatial — unchanged by reflection, inverted by orientation;
+  `(n+e₀,0)` negative temporal — inverted by reflection AND orientation, hence
+  un-inverted.  Mirrors family (c) with the two directions swapped.)
+- `wraparoundRevWordA` / `wraparoundRevWordB`: half-words
+  `W_A = u_{n+e_ν,0} · (V⁺_{θ(n+e_ν+e₀),ν})⁻¹` and
+  `W_B = (u_{n,ν})⁻¹ · (V⁺_{θ(n+e₀),0})⁻¹`.
+- `repCharacter_plaquetteProduct_wraparound_reversed_eq_halfWords`:
+  `χ(word) = ∑_{k,l} (ρ (W_A V⁺ u))_{kl} · conj((ρ (W_B V⁺ u))_{kl})` — the word
+  `u₁·u₂·V₁⁻¹·V₂` is ALREADY in the `a⁻¹·b·c⁻¹·d⁻¹` pattern (with `a = u₁⁻¹`,
+  `b = u₂`, `c = V₁`, `d = V₂⁻¹`), so
+  `repCharacter_crossing_word_eq_sum_matrixElement_conj` applies directly (no cyclic
+  rotation needed).
+
+**Status:** verified (compiled, `#print axioms` checked, no sorry).  Axiom count: 6.
+ALL FOUR rest-product mixed families (a) reversed crossings, (b) degenerate `(n,0,0)`,
+(c) wraparound `(n,0,ν)`, (d) reversed wraparound `(n,ν,0)` now have word evaluation +
+half-word factorization.  Remaining: κ-bridging (per-link index assignments vs
+per-plaquette `(k,l)`), interface Schur orthogonality, (iv-c) final assembly.
