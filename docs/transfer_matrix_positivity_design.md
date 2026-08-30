@@ -9784,3 +9784,80 @@ ALL FOUR rest-product mixed families (a) reversed crossings, (b) degenerate `(n,
 (c) wraparound `(n,0,ν)`, (d) reversed wraparound `(n,ν,0)` now have word evaluation +
 half-word factorization.  Remaining: κ-bridging (per-link index assignments vs
 per-plaquette `(k,l)`), interface Schur orthogonality, (iv-c) final assembly.
+
+## §8.11.109 — Session 139 (2026-08-29): κ-bridging DESIGN ANALYSIS (not yet formalized)
+
+**The remaining gap, stated precisely.**  The two halves of the machinery are now both
+in place but speak different index languages:
+
+1. **Per-plaquette matrix-element expansion** (`crossing_prod_boltzmann_matrixElement_expansion`,
+   Bridge.lean): the product over crossing plaquettes of `exp(c·ReTr(word_p))` equals
+   `∑_{w : CrossingPlaquette → ι} (∏_p coeff_{w p}) · ∏_p ∑_{k,l} (ρ_{w p}(W_int^p u))_{kl}
+   · conj((ρ_{w p}(W_pos^p V⁺))_{kl})`.  Here the internal indices `(k,l)` are
+   **per-plaquette** — each plaquette `p` carries its own `∑_{k,l}` over
+   `Fin (dims (w p)) × Fin (dims (w p))`.
+
+2. **Per-link matrix-element σ-inversion** (`matrixElemFactorNeg_thetaReindex_eq_matrixElemFactorPos`
+   + `fourierCoeffNegME_thetaReindex_eq_star_fourierCoeffPosME_of_sigma_invisible`,
+   SigmaInversion.lean): the pairing `B^{ME}_{θw,θκ}(u⁰) = star(A^{ME}_{w,κ}(u⁰))` is stated
+   for a **per-link** index assignment `κ : ∀ l : InterfaceLink, Fin(dims(w l)) × Fin(dims(w l))`
+   and a per-link weight `w : InterfaceLink → ι`.
+
+**The bridge (κ-bridging).**  The half-words `W_int^p`, `W_pos^p` are each a product of
+TWO link variables (e.g. `W_int = u_{n+e₀,ν}·(u_{n+e₀+e_ν,0})⁻¹`).  By `map_mul` and the
+matrix-multiplication expansion, the per-plaquette matrix element
+`(ρ_s (W_int^p u))_{kl}` expands as a sum over an INTERNAL index `m`:
+`∑_m (ρ_s u_{l₁})_{k m} · (ρ_s (u_{l₂})⁻¹)_{m l}` — i.e. the per-plaquette `(k,l)` pair
+decomposes into per-link index pairs `(k,m)` and `(m,l)` on the two constituent links.
+The per-plaquette `∑_{k,l}` therefore becomes a per-link `∑` over the assignment of
+matrix indices to the two links of each half-word, with the internal index `m` summed
+out.  This is exactly the `κ`-assignment structure of `matrixElemFactorPos`/`Neg`:
+each interface link `l` gets a pair `κ(l) = (k_l, m_l)`, and the half-word matrix element
+is the product of the two per-link matrix elements with the shared internal index
+identified.
+
+**Concretely**, for the crossing family `W_int = u₁·u₂⁻¹` (links `l₁ = (n+e₀,ν)`,
+`l₂ = (n+e₀+e_ν,0)`), the per-plaquette sum `∑_{k,l} (ρ W_int)_{kl}·conj((ρ W_pos)_{kl})`
+equals `∑_{k,m,l} (ρ u₁)_{k m}·(ρ u₂⁻¹)_{m l}·conj((ρ W_pos)_{kl})`.  The `κ`-bridge
+identifies `κ(l₁) = (k, m)`, `κ(l₂) = (m, l)` (the shared index `m` is the internal
+contraction), so that `matrixElemFactorPos` over the two interface links reproduces the
+per-plaquette matrix element.  The `W_pos` side is the ket (`V⁺`) half-word, handled by
+`matrixElemFactorNeg` after reflection (the σ-inversion lift already accounts for the
+index swap on time-like links).
+
+**What must be formalized (the κ-bridging lemmas):**
+1. A per-plaquette → per-link decomposition lemma: for each crossing plaquette `p`, the
+   `∑_{k,l} (ρ (W_int^p u))_{kl}·conj((ρ (W_pos^p V⁺))_{kl})` equals a sum over per-link
+   index assignments `κ` (restricted to the two interface links and two positive links of
+   `p`) of `matrixElemFactorPos(w, κ, V⁺) · conj(matrixElemFactorNeg(...))`-type products.
+   This is `map_mul` + `Matrix.mul_apply` + `repMatrixElement_inv` bookkeeping — the
+   SAME content as `repCharacter_crossing_word_eq_sum_matrixElement_conj` but at the
+   explicit per-link level.
+2. The product over crossing plaquettes then factors the `∑_{w : CrossingPlaquette → ι}`
+   into a `∑_{w : InterfaceLink → ι}` (per-link weight) by the bijection between
+   per-plaquette weights and per-link weights (each plaquette's two half-words are
+   determined by its four links; the per-link weight `w` restricts to the per-plaquette
+   weight).  This is a `Finset.sum_bij` / `prod_bij` reindexing.
+3. The resulting form is `∑_{w,κ} coeff · ∫_{u⁰} charFactorInt(w, u⁰) · B^{ME}_{θw,θκ}(u⁰)
+   · A^{ME}_{w,κ}(u⁰)`, and the σ-inversion pairing
+   `B^{ME}_{θw,θκ}(u⁰) = star(A^{ME}_{w,κ}(u⁰))` turns each term into
+   `coeff · ∫_{u⁰} charFactorInt(w, u⁰) · |A^{ME}_{w,κ}(u⁰)|²`.
+4. Interface Schur orthogonality (`interface_char_integral_trivial`, already PROVEN in
+   CharacterExpansion.lean) collapses `∫_{u⁰} charFactorInt(w, u⁰) · |A|²` to a
+   non-negative scalar (the `δ_{w|_int, trivial}` projection), giving the final
+   sum-of-squares `≥ 0`.
+
+**Honest status.**  This is a DESIGN ANALYSIS (believed true, elementary linear algebra +
+   finite-sum reindexing), NOT yet reflected in any Lean statement.  The hard part is
+   step 1 (per-plaquette → per-link decomposition), which is `map_mul` + `mul_apply`
+   bookkeeping over the four link factors of each half-word; steps 2–4 are standard
+   `Finset` reindexing + the already-proven σ-inversion and Schur-orthogonality lemmas.
+   No new axioms are anticipated: the only non-standard inputs are the existing
+   `peterWeyl_clebschGordan_plaquette` (character expansion) and `characterOrthogonality`
+   (Schur orthogonality), both already counted in the 6.
+
+**Next concrete step:** formalize step 1 for the crossing family first (the cleanest
+   case, `W_int = u₁·u₂⁻¹`, `W_pos = V₁·V₂`), as a lemma in Bridge.lean connecting
+   `∑_{k,l} (ρ (crossingWordInt ...))_{kl}·conj((ρ (crossingWordPos ...))_{kl})` to the
+   per-link `matrixElemFactorPos`/`Neg` products.  Then generalize to the other three
+   families (a)–(d) via their half-word structures.
