@@ -382,6 +382,49 @@ lemma repCharacter_plaquetteProduct_crossing_eq_halfWords
         conj ((ρ (crossingWordPos N T L hT n hn ν hν V_plus)) k l) :=
   repCharacter_plaquetteProduct_extendToFullConfig_crossing N T L hT ρ hU V_plus u n hn ν hν
 
+/-- **Crossing-family per-link decomposition** (κ-bridging step 1, lattice instantiation,
+§8.11.109).  For a crossing plaquette based at `n` (signedTime `-1`), directions `(0, ν)`,
+the per-plaquette matrix-element pairing of the half-words `crossingWordInt` / `crossingWordPos`
+decomposes into a sum over the four constituent links:
+
+  `∑_{k,l} (ρ (W_int u))_{kl}·conj((ρ (W_pos V⁺))_{kl}) =
+   ∑_{k,l,m,m'} (ρ u₁)_{km}·conj((ρ u₂)_{lm})·conj((ρ V₁)_{km'})·conj((ρ V₂)_{m'l}`
+
+with `u₁ = u_{n+e₀,ν}`, `u₂ = u_{n+e₀+e_ν,0}`, `V₁ = V⁺_{θn,0}`, `V₂ = V⁺_{θ(n+e_ν),ν}`.
+This is the group-level `matrixElement_pairing_two_link_decomp` applied to the crossing
+half-words (which unfold to `u₁·u₂⁻¹` and `V₁·V₂`).  0 sorries, 0 new axioms. -/
+lemma crossing_pairing_per_link_decomp
+    (N T L : ℕ) [NeZero T] [NeZero L] (hT : Odd T)
+    {dim : ℕ} (ρ : SU N →* Matrix (Fin dim) (Fin dim) ℂ)
+    (hU : IsUnitaryRepresentation ρ)
+    (V_plus : FiniteLinkConfig N (PeriodicSite T L) (positiveSites T L))
+    (u : PosInterfaceConfig N T L)
+    (n : PeriodicSite T L) (hn : signedTime T n.time = -1)
+    (ν : Fin 4) (hν : ν ≠ 0) :
+    (∑ k : Fin dim, ∑ l : Fin dim,
+      (ρ (crossingWordInt N T L n hn ν hν u)) k l *
+      conj ((ρ (crossingWordPos N T L hT n hn ν hν V_plus)) k l)) =
+    ∑ k : Fin dim, ∑ l : Fin dim, ∑ m : Fin dim, ∑ m' : Fin dim,
+      (ρ (u ⟨(AddVector.addVector n 0, ν),
+          Finset.mem_union_right (positiveSites T L)
+            (mem_interfaceSites_of_signedTime_eq_zero
+              (signedTime_addVector_zero_of_eq_neg_one T L n hn))⟩)) k m *
+      conj ((ρ (u ⟨(AddVector.addVector (AddVector.addVector n 0) ν, 0),
+          Finset.mem_union_right (positiveSites T L)
+            (mem_interfaceSites_of_signedTime_eq_zero
+              (signedTime_addVector_zero_spatial_of_eq_neg_one T L n ν hν hn))⟩)) l m) *
+      conj ((ρ (V_plus ⟨(ReflectSite.reflectSite n, 0),
+          reflectSite_mem_positive_of_negative hT
+            (mem_negativeSites_of_signedTime_eq_neg_one hn)⟩)) k m') *
+      conj ((ρ (V_plus ⟨(ReflectSite.reflectSite (AddVector.addVector n ν), ν),
+          reflectSite_mem_positive_of_negative hT
+            (mem_negativeSites_of_signedTime_eq_neg_one
+              (by rw [signedTime_addVector_spatial T L n ν hν]; exact hn))⟩)) m' l) := by
+  unfold crossingWordInt crossingWordPos
+  exact matrixElement_pairing_two_link_decomp ρ hU _ _ _ _
+
+#print axioms crossing_pairing_per_link_decomp
+
 /-- **Reversed-crossing plaquette word evaluation** (rest-product family (a),
 §8.11.102).  For a plaquette based at `n` with `signedTime n = -1` in directions
 `(ν, 0)` (`ν ≠ 0` spatial — the REVERSED orientation of a crossing plaquette), the
