@@ -120,6 +120,62 @@ lemma repCharacter_crossing_word_eq_sum_matrixElement_conj
 
 #print axioms repCharacter_crossing_word_eq_sum_matrixElement_conj
 
+/-- Matrix element of a product: `(ρ (a·b))_{kl} = ∑_m (ρ a)_{km}·(ρ b)_{ml}`. -/
+lemma matrixElement_mul {G : Type*} [Group G] {n : ℕ} (ρ : G →* Matrix (Fin n) (Fin n) ℂ)
+    (a b : G) (k l : Fin n) :
+    (ρ (a * b)) k l = ∑ m : Fin n, (ρ a) k m * (ρ b) m l := by
+  rw [MonoidHom.map_mul, Matrix.mul_apply]
+
+#print axioms matrixElement_mul
+
+/-- Matrix element of `a·b⁻¹`: `(ρ (a·b⁻¹))_{kl} = ∑_m (ρ a)_{km}·conj((ρ b)_{lm})`.
+Uses `repMatrixElement_inv` (unitarity). -/
+lemma matrixElement_mul_inv {G : Type*} [Group G] {n : ℕ} (ρ : G →* Matrix (Fin n) (Fin n) ℂ)
+    (hU : IsUnitaryRepresentation ρ) (a b : G) (k l : Fin n) :
+    (ρ (a * b⁻¹)) k l = ∑ m : Fin n, (ρ a) k m * conj ((ρ b) l m) := by
+  rw [MonoidHom.map_mul, Matrix.mul_apply]
+  apply Finset.sum_congr rfl; intro m _
+  rw [repMatrixElement_inv ρ hU b m l]
+
+#print axioms matrixElement_mul_inv
+
+/-- **Per-link decomposition of a two-link matrix-element pairing** (κ-bridging step 1,
+§8.11.109).  For a unitary rep `ρ`, the per-plaquette pairing of the two half-words
+`a·b⁻¹` (interface) and `c·d` (positive) decomposes into a sum over per-link matrix
+elements:
+
+  ∑_{k,l} (ρ (a·b⁻¹))_{kl} · conj((ρ (c·d))_{kl})
+    = ∑_{k,l,m,m'} (ρ a)_{km} · conj((ρ b)_{lm}) · conj((ρ c)_{km'}) · conj((ρ d)_{m'l}.
+
+This is the group-level content of the κ-bridge: the per-plaquette `(k,l)` pair expands
+via `map_mul` + `Matrix.mul_apply` + `repMatrixElement_inv` into per-link index pairs.
+0 sorries, 0 new axioms. -/
+lemma matrixElement_pairing_two_link_decomp
+    {G : Type*} [Group G] {n : ℕ} (ρ : G →* Matrix (Fin n) (Fin n) ℂ)
+    (hU : IsUnitaryRepresentation ρ) (a b c d : G) :
+    (∑ k : Fin n, ∑ l : Fin n,
+      (ρ (a * b⁻¹)) k l * conj ((ρ (c * d)) k l)) =
+    ∑ k : Fin n, ∑ l : Fin n, ∑ m : Fin n, ∑ m' : Fin n,
+      (ρ a) k m * conj ((ρ b) l m) * conj ((ρ c) k m') * conj ((ρ d) m' l) := by
+  have hinner : ∀ k l : Fin n,
+      (ρ (a * b⁻¹)) k l * conj ((ρ (c * d)) k l) =
+      ∑ m : Fin n, ∑ m' : Fin n,
+        (ρ a) k m * conj ((ρ b) l m) * conj ((ρ c) k m') * conj ((ρ d) m' l) := by
+    intro k l
+    rw [matrixElement_mul_inv ρ hU a b k l, matrixElement_mul ρ c d k l]
+    simp only [map_sum, map_mul]
+    simp only [Finset.sum_mul, Finset.mul_sum]
+    rw [Finset.sum_comm]
+    simp only [mul_assoc]
+  calc
+    (∑ k, ∑ l, (ρ (a * b⁻¹)) k l * conj ((ρ (c * d)) k l))
+        = ∑ k, ∑ l, ∑ m, ∑ m', (ρ a) k m * conj ((ρ b) l m) * conj ((ρ c) k m') * conj ((ρ d) m' l) := by
+          apply Finset.sum_congr rfl; intro k _
+          apply Finset.sum_congr rfl; intro l _
+          exact hinner k l
+
+#print axioms matrixElement_pairing_two_link_decomp
+
 /-- **Step 4: the cascade integral is non-negative.**  The kernel
 `K(W,V) = ∑_ν cg(s₁,s₂,ν)·cg(t₁,t₂,ν)·(1/dims ν)·χ_ν(W·V)` (the output
 of `luscher_2site_2D_cascade_charlevel`) integrated against
