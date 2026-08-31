@@ -1,0 +1,70 @@
+{
+  "id": "c775l",
+  "label": "lemma3_sigma_inversion",
+  "created_at": 1785787818,
+  "next_message_id": 164,
+  "provider_label": "NVIDIA NIM",
+  "model": "z-ai/glm-5.2",
+  "todo_list": {
+    "title": "Session tasks",
+    "items": [
+      {
+        "id": "1",
+        "content": "Read design doc §8.8 + §8.11.4 for Lemma 3 (σ-inversion) strategy",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "2",
+        "content": "Understand definitions: charFactorPos, charFactorNeg, charFactorInt, sigmaInterface, reflectPosToNeg, repMatrixElement_inv",
+        "status": "InProgress",
+        "priority": "high"
+      },
+      {
+        "id": "3",
+        "content": "Determine the precise statement of Lemma 3 (fourierCoeffNeg u0 = star(fourierCoeffPos (sigmaInterface u0)))",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "4",
+        "content": "Identify what sub-lemmas are needed (pointwise charFactor identity? reindexing? integral conjugation?)",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "5",
+        "content": "Prove Lemma 3 with 0 sorries, 0 custom axioms",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "6",
+        "content": "Verify build GREEN + #print axioms",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "7",
+        "content": "Update README + project_task_list",
+        "status": "Pending",
+        "priority": "medium"
+      }
+    ]
+  },
+  "show_todo": false,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 167457,
+  "estimated_full_at_request": 108153,
+  "token_correction_ratio": 1.5485994,
+  "thinking_mode": true,
+  "reasoning_effort": "medium",
+  "show_reasoning_inline": true,
+  "show_project_tasks": false,
+  "draft_input": "",
+  "looping_window": false
+}

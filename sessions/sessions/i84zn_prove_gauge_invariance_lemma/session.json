@@ -1,0 +1,64 @@
+{
+  "id": "i84zn",
+  "label": "prove_gauge_invariance_lemma",
+  "created_at": 1786244611,
+  "next_message_id": 125,
+  "provider_label": "NVIDIA NIM",
+  "model": "z-ai/glm-5.2",
+  "todo_list": {
+    "title": "Session tasks",
+    "items": [
+      {
+        "id": "1",
+        "content": "Define IsGaugeInvariantC (ℂ-valued gauge invariance) in Lattice.lean",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "2",
+        "content": "Prove extendLinkVariable_univ (simplification at Finset.univ) in LatticeMeasure.lean",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "3",
+        "content": "Prove extendLinkVariable_gaugeTransformConfig (commutation lemma) in LatticeMeasure.lean",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "4",
+        "content": "Prove gaugeTransformLinkVariable_single_site (key identity: (g_h·U)(x,μ) = h·U(x,μ)) in Lattice.lean",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "5",
+        "content": "Prove the key lemma: gauge-invariant φ ⟹ ∫ φ·(ρ(U(x,μ)))_{r,s} dμ = 0 for non-trivial ρ",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "6",
+        "content": "Build and verify (0 sorries, axiom count unchanged)",
+        "status": "Pending",
+        "priority": "high"
+      }
+    ]
+  },
+  "show_todo": true,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 172430,
+  "estimated_full_at_request": 142160,
+  "token_correction_ratio": 1.2115936,
+  "thinking_mode": true,
+  "reasoning_effort": "medium",
+  "show_reasoning_inline": true,
+  "show_project_tasks": true,
+  "draft_input": "",
+  "looping_window": false
+}

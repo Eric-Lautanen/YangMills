@@ -1,0 +1,75 @@
+{
+  "id": "jisy4",
+  "label": "transfer_matrix_sorries",
+  "created_at": 1784079128,
+  "next_message_id": 370,
+  "provider_label": "OpenCode Go",
+  "model": "deepseek-v4-flash",
+  "todo_list": {
+    "title": "Session tasks",
+    "items": [
+      {
+        "id": "1",
+        "content": "Fix compile errors in TransferMatrix.lean",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "2",
+        "content": "Fix finiteLinkIndexUnionSum left_inv proof",
+        "status": "InProgress",
+        "priority": "high"
+      },
+      {
+        "id": "3",
+        "content": "Fix hAll_eq proof",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "4",
+        "content": "Fix Measure.map_id usage",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "5",
+        "content": "Fix IsFiniteMeasure.prod usage",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "6",
+        "content": "Fix final subst/rw for All",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "7",
+        "content": "Build and verify",
+        "status": "Pending",
+        "priority": "high"
+      }
+    ]
+  },
+  "show_todo": false,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 322400,
+  "temperature": 0.2,
+  "top_p": 1.0,
+  "frequency_penalty": 0.0,
+  "presence_penalty": 0.0,
+  "requests_per_hour": null,
+  "handoff_percent": 80,
+  "thinking_mode": true,
+  "reasoning_effort": "max",
+  "show_reasoning_inline": false,
+  "show_project_tasks": false,
+  "draft_input": "",
+  "token_correction_ratio": 1.4342852,
+  "looping_window": false
+}

@@ -1,0 +1,64 @@
+{
+  "id": "o7ybw",
+  "label": "discharge_h_int_integrability",
+  "created_at": 1785706424,
+  "next_message_id": 136,
+  "provider_label": "NVIDIA NIM",
+  "model": "z-ai/glm-5.2",
+  "todo_list": {
+    "title": "Session tasks",
+    "items": [
+      {
+        "id": "1",
+        "content": "Find Mathlib lemma names: Finset.norm_prod_le, norm_star, Integrable.mono', Integrable.const_mul, RCLike.norm_ofReal — DONE",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "2",
+        "content": "Prove charProduct_norm_le helper (product of characters bounded by product of dims) — DONE, 0 sorryAx",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "3",
+        "content": "Prove charTripleProduct_norm_le (||Phi*Psi*V|| <= M_w) — DONE, 0 sorryAx",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "4",
+        "content": "Prove transfer_matrix_fubini_integrability (main discharge: hpsi_int + h_unitary + action boundedness => h_int) via pointwise domination + Integrable.mono' — NEXT SESSION",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "5",
+        "content": "Verify #print axioms + full lake build GREEN after main lemma — NEXT SESSION",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "6",
+        "content": "Update design doc §8.11 + README.md to reflect integrability discharge — NEXT SESSION",
+        "status": "Pending",
+        "priority": "medium"
+      }
+    ]
+  },
+  "show_todo": false,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 173086,
+  "estimated_full_at_request": 106818,
+  "token_correction_ratio": 1.6278977,
+  "thinking_mode": true,
+  "reasoning_effort": "medium",
+  "show_reasoning_inline": true,
+  "show_project_tasks": false,
+  "draft_input": "",
+  "looping_window": false
+}

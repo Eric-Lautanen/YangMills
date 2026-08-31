@@ -1,0 +1,27 @@
+{
+  "id": "4idcy",
+  "label": "step4d_char_triple_separation",
+  "created_at": 1785741357,
+  "next_message_id": 88,
+  "provider_label": "NVIDIA NIM",
+  "model": "z-ai/glm-5.2",
+  "todo_list": {
+    "title": "",
+    "items": []
+  },
+  "show_todo": false,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 167428,
+  "estimated_full_at_request": 104759,
+  "token_correction_ratio": 1.5997168,
+  "thinking_mode": true,
+  "reasoning_effort": "medium",
+  "show_reasoning_inline": true,
+  "show_project_tasks": false,
+  "draft_input": "",
+  "looping_window": false
+}

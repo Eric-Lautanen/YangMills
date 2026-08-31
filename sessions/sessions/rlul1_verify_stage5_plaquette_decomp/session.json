@@ -1,0 +1,25 @@
+{
+  "id": "rlul1",
+  "label": "verify_stage5_plaquette_decomp",
+  "created_at": 1785440336,
+  "next_message_id": 85,
+  "provider_label": "NVIDIA NIM",
+  "model": "z-ai/glm-5.2",
+  "todo_list": {
+    "title": "",
+    "items": []
+  },
+  "show_todo": false,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 148215,
+  "thinking_mode": true,
+  "reasoning_effort": "medium",
+  "show_reasoning_inline": false,
+  "show_project_tasks": false,
+  "draft_input": "",
+  "looping_window": false
+}

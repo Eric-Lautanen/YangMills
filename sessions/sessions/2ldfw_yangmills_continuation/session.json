@@ -1,0 +1,76 @@
+{
+  "id": "2ldfw",
+  "label": "yangmills_continuation",
+  "created_at": 1785510130,
+  "next_message_id": 118,
+  "provider_label": "NVIDIA NIM",
+  "model": "z-ai/glm-5.2",
+  "todo_list": {
+    "title": "Session tasks",
+    "items": [
+      {
+        "id": "1",
+        "content": "Verify current build state (lake build clean per README)",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "2",
+        "content": "Locate & read peterWeyl_clebschGordan_plaquette axiom + characterOrthogonality axiom in source",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "3",
+        "content": "Locate & read transferMatrixPositivity_axiom + character_expansion_positivity scaffold",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "4",
+        "content": "Strengthen characterOrthogonality axiom: Schur orthogonality of matrix elements (diagonal + off-diagonal)",
+        "status": "InProgress",
+        "priority": "high"
+      },
+      {
+        "id": "5",
+        "content": "Prove character_orthogonality_from_schur lemma (derive char orthogonality from matrix element orthogonality)",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "6",
+        "content": "Add hIrr to peterWeyl_clebschGordan_plaquette axiom + update 2 obtain statements",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "7",
+        "content": "Build & verify: lake build clean, #print axioms on key lemmas",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "8",
+        "content": "Update README.md, Overview.lean, design docs to reflect strengthened axioms",
+        "status": "Pending",
+        "priority": "medium"
+      }
+    ]
+  },
+  "show_todo": false,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 97657,
+  "estimated_full_at_request": 123441,
+  "token_correction_ratio": 1.1223161,
+  "thinking_mode": true,
+  "reasoning_effort": "medium",
+  "show_reasoning_inline": false,
+  "show_project_tasks": false,
+  "draft_input": "",
+  "looping_window": false
+}

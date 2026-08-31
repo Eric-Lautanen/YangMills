@@ -1,0 +1,51 @@
+{
+  "id": "16etx",
+  "label": "proving_measure_factorization_and_integral",
+  "created_at": 1784594861,
+  "next_message_id": 476,
+  "provider_label": "OpenCode Go",
+  "model": "deepseek-v4-flash",
+  "todo_list": {
+    "title": "Session tasks",
+    "items": [
+      {
+        "id": "2",
+        "content": "Prove measure_factorization' (line 519) - MEASURE PART STILL SORRY",
+        "status": "InProgress",
+        "priority": "high"
+      },
+      {
+        "id": "3",
+        "content": "Prove integral_G_thetaG_eq_inner_g_Tg (line 2172)",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "4",
+        "content": "Build verification",
+        "status": "Pending",
+        "priority": "medium"
+      }
+    ]
+  },
+  "show_todo": true,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 405806,
+  "temperature": 0.2,
+  "top_p": 1.0,
+  "frequency_penalty": 0.0,
+  "presence_penalty": 0.0,
+  "requests_per_hour": null,
+  "handoff_percent": 80,
+  "thinking_mode": true,
+  "reasoning_effort": "max",
+  "show_reasoning_inline": false,
+  "show_project_tasks": false,
+  "draft_input": "",
+  "token_correction_ratio": 1.4145168,
+  "looping_window": false
+}

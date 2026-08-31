@@ -1,0 +1,57 @@
+{
+  "id": "szeyr",
+  "label": "yang_mills_gap_continued",
+  "created_at": 1784664077,
+  "next_message_id": 127,
+  "provider_label": "NVIDIA NIM",
+  "model": "z-ai/glm-5.2",
+  "todo_list": {
+    "title": "Session tasks",
+    "items": [
+      {
+        "id": "1",
+        "content": "Prove measure_factorization' MeasurePreserving sorry (TransferMatrix.lean:751) - product Haar measure factorization over disjoint site partition",
+        "status": "InProgress",
+        "priority": "high"
+      },
+      {
+        "id": "2",
+        "content": "Prove integral_G_thetaG_eq_inner_g_Tg (TransferMatrix.lean:2329) - key identity reducing reflection positivity to transfer matrix inner product",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "3",
+        "content": "Assess exp_reTrace_positiveDefinite / transferMatrixCorrect_positive (Peter-Weyl) feasibility",
+        "status": "Pending",
+        "priority": "medium"
+      },
+      {
+        "id": "4",
+        "content": "Update docs and project_task_list with progress",
+        "status": "Pending",
+        "priority": "low"
+      }
+    ]
+  },
+  "show_todo": false,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 147035,
+  "temperature": 0.2,
+  "top_p": 1.0,
+  "frequency_penalty": 0.0,
+  "presence_penalty": 0.0,
+  "requests_per_hour": 30,
+  "handoff_percent": 80,
+  "thinking_mode": true,
+  "reasoning_effort": "max",
+  "show_reasoning_inline": false,
+  "show_project_tasks": false,
+  "draft_input": "",
+  "token_correction_ratio": 1.4290261,
+  "looping_window": false
+}

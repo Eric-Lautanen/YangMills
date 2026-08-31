@@ -1,0 +1,52 @@
+{
+  "id": "6efng",
+  "label": "step5_char_level_3D_integral",
+  "created_at": 1786719016,
+  "next_message_id": 66,
+  "provider_label": "NVIDIA NIM",
+  "model": "z-ai/glm-5.2",
+  "todo_list": {
+    "title": "Session tasks",
+    "items": [
+      {
+        "id": "1",
+        "content": "Study reference patterns: repMatrixElement_inv, htrace_mul, char_product_integrable",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "2",
+        "content": "Write char_level_single_site_3D_integral proof: character expansions + 12-level distribution + integrability + sum-integral exchange + integral_const_mul",
+        "status": "InProgress",
+        "priority": "high"
+      },
+      {
+        "id": "3",
+        "content": "Build and verify: lake build YangMills.Proofs.PeterWeyl, check #print axioms (expect [propext, Classical.choice, Quot.sound, characterOrthogonality], NO sorryAx)",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "4",
+        "content": "Update project_task_list and docs if verified",
+        "status": "Pending",
+        "priority": "medium"
+      }
+    ]
+  },
+  "show_todo": true,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 145393,
+  "estimated_full_at_request": 120324,
+  "token_correction_ratio": 1.2998048,
+  "thinking_mode": true,
+  "reasoning_effort": "max",
+  "show_reasoning_inline": true,
+  "show_project_tasks": true,
+  "draft_input": "",
+  "looping_window": false
+}

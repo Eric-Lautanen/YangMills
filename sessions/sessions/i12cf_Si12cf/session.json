@@ -1,0 +1,27 @@
+{
+  "id": "i12cf",
+  "label": "Si12cf",
+  "created_at": 1787303485,
+  "next_message_id": 6,
+  "provider_label": "NVIDIA NIM",
+  "model": "moonshotai/kimi-k3",
+  "todo_list": {
+    "title": "",
+    "items": []
+  },
+  "show_todo": true,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": false,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 0,
+  "estimated_full_at_request": 0,
+  "token_correction_ratio": 1.0,
+  "thinking_mode": false,
+  "reasoning_effort": "medium",
+  "show_reasoning_inline": true,
+  "show_project_tasks": true,
+  "draft_input": "",
+  "looping_window": false
+}

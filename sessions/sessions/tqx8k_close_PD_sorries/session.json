@@ -1,0 +1,69 @@
+{
+  "id": "tqx8k",
+  "label": "close_PD_sorries",
+  "created_at": 1784864156,
+  "next_message_id": 21,
+  "provider_label": "OpenCode Go",
+  "model": "glm-5.2",
+  "todo_list": {
+    "title": "Session tasks",
+    "items": [
+      {
+        "id": "1",
+        "content": "Investigate exact goal state at both sorries (replace sorry with failing tactic to see goal)",
+        "status": "InProgress",
+        "priority": "high"
+      },
+      {
+        "id": "2",
+        "content": "Find the right Mathlib lemma for Fintype↔Finset sum conversion (sum_coe_sort / sum_attach / sum_bij)",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "3",
+        "content": "Close sorry 1: PositiveDefinite.matrix_posSemidef (line 138/165)",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "4",
+        "content": "Close sorry 2: PositiveDefinite.mul (line 170/188)",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "5",
+        "content": "Verify build green with 0 sorries in PositiveDefinite.lean",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "6",
+        "content": "Close ReflectionPositivity.lean:1437 sorry using exp_reTrace_positiveDefinite",
+        "status": "Pending",
+        "priority": "medium"
+      }
+    ]
+  },
+  "show_todo": true,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 21840,
+  "temperature": 0.2,
+  "top_p": 1.0,
+  "frequency_penalty": 0.0,
+  "presence_penalty": 0.0,
+  "requests_per_hour": null,
+  "handoff_percent": 80,
+  "thinking_mode": true,
+  "reasoning_effort": "max",
+  "show_reasoning_inline": false,
+  "show_project_tasks": true,
+  "draft_input": "",
+  "token_correction_ratio": 1.3078518,
+  "looping_window": false
+}

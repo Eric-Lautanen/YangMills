@@ -1,0 +1,76 @@
+{
+  "id": "eeo8x",
+  "label": "L2_cascade_formalization",
+  "created_at": 1786577838,
+  "next_message_id": 54,
+  "provider_label": "NVIDIA NIM",
+  "model": "z-ai/glm-5.2",
+  "todo_list": {
+    "title": "Session tasks",
+    "items": [
+      {
+        "id": "1",
+        "content": "Adversarial self-check: steelman the dead-end case for L=2 cascade approach",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "2",
+        "content": "Write luscher_2site_cascade_separable lemma statement (full 4-element plaquette structure, separable kernel output)",
+        "status": "InProgress",
+        "priority": "high"
+      },
+      {
+        "id": "3",
+        "content": "Prove integrability of each (s,t) term w.r.t. g₁ using char_product_integrable + trace cyclicity congruence",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "4",
+        "content": "Define hInner helper: apply luscher_key_identity to g₁ integral (after cyclic rewrite)",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "5",
+        "content": "Exchange sums with g₁ integral, apply hInner_full, collapse s=t",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "6",
+        "content": "Apply conjugation_integral to g₀ integral (after cyclic rewrite to g⁻¹·M·g·N form)",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "7",
+        "content": "Simplify to final separable kernel form and verify build GREEN",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "8",
+        "content": "Check #print axioms, update docs (§8.11.73), update project_task_list",
+        "status": "Pending",
+        "priority": "medium"
+      }
+    ]
+  },
+  "show_todo": true,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 135289,
+  "estimated_full_at_request": 143395,
+  "token_correction_ratio": 1.2141545,
+  "thinking_mode": true,
+  "reasoning_effort": "max",
+  "show_reasoning_inline": true,
+  "show_project_tasks": true,
+  "draft_input": "",
+  "looping_window": false
+}

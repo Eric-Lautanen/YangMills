@@ -1,0 +1,58 @@
+{
+  "id": "12k6r",
+  "label": "B2e2 PD kernel lemma formalization",
+  "created_at": 1787296788,
+  "next_message_id": 138,
+  "provider_label": "NVIDIA NIM",
+  "model": "moonshotai/kimi-k3",
+  "todo_list": {
+    "title": "Session tasks",
+    "items": [
+      {
+        "id": "1",
+        "content": "Adversarial self-check: document steelman of approach (a) dead-end risk in design doc",
+        "status": "InProgress",
+        "priority": "high"
+      },
+      {
+        "id": "2",
+        "content": "Verify build green + audit axiom count via #print axioms",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "3",
+        "content": "Formalize abstract lemma: integrated separable PD kernel is PSD (Gram matrix form)",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "4",
+        "content": "Log abstract PD-kernel lemma as Mathlib candidate if general/reusable",
+        "status": "Pending",
+        "priority": "medium"
+      },
+      {
+        "id": "5",
+        "content": "Document remaining gap (c'≠conj(c) obstacle) honestly in design doc",
+        "status": "Pending",
+        "priority": "high"
+      }
+    ]
+  },
+  "show_todo": true,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 162989,
+  "estimated_full_at_request": 112360,
+  "token_correction_ratio": 1.4495221,
+  "thinking_mode": true,
+  "reasoning_effort": "high",
+  "show_reasoning_inline": true,
+  "show_project_tasks": true,
+  "draft_input": "",
+  "looping_window": false
+}

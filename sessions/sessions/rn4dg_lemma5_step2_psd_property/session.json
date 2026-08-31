@@ -1,0 +1,52 @@
+{
+  "id": "rn4dg",
+  "label": "lemma5_step2_psd_property",
+  "created_at": 1785862673,
+  "next_message_id": 123,
+  "provider_label": "NVIDIA NIM",
+  "model": "z-ai/glm-5.2",
+  "todo_list": {
+    "title": "Session tasks",
+    "items": [
+      {
+        "id": "1",
+        "content": "Prove gram_matrix_psd_nonneg lemma (general Gram matrix PSD: ∑_x,y d_x conj(d_y) ∑_a A_{a,x} conj(A_{a,y}) = ∑_a |∑_x d_x A_{a,x}|² ≥ 0)",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "2",
+        "content": "Verify 0 sorries, 0 custom axioms, GREEN build",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "3",
+        "content": "Update design doc §8.5-8.6 with PSD property findings",
+        "status": "Pending",
+        "priority": "medium"
+      },
+      {
+        "id": "4",
+        "content": "Step 3: Multi-link extension (factorize integral over interface links via Fubini)",
+        "status": "Pending",
+        "priority": "high"
+      }
+    ]
+  },
+  "show_todo": false,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 150469,
+  "estimated_full_at_request": 113664,
+  "token_correction_ratio": 1.3150241,
+  "thinking_mode": true,
+  "reasoning_effort": "medium",
+  "show_reasoning_inline": true,
+  "show_project_tasks": false,
+  "draft_input": "",
+  "looping_window": false
+}

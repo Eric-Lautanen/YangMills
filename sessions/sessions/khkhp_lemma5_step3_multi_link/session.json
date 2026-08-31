@@ -1,0 +1,52 @@
+{
+  "id": "khkhp",
+  "label": "lemma5_step3_multi_link",
+  "created_at": 1785871455,
+  "next_message_id": 99,
+  "provider_label": "NVIDIA NIM",
+  "model": "z-ai/glm-5.2",
+  "todo_list": {
+    "title": "Session tasks",
+    "items": [
+      {
+        "id": "1",
+        "content": "Search for product-of-sums identity in Mathlib (∏_l ∑_a f = ∑_{Π a} ∏_l f)",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "2",
+        "content": "Prove multi_link_gram_psd_nonneg (Step 3 of Lemma 5) in PeterWeyl.lean",
+        "status": "InProgress",
+        "priority": "high"
+      },
+      {
+        "id": "3",
+        "content": "Build and verify (0 sorries, 0 custom axioms, GREEN)",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "4",
+        "content": "Update project_task_list and design doc",
+        "status": "Pending",
+        "priority": "medium"
+      }
+    ]
+  },
+  "show_todo": false,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 185961,
+  "estimated_full_at_request": 125200,
+  "token_correction_ratio": 1.4898152,
+  "thinking_mode": true,
+  "reasoning_effort": "medium",
+  "show_reasoning_inline": true,
+  "show_project_tasks": false,
+  "draft_input": "",
+  "looping_window": false
+}

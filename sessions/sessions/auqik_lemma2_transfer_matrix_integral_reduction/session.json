@@ -1,0 +1,58 @@
+{
+  "id": "auqik",
+  "label": "lemma2_transfer_matrix_integral_reduction",
+  "created_at": 1785573098,
+  "next_message_id": 42,
+  "provider_label": "NVIDIA NIM",
+  "model": "z-ai/glm-5.2",
+  "todo_list": {
+    "title": "Session tasks",
+    "items": [
+      {
+        "id": "1",
+        "content": "Assess G1-G3 gap: DONE. G1 technique known (inlined in boltzmannFactorPD). Real blocker is G2 (interface plaquette Fintype + link surjection). integral_G_thetaG_eq_inner_g_Tg already DONE (reduces to <g,Tg>).",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "2",
+        "content": "Extract G1 as standalone lemma exp_neg_wilsonActionFinite_eq_prod in BoltzmannFactor.lean. Verify build + #print axioms.",
+        "status": "InProgress",
+        "priority": "high"
+      },
+      {
+        "id": "3",
+        "content": "Prove OS-interface product lemma exp_neg_wilsonActionOSInterface_eq_prod in ReflectionPositivity.lean (direct G2 precursor). Verify build + axioms.",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "4",
+        "content": "Assess + document G2 (interface plaquette Fintype, link surjection, partition) in design doc. Start if tractable.",
+        "status": "Pending",
+        "priority": "medium"
+      },
+      {
+        "id": "5",
+        "content": "Update README.md + Overview.lean + design doc to reflect progress",
+        "status": "Pending",
+        "priority": "medium"
+      }
+    ]
+  },
+  "show_todo": false,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 0,
+  "estimated_full_at_request": 49859,
+  "token_correction_ratio": 1.0,
+  "thinking_mode": true,
+  "reasoning_effort": "medium",
+  "show_reasoning_inline": false,
+  "show_project_tasks": false,
+  "draft_input": "",
+  "looping_window": false
+}

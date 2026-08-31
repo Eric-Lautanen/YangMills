@@ -1,0 +1,88 @@
+{
+  "id": "eczff",
+  "label": "step5_luescher_decomposition",
+  "created_at": 1786536323,
+  "next_message_id": 57,
+  "provider_label": "NVIDIA NIM",
+  "model": "z-ai/glm-5.2",
+  "todo_list": {
+    "title": "Session tasks",
+    "items": [
+      {
+        "id": "1",
+        "content": "Read current state of sub-steps 1-2 in ReflectionPositivity.lean (DONE)",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "2",
+        "content": "Read character_kernel_integral_nonneg + Lüscher cascade lemmas (DONE - found chainIntegral_eq for general L-site cascade)",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "3",
+        "content": "Investigate general L² result connection (DONE - NOT directly applicable; character_kernel_integral_nonneg is the right tool)",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "4",
+        "content": "Write temporal_boltzmann_eq_abstract_product (DONE - VERIFIED, build GREEN, 0 sorries, std 3 axioms)",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "5",
+        "content": "Update design doc §8.11.69 with new lemma + infrastructure analysis (DONE)",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "6",
+        "content": "NEXT: 3b temporal_product_character_expansion (apply plaquette_product_separable_decomp to temporal plaquettes)",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "7",
+        "content": "3c: Lüscher cascade on temporal links via chainIntegral_eq → kernel Σ a_s χ_s(W·V) with a_s ≥ 0",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "8",
+        "content": "3d: Apply character_kernel_integral_nonneg to conclude U positive",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "9",
+        "content": "Sub-step 4: T = V^{1/2}·U·V^{1/2} factorization",
+        "status": "Pending",
+        "priority": "medium"
+      },
+      {
+        "id": "10",
+        "content": "Sub-step 5-6: ∫g·Tg ≥ 0 + conclude I≥0 via integral_G_thetaG_eq_inner_g_Tg",
+        "status": "Pending",
+        "priority": "medium"
+      }
+    ]
+  },
+  "show_todo": true,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 166314,
+  "estimated_full_at_request": 105301,
+  "token_correction_ratio": 1.5846848,
+  "thinking_mode": true,
+  "reasoning_effort": "medium",
+  "show_reasoning_inline": true,
+  "show_project_tasks": true,
+  "draft_input": "",
+  "looping_window": false
+}

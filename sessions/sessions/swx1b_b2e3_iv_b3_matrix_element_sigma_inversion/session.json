@@ -1,0 +1,70 @@
+{
+  "id": "swx1b",
+  "label": "b2e3_iv_b3_matrix_element_sigma_inversion",
+  "created_at": 1787362388,
+  "next_message_id": 40,
+  "provider_label": "NVIDIA NIM",
+  "model": "moonshotai/kimi-k3",
+  "todo_list": {
+    "title": "Session tasks",
+    "items": [
+      {
+        "id": "1",
+        "content": "Read design doc §8.11.99 and §8.11.102",
+        "status": "Completed",
+        "priority": "medium"
+      },
+      {
+        "id": "2",
+        "content": "Read Bridge.lean current state (crossing lemmas, plaquetteProduct_extendToFullConfig_crossing)",
+        "status": "Completed",
+        "priority": "medium"
+      },
+      {
+        "id": "3",
+        "content": "Locate fourierCoeffNeg_thetaReindex_eq_star_fourierCoeffPos (session 17) to plan lift",
+        "status": "Completed",
+        "priority": "medium"
+      },
+      {
+        "id": "4",
+        "content": "Implement matrix-element σ-inversion lift: group helpers + matrixElemFactor defs + thetaReindexMatrixElem + per-link + product lemmas",
+        "status": "InProgress",
+        "priority": "medium"
+      },
+      {
+        "id": "5",
+        "content": "Word evaluations for rest-product mixed families (reversed crossings, degenerate, wraparound)",
+        "status": "Pending",
+        "priority": "medium"
+      },
+      {
+        "id": "6",
+        "content": "Combine with (iv-b2') + interface Schur orthogonality toward sum-of-squares",
+        "status": "Pending",
+        "priority": "medium"
+      },
+      {
+        "id": "7",
+        "content": "Build GREEN, audit axioms, commit; document hdual_me hypothesis in design doc",
+        "status": "Pending",
+        "priority": "medium"
+      }
+    ]
+  },
+  "show_todo": true,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 66980,
+  "estimated_full_at_request": 44612,
+  "token_correction_ratio": 1.150417,
+  "thinking_mode": false,
+  "reasoning_effort": "medium",
+  "show_reasoning_inline": true,
+  "show_project_tasks": true,
+  "draft_input": "",
+  "looping_window": false
+}

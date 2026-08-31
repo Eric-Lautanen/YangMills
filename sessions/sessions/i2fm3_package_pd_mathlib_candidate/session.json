@@ -1,0 +1,32 @@
+{
+  "id": "i2fm3",
+  "label": "package_pd_mathlib_candidate",
+  "created_at": 1785155000,
+  "next_message_id": 24,
+  "provider_label": "NVIDIA NIM",
+  "model": "z-ai/glm-5.2",
+  "todo_list": {
+    "title": "",
+    "items": []
+  },
+  "show_todo": false,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 0,
+  "temperature": 0.2,
+  "top_p": 1.0,
+  "frequency_penalty": 0.0,
+  "presence_penalty": 0.0,
+  "requests_per_hour": 30,
+  "handoff_percent": 90,
+  "thinking_mode": true,
+  "reasoning_effort": "high",
+  "show_reasoning_inline": true,
+  "show_project_tasks": false,
+  "draft_input": "just use regular shell commands none of this crazy files and stuff being created with powershell.  it'll finish eventually ",
+  "token_correction_ratio": 1.4086454,
+  "looping_window": false
+}

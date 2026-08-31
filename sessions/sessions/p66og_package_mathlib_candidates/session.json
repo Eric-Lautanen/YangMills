@@ -1,0 +1,75 @@
+{
+  "id": "p66og",
+  "label": "package_mathlib_candidates",
+  "created_at": 1785231646,
+  "next_message_id": 146,
+  "provider_label": "NVIDIA NIM",
+  "model": "z-ai/glm-5.2",
+  "todo_list": {
+    "title": "Session tasks",
+    "items": [
+      {
+        "id": "1",
+        "content": "Task 1: Run #print axioms on all 6 target lemmas from original location",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "2",
+        "content": "Task 2a: Extract PositiveDefiniteKernelMathlibCandidate.lean (priority)",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "3",
+        "content": "Task 2b: Extract PositiveDefiniteMathlibCandidate.lean",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "4",
+        "content": "Task 2c: Verify both standalone files compile + #print axioms clean",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "5",
+        "content": "Task 3: Negative-search pass (exact?/apply?/Loogle) on isolated statements",
+        "status": "InProgress",
+        "priority": "medium"
+      },
+      {
+        "id": "6",
+        "content": "Task 4: Write MATHLIB_SUBMISSION.md",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "7",
+        "content": "Task 5: Update README.md with pointer to MATHLIB_SUBMISSION.md",
+        "status": "Pending",
+        "priority": "medium"
+      }
+    ]
+  },
+  "show_todo": true,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 85746,
+  "temperature": 0.2,
+  "top_p": 1.0,
+  "frequency_penalty": 0.0,
+  "presence_penalty": 0.0,
+  "requests_per_hour": 30,
+  "handoff_percent": 80,
+  "thinking_mode": true,
+  "reasoning_effort": "high",
+  "show_reasoning_inline": true,
+  "show_project_tasks": true,
+  "draft_input": "",
+  "token_correction_ratio": 1.0619249,
+  "looping_window": false
+}

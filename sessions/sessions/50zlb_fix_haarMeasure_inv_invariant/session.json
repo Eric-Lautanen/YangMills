@@ -1,0 +1,32 @@
+{
+  "id": "50zlb",
+  "label": "fix_haarMeasure_inv_invariant",
+  "created_at": 1785275944,
+  "next_message_id": 38,
+  "provider_label": "NVIDIA NIM",
+  "model": "z-ai/glm-5.2",
+  "todo_list": {
+    "title": "",
+    "items": []
+  },
+  "show_todo": false,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 0,
+  "temperature": 0.2,
+  "top_p": 1.0,
+  "frequency_penalty": 0.0,
+  "presence_penalty": 0.0,
+  "requests_per_hour": 30,
+  "handoff_percent": 90,
+  "thinking_mode": true,
+  "reasoning_effort": "high",
+  "show_reasoning_inline": false,
+  "show_project_tasks": false,
+  "draft_input": "!! CONTEXT WARNING: The context window is near its limit.\n\nThis conversation must end now. Immediately:\n1. STOP all ongoing work.\n2. Use the `project_task_list` tool to record any new tasks.\n3. Call the `handoff` tool with a complete next_prompt.\n\nDo NOT continue working or write any more code. Use the handoff tool now.",
+  "token_correction_ratio": 1.2288108,
+  "looping_window": false
+}

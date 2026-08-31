@@ -1,0 +1,69 @@
+{
+  "id": "mv0fg",
+  "label": "fixing_transfermatrix_toolchain_drift",
+  "created_at": 1784998175,
+  "next_message_id": 94,
+  "provider_label": "NVIDIA NIM",
+  "model": "z-ai/glm-5.2",
+  "todo_list": {
+    "title": "Session tasks",
+    "items": [
+      {
+        "id": "1",
+        "content": "Fix h_eq block (lines 900-923): replace split_ifs+‹_› with by_cases + Subtype.ext for proof irrelevance",
+        "status": "InProgress",
+        "priority": "high"
+      },
+      {
+        "id": "2",
+        "content": "Fix negative projection condition (lines 945-950): replace simp [hnpos, idx.2] with explicit rw [dif_neg, dif_pos]",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "3",
+        "content": "Rebuild TransferMatrix.lean, iterate on any remaining errors",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "4",
+        "content": "Full lake build, confirm clean",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "5",
+        "content": "Re-run #print axioms on measure_factorization' and integral_G_thetaG_eq_inner_g_Tg",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "6",
+        "content": "Update README.md and Overview.lean: remove [PENDING RE-VERIFICATION] tags",
+        "status": "Pending",
+        "priority": "high"
+      }
+    ]
+  },
+  "show_todo": false,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 87771,
+  "temperature": 0.2,
+  "top_p": 1.0,
+  "frequency_penalty": 0.0,
+  "presence_penalty": 0.0,
+  "requests_per_hour": 30,
+  "handoff_percent": 80,
+  "thinking_mode": true,
+  "reasoning_effort": "high",
+  "show_reasoning_inline": false,
+  "show_project_tasks": false,
+  "draft_input": "",
+  "token_correction_ratio": 1.1478086,
+  "looping_window": false
+}

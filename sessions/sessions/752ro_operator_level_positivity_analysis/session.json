@@ -1,0 +1,27 @@
+{
+  "id": "752ro",
+  "label": "operator_level_positivity_analysis",
+  "created_at": 1786221534,
+  "next_message_id": 98,
+  "provider_label": "NVIDIA NIM",
+  "model": "z-ai/glm-5.2",
+  "todo_list": {
+    "title": "",
+    "items": []
+  },
+  "show_todo": true,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 146993,
+  "estimated_full_at_request": 126011,
+  "token_correction_ratio": 1.1695387,
+  "thinking_mode": true,
+  "reasoning_effort": "medium",
+  "show_reasoning_inline": true,
+  "show_project_tasks": true,
+  "draft_input": "https://projecteuclid.org/journals/communications-in-mathematical-physics/volume-54/issue-3/Construction-of-a-selfadjoint-strictly-positive-transfermatrix-for-euclidean-lattice/cmp/1103900872.full",
+  "looping_window": false
+}

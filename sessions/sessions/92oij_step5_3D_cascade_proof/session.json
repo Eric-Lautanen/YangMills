@@ -1,0 +1,58 @@
+{
+  "id": "92oij",
+  "label": "step5_3D_cascade_proof",
+  "created_at": 1786713443,
+  "next_message_id": 56,
+  "provider_label": "NVIDIA NIM",
+  "model": "z-ai/glm-5.2",
+  "todo_list": {
+    "title": "Session tasks",
+    "items": [
+      {
+        "id": "1",
+        "content": "Fix integrable_6ME_product proof (replace sorry with CG decomposition proof)",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "2",
+        "content": "Build and verify integrable_6ME_product (no sorry, check #print axioms)",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "3",
+        "content": "Complete char_level_single_site_3D_integral proof (12-level sum exchange)",
+        "status": "InProgress",
+        "priority": "high"
+      },
+      {
+        "id": "4",
+        "content": "Build and verify char_level_single_site_3D_integral (no sorry, check #print axioms)",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "5",
+        "content": "Update project_task_list and docs with progress",
+        "status": "Pending",
+        "priority": "medium"
+      }
+    ]
+  },
+  "show_todo": true,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 187510,
+  "estimated_full_at_request": 134924,
+  "token_correction_ratio": 1.39024,
+  "thinking_mode": true,
+  "reasoning_effort": "max",
+  "show_reasoning_inline": true,
+  "show_project_tasks": true,
+  "draft_input": "",
+  "looping_window": false
+}

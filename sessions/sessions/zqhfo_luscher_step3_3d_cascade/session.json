@@ -1,0 +1,88 @@
+{
+  "id": "zqhfo",
+  "label": "luscher_step3_3d_cascade",
+  "created_at": 1786045004,
+  "next_message_id": 119,
+  "provider_label": "NVIDIA NIM",
+  "model": "z-ai/glm-5.2",
+  "todo_list": {
+    "title": "Session tasks",
+    "items": [
+      {
+        "id": "1",
+        "content": "Read design doc §8.11.41-42 for Step 3 roadmap",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "2",
+        "content": "Read single_site_3D_luscher_integral and CG unitarity infrastructure",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "3",
+        "content": "Read character_expansion_nonneg_shared and integral_G_thetaG_eq_inner_g_Tg",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "6",
+        "content": "Prove repCharacter_cyclic: χ(g*h*k) = χ(h*k*g) (class function / cyclic property)",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "7",
+        "content": "Prove luscher_2site_cascade: 2-site 1D Lüscher cascade",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "9",
+        "content": "Verify build is GREEN and check #print axioms",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "10",
+        "content": "Update documentation (design doc) for Step 3 progress",
+        "status": "InProgress",
+        "priority": "medium"
+      },
+      {
+        "id": "8",
+        "content": "Prove CG unitarity non-negativity lemma (diagonal case of single_site gives |C|² terms)",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "11",
+        "content": "Prove full 1D L-site Lüscher cascade (generalization of 2-site)",
+        "status": "Pending",
+        "priority": "medium"
+      },
+      {
+        "id": "12",
+        "content": "Formalize 3D global cascade (Step 3 main goal)",
+        "status": "Pending",
+        "priority": "high"
+      }
+    ]
+  },
+  "show_todo": false,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 163997,
+  "estimated_full_at_request": 106700,
+  "token_correction_ratio": 1.5373825,
+  "thinking_mode": true,
+  "reasoning_effort": "medium",
+  "show_reasoning_inline": true,
+  "show_project_tasks": false,
+  "draft_input": "",
+  "looping_window": false
+}

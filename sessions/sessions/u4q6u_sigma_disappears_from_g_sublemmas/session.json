@@ -1,0 +1,64 @@
+{
+  "id": "u4q6u",
+  "label": "sigma_disappears_from_g_sublemmas",
+  "created_at": 1785958875,
+  "next_message_id": 183,
+  "provider_label": "NVIDIA NIM",
+  "model": "z-ai/glm-5.2",
+  "todo_list": {
+    "title": "Session tasks",
+    "items": [
+      {
+        "id": "1",
+        "content": "Prove sigmaInterface_spatial_fixed (μ≠0 interface links fixed by σ)",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "2",
+        "content": "Prove extendLinkVariable_merge_sigma_agree (merge+extend agree on pos+spatial-interface links)",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "3",
+        "content": "Prove f_sigma_invisible (dependsOnlyOnPosSpatialInterface → f ignores σ on temporal links)",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "4",
+        "content": "Prove osPositiveOfPosInterface_sigma_invariant (S⁺ only reads positive-site links)",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "5",
+        "content": "Combine into g_posInterface_sigma_invisible",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "6",
+        "content": "Build check after each lemma",
+        "status": "Completed",
+        "priority": "high"
+      }
+    ]
+  },
+  "show_todo": true,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 135243,
+  "estimated_full_at_request": 94395,
+  "token_correction_ratio": 1.4332166,
+  "thinking_mode": true,
+  "reasoning_effort": "medium",
+  "show_reasoning_inline": true,
+  "show_project_tasks": false,
+  "draft_input": "",
+  "looping_window": false
+}

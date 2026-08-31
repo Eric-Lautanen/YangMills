@@ -1,0 +1,81 @@
+{
+  "id": "76cfo",
+  "label": "closing_exp_reTrace_positiveDefinite",
+  "created_at": 1784807500,
+  "next_message_id": 801,
+  "provider_label": "OpenCode Go",
+  "model": "glm-5.2",
+  "todo_list": {
+    "title": "Session tasks",
+    "items": [
+      {
+        "id": "1",
+        "content": "Look up key Mathlib lemmas (PosSemidef, hadamard, conj_inv, tendsto_finsetSum, ge_of_tendsto', expSeries, normSq)",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "2",
+        "content": "Write PositiveDefinite.matrix_posSemidef helper (Finsupp version, no Fintype needed)",
+        "status": "InProgress",
+        "priority": "high"
+      },
+      {
+        "id": "3",
+        "content": "Write PositiveDefinite.mul (Schur/Hadamard via helper + PosSemidef.hadamard)",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "4",
+        "content": "Write PositiveDefinite.one (constant 1 is PD via normSq)",
+        "status": "Pending",
+        "priority": "medium"
+      },
+      {
+        "id": "5",
+        "content": "Write PositiveDefinite.pow (induction from mul + one)",
+        "status": "Pending",
+        "priority": "medium"
+      },
+      {
+        "id": "6",
+        "content": "Write PositiveDefinite.tendsto (limit of PD is PD via ge_of_tendsto')",
+        "status": "Pending",
+        "priority": "medium"
+      },
+      {
+        "id": "7",
+        "content": "Rewrite exp_reTrace_positiveDefinite using pow+tendsto+power series",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "8",
+        "content": "Build green with 0 sorries in PositiveDefinite.lean",
+        "status": "Pending",
+        "priority": "high"
+      }
+    ]
+  },
+  "show_todo": true,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 278733,
+  "temperature": 0.2,
+  "top_p": 1.0,
+  "frequency_penalty": 0.0,
+  "presence_penalty": 0.0,
+  "requests_per_hour": null,
+  "handoff_percent": 80,
+  "thinking_mode": true,
+  "reasoning_effort": "max",
+  "show_reasoning_inline": false,
+  "show_project_tasks": false,
+  "draft_input": "",
+  "token_correction_ratio": 0.6554187,
+  "looping_window": false
+}

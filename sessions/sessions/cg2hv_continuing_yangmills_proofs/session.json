@@ -1,0 +1,63 @@
+{
+  "id": "cg2hv",
+  "label": "continuing_yangmills_proofs",
+  "created_at": 1784672655,
+  "next_message_id": 359,
+  "provider_label": "NVIDIA NIM",
+  "model": "z-ai/glm-5.2",
+  "todo_list": {
+    "title": "Session tasks",
+    "items": [
+      {
+        "id": "1",
+        "content": "Prove measure_factorization' MeasurePreserving condition (TransferMatrix.lean:751)",
+        "status": "InProgress",
+        "priority": "high"
+      },
+      {
+        "id": "2",
+        "content": "Prove integral_G_thetaG_eq_inner_g_Tg (TransferMatrix.lean:2329)",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "3",
+        "content": "Prove gibbsExpectationPeriodic_reflection_positive (ReflectionPositivity.lean:1437)",
+        "status": "Pending",
+        "priority": "medium"
+      },
+      {
+        "id": "4",
+        "content": "Prove exp_reTrace_positiveDefinite (PositiveDefinite.lean:185, needs Peter-Weyl)",
+        "status": "Pending",
+        "priority": "low"
+      },
+      {
+        "id": "5",
+        "content": "Verify full build after each sorry is closed",
+        "status": "Pending",
+        "priority": "high"
+      }
+    ]
+  },
+  "show_todo": false,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 98812,
+  "temperature": 0.2,
+  "top_p": 1.0,
+  "frequency_penalty": 0.0,
+  "presence_penalty": 0.0,
+  "requests_per_hour": 30,
+  "handoff_percent": 80,
+  "thinking_mode": true,
+  "reasoning_effort": "max",
+  "show_reasoning_inline": false,
+  "show_project_tasks": false,
+  "draft_input": "",
+  "token_correction_ratio": 0.8794509,
+  "looping_window": false
+}

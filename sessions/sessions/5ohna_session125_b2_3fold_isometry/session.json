@@ -1,0 +1,64 @@
+{
+  "id": "5ohna",
+  "label": "session125_b2_3fold_isometry",
+  "created_at": 1786851532,
+  "next_message_id": 86,
+  "provider_label": "NVIDIA NIM",
+  "model": "z-ai/glm-5.2",
+  "todo_list": {
+    "title": "Session tasks",
+    "items": [
+      {
+        "id": "1",
+        "content": "Verify build is GREEN (baseline before changes)",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "2",
+        "content": "Document finding: 3-fold isometry requires cross-rep orthogonality (not just hcgME_unitary)",
+        "status": "InProgress",
+        "priority": "high"
+      },
+      {
+        "id": "3",
+        "content": "Prove cgME_multirep_isometry_normSq (multi-rep isometry with hcgME_unitary + hcgME_cross_rep hypotheses) — Steps 1-4,6 DONE, Step 5 (21 swaps) is sorry",
+        "status": "InProgress",
+        "priority": "high"
+      },
+      {
+        "id": "4",
+        "content": "Prove cgME_3fold_isometry_normSq by composing single isometry + multi-rep isometry",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "5",
+        "content": "Verify build GREEN with 0 sorries, check #print axioms",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "6",
+        "content": "Commit + update docs (design doc §8.11.90, axiom_growth_log if needed)",
+        "status": "Pending",
+        "priority": "medium"
+      }
+    ]
+  },
+  "show_todo": true,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 158914,
+  "estimated_full_at_request": 130331,
+  "token_correction_ratio": 1.2160206,
+  "thinking_mode": true,
+  "reasoning_effort": "high",
+  "show_reasoning_inline": true,
+  "show_project_tasks": true,
+  "draft_input": "",
+  "looping_window": false
+}

@@ -1,0 +1,27 @@
+{
+  "id": "u129t",
+  "label": "Session 74 Investigate transferMatrixPositivity proof mechanism",
+  "created_at": 1786327045,
+  "next_message_id": 137,
+  "provider_label": "NVIDIA NIM",
+  "model": "z-ai/glm-5.2",
+  "todo_list": {
+    "title": "",
+    "items": []
+  },
+  "show_todo": true,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 141441,
+  "estimated_full_at_request": 99439,
+  "token_correction_ratio": 1.4219619,
+  "thinking_mode": true,
+  "reasoning_effort": "medium",
+  "show_reasoning_inline": true,
+  "show_project_tasks": true,
+  "draft_input": "",
+  "looping_window": false
+}

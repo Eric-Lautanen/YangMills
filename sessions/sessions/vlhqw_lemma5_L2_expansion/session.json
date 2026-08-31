@@ -1,0 +1,58 @@
+{
+  "id": "vlhqw",
+  "label": "lemma5_L2_expansion",
+  "created_at": 1785842215,
+  "next_message_id": 86,
+  "provider_label": "NVIDIA NIM",
+  "model": "z-ai/glm-5.2",
+  "todo_list": {
+    "title": "Session tasks",
+    "items": [
+      {
+        "id": "1",
+        "content": "Prove triple_product_character_matrix_integral: ∫ χ_s · (ρ_t)_{ij} · conj((ρ_u)_{kl}) dμ = (1/dim u) ∑_a cgME(s,t,u,a,i,k) · conj(cgME(s,t,u,a,j,l)). Uses CG decomp + Schur orthogonality.",
+        "status": "InProgress",
+        "priority": "high"
+      },
+      {
+        "id": "2",
+        "content": "Prove the PSD property: the RHS (1/dim u) ∑_a cgME · conj(cgME) is a Gram matrix → ≥ 0 as a quadratic form",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "3",
+        "content": "Extend to multi-link case: product structure over interface links",
+        "status": "Pending",
+        "priority": "medium"
+      },
+      {
+        "id": "4",
+        "content": "Assemble Lemma 5: L² expansion reorganization showing ∑_w F(w) ∫ charFactorInt · A_w · A_{w*}(σ) ≥ 0",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "5",
+        "content": "Assemble Lemma 6: close transferMatrixPositivity_axiom (axiom count 6→5)",
+        "status": "Pending",
+        "priority": "high"
+      }
+    ]
+  },
+  "show_todo": false,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 101681,
+  "estimated_full_at_request": 121063,
+  "token_correction_ratio": 1.3101065,
+  "thinking_mode": true,
+  "reasoning_effort": "medium",
+  "show_reasoning_inline": true,
+  "show_project_tasks": false,
+  "draft_input": "",
+  "looping_window": false
+}

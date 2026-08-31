@@ -1,0 +1,57 @@
+{
+  "id": "fbe3v",
+  "label": "proving_measure_factorization_and_integral",
+  "created_at": 1784601527,
+  "next_message_id": 529,
+  "provider_label": "OpenCode Go",
+  "model": "deepseek-v4-flash",
+  "todo_list": {
+    "title": "Session tasks",
+    "items": [
+      {
+        "id": "1",
+        "content": "Restore clean version of TransferMatrix.lean from .lf backup",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "2",
+        "content": "Prove measure_factorization' - measure-preserving condition (still open)",
+        "status": "InProgress",
+        "priority": "high"
+      },
+      {
+        "id": "3",
+        "content": "Prove integral_G_thetaG_eq_inner_g_Tg",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "4",
+        "content": "Verify build succeeds with expected sorry blocks",
+        "status": "Completed",
+        "priority": "high"
+      }
+    ]
+  },
+  "show_todo": false,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 285534,
+  "temperature": 0.2,
+  "top_p": 1.0,
+  "frequency_penalty": 0.0,
+  "presence_penalty": 0.0,
+  "requests_per_hour": null,
+  "handoff_percent": 80,
+  "thinking_mode": true,
+  "reasoning_effort": "max",
+  "show_reasoning_inline": false,
+  "show_project_tasks": false,
+  "draft_input": "",
+  "token_correction_ratio": 1.4093573,
+  "looping_window": false
+}

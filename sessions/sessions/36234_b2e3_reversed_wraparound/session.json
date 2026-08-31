@@ -1,0 +1,82 @@
+{
+  "id": "36234",
+  "label": "b2e3_reversed_wraparound",
+  "created_at": 1787965658,
+  "next_message_id": 315,
+  "provider_label": "NVIDIA NIM",
+  "model": "deepseek-ai/deepseek-v4-flash-0731",
+  "todo_list": {
+    "title": "Session tasks",
+    "items": [
+      {
+        "id": "1",
+        "content": "Reversed wraparound (n,ν,0) word eval + factorization in Bridge.lean",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "6",
+        "content": "Update design doc §8.11.108 for family (d)",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "2",
+        "content": "κ-bridging design: write §8.11.109 analysis",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "7",
+        "content": "κ-bridging step 1: matrixElement_pairing_two_link_decomp + helpers (commit ac7df81)",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "8",
+        "content": "Update design doc §8.11.109 with step-1 formalization status",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "9",
+        "content": "κ-bridging step 1 lattice-level: instantiate for crossing family, connect to matrixElemFactorPos/Neg",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "3",
+        "content": "Interface Schur orthogonality on charFactorInt",
+        "status": "Pending",
+        "priority": "medium"
+      },
+      {
+        "id": "4",
+        "content": "(iv-c) final assembly → sum-of-squares",
+        "status": "Pending",
+        "priority": "medium"
+      },
+      {
+        "id": "5",
+        "content": "Build GREEN + commit + update design doc",
+        "status": "Pending",
+        "priority": "high"
+      }
+    ]
+  },
+  "show_todo": true,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 238739,
+  "thinking_mode": true,
+  "reasoning_effort": "high",
+  "show_reasoning_inline": true,
+  "show_project_tasks": true,
+  "draft_input": "",
+  "draft_attachments": [],
+  "looping_window": false,
+  "agent": null
+}

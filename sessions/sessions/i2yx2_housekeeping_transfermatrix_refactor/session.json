@@ -1,0 +1,58 @@
+{
+  "id": "i2yx2",
+  "label": "housekeeping_transfermatrix_refactor",
+  "created_at": 1786763279,
+  "next_message_id": 232,
+  "provider_label": "NVIDIA NIM",
+  "model": "z-ai/glm-5.2",
+  "todo_list": {
+    "title": "Session tasks",
+    "items": [
+      {
+        "id": "1",
+        "content": "Analyze TransferMatrix.lean structure (6334 lines, 10 sections identified)",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "2",
+        "content": "Create TransferMatrix/ subdirectory with 10 sub-files split by section",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "3",
+        "content": "Build sub-files individually to verify GREEN",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "4",
+        "content": "Replace old TransferMatrix.lean with import of sub-files, verify full build GREEN",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "5",
+        "content": "Verify 0 sorries, axiom count = 6, commit changes",
+        "status": "InProgress",
+        "priority": "high"
+      }
+    ]
+  },
+  "show_todo": true,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 151147,
+  "estimated_full_at_request": 106861,
+  "token_correction_ratio": 1.4167373,
+  "thinking_mode": true,
+  "reasoning_effort": "high",
+  "show_reasoning_inline": true,
+  "show_project_tasks": true,
+  "draft_input": "",
+  "looping_window": false
+}

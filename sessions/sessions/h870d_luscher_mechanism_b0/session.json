@@ -1,0 +1,76 @@
+{
+  "id": "h870d",
+  "label": "luscher_mechanism_b0",
+  "created_at": 1785935116,
+  "next_message_id": 156,
+  "provider_label": "NVIDIA NIM",
+  "model": "z-ai/glm-5.2",
+  "todo_list": {
+    "title": "Session tasks",
+    "items": [
+      {
+        "id": "1",
+        "content": "Read §8.11.36 design doc analysis",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "2",
+        "content": "Understand OS decomposition + interface action structure",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "3",
+        "content": "Understand character_expansion_positivity + plaquetteBoltzmannPD + transferMatrixReflected",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "4",
+        "content": "KEY INSIGHT: β² convention means axiom true for ALL β; σ disappears from g with dependsOnlyOnPosSpatialInterface; proof reduces to Lüscher mechanism (J has diagonal char expansion)",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "5",
+        "content": "Formalize shared-variable character_expansion_positivity variant (PositiveDefiniteIntegral.lean)",
+        "status": "InProgress",
+        "priority": "high"
+      },
+      {
+        "id": "6",
+        "content": "Formalize σ-disappears-from-g lemma (TransferMatrix.lean)",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "7",
+        "content": "Build + verify GREEN",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "8",
+        "content": "Document proof strategy in design doc §8.11.37",
+        "status": "Pending",
+        "priority": "medium"
+      }
+    ]
+  },
+  "show_todo": false,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 180299,
+  "estimated_full_at_request": 118395,
+  "token_correction_ratio": 1.5221812,
+  "thinking_mode": true,
+  "reasoning_effort": "medium",
+  "show_reasoning_inline": true,
+  "show_project_tasks": false,
+  "draft_input": "",
+  "looping_window": false
+}

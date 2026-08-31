@@ -1,0 +1,69 @@
+{
+  "id": "sx8q6",
+  "label": "closing_integral_G_thetaG_proof",
+  "created_at": 1784088465,
+  "next_message_id": 131,
+  "provider_label": "OpenCode Go",
+  "model": "deepseek-v4-flash",
+  "todo_list": {
+    "title": "Session tasks",
+    "items": [
+      {
+        "id": "1",
+        "content": "Fix h_factor block by adding simpa using G_thetaG_factorization",
+        "status": "InProgress",
+        "priority": "high"
+      },
+      {
+        "id": "2",
+        "content": "Fix integrand_measurable with Measurable f hypothesis and proof",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "3",
+        "content": "Add hf_meas to integral_G_thetaG_eq_inner_g_Tg and downstream lemmas",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "4",
+        "content": "Fill G_thetaG_factorization with proper proof",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "5",
+        "content": "Build and verify the file compiles",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "6",
+        "content": "Update project_task_list",
+        "status": "Pending",
+        "priority": "medium"
+      }
+    ]
+  },
+  "show_todo": false,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 208628,
+  "temperature": 0.2,
+  "top_p": 1.0,
+  "frequency_penalty": 0.0,
+  "presence_penalty": 0.0,
+  "requests_per_hour": null,
+  "handoff_percent": 80,
+  "thinking_mode": true,
+  "reasoning_effort": "max",
+  "show_reasoning_inline": false,
+  "show_project_tasks": false,
+  "draft_input": "",
+  "token_correction_ratio": 1.4264698,
+  "looping_window": false
+}

@@ -1,0 +1,27 @@
+{
+  "id": "wvlm1",
+  "label": "B2d resolve hcgME_cross_rep derivability",
+  "created_at": 1786872157,
+  "next_message_id": 68,
+  "provider_label": "NVIDIA NIM",
+  "model": "z-ai/glm-5.2",
+  "todo_list": {
+    "title": "",
+    "items": []
+  },
+  "show_todo": true,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 140764,
+  "estimated_full_at_request": 85749,
+  "token_correction_ratio": 1.6432486,
+  "thinking_mode": true,
+  "reasoning_effort": "high",
+  "show_reasoning_inline": true,
+  "show_project_tasks": true,
+  "draft_input": "",
+  "looping_window": false
+}

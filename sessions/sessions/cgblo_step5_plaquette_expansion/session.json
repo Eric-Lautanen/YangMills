@@ -1,0 +1,27 @@
+{
+  "id": "cgblo",
+  "label": "step5_plaquette_expansion",
+  "created_at": 1786656936,
+  "next_message_id": 148,
+  "provider_label": "NVIDIA NIM",
+  "model": "z-ai/glm-5.2",
+  "todo_list": {
+    "title": "",
+    "items": []
+  },
+  "show_todo": true,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 168321,
+  "estimated_full_at_request": 109070,
+  "token_correction_ratio": 1.5465941,
+  "thinking_mode": true,
+  "reasoning_effort": "max",
+  "show_reasoning_inline": true,
+  "show_project_tasks": true,
+  "draft_input": "",
+  "looping_window": false
+}

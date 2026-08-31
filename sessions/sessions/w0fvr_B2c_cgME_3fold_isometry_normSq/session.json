@@ -1,0 +1,64 @@
+{
+  "id": "w0fvr",
+  "label": "B2c cgME_3fold_isometry_normSq",
+  "created_at": 1786864587,
+  "next_message_id": 93,
+  "provider_label": "NVIDIA NIM",
+  "model": "z-ai/glm-5.2",
+  "todo_list": {
+    "title": "Session tasks",
+    "items": [
+      {
+        "id": "1",
+        "content": "Write cgME_3fold_isometry_normSq statement + Step 1 (reorder LHS inner sum to multi-rep form)",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "2",
+        "content": "Step 2: Apply multi-rep isometry (with u = lambda for first CG)",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "3",
+        "content": "Step 3: Reorder RHS to apply single isometry per a3",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "4",
+        "content": "Step 4: Apply single isometry, reorder to final form",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "5",
+        "content": "Verify build GREEN, 0 sorries, #print axioms check",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "6",
+        "content": "Full build check + commit + update design doc",
+        "status": "InProgress",
+        "priority": "medium"
+      }
+    ]
+  },
+  "show_todo": true,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 132084,
+  "estimated_full_at_request": 100344,
+  "token_correction_ratio": 1.3149763,
+  "thinking_mode": true,
+  "reasoning_effort": "high",
+  "show_reasoning_inline": true,
+  "show_project_tasks": true,
+  "draft_input": "",
+  "looping_window": false
+}

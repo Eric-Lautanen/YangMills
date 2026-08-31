@@ -1,0 +1,27 @@
+{
+  "id": "h95t5",
+  "label": "step3_interface_link_integral",
+  "created_at": 1786355499,
+  "next_message_id": 177,
+  "provider_label": "NVIDIA NIM",
+  "model": "z-ai/glm-5.2",
+  "todo_list": {
+    "title": "",
+    "items": []
+  },
+  "show_todo": true,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 127185,
+  "estimated_full_at_request": 85677,
+  "token_correction_ratio": 1.4856465,
+  "thinking_mode": true,
+  "reasoning_effort": "medium",
+  "show_reasoning_inline": true,
+  "show_project_tasks": true,
+  "draft_input": "",
+  "looping_window": false
+}

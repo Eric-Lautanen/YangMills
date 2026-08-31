@@ -1,0 +1,70 @@
+{
+  "id": "3g28w",
+  "label": "step3c_multisite_cascade",
+  "created_at": 1786107891,
+  "next_message_id": 49,
+  "provider_label": "NVIDIA NIM",
+  "model": "z-ai/glm-5.2",
+  "todo_list": {
+    "title": "Session tasks",
+    "items": [
+      {
+        "id": "1",
+        "content": "Verify build is GREEN (baseline)",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "2",
+        "content": "Search for integrability infrastructure (IsUnitaryRepresentation, repCharacter measurability/boundedness)",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "3",
+        "content": "Formalize luscher_2site_2D_cascade_charlevel lemma in PositiveDefinite.lean",
+        "status": "InProgress",
+        "priority": "high"
+      },
+      {
+        "id": "4",
+        "content": "Build and fix errors (0 sorries target)",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "5",
+        "content": "Verify #print axioms (expect [propext, Classical.choice, Quot.sound, characterOrthogonality])",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "6",
+        "content": "Update design doc with session 49 progress",
+        "status": "Pending",
+        "priority": "medium"
+      },
+      {
+        "id": "7",
+        "content": "Update project_task_list",
+        "status": "Pending",
+        "priority": "medium"
+      }
+    ]
+  },
+  "show_todo": true,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 151930,
+  "estimated_full_at_request": 159122,
+  "token_correction_ratio": 1.0749736,
+  "thinking_mode": true,
+  "reasoning_effort": "medium",
+  "show_reasoning_inline": true,
+  "show_project_tasks": true,
+  "draft_input": "",
+  "looping_window": false
+}

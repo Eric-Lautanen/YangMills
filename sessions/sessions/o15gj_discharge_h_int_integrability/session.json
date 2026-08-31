@@ -1,0 +1,76 @@
+{
+  "id": "o15gj",
+  "label": "discharge_h_int_integrability",
+  "created_at": 1785697355,
+  "next_message_id": 165,
+  "provider_label": "NVIDIA NIM",
+  "model": "z-ai/glm-5.2",
+  "todo_list": {
+    "title": "Session tasks",
+    "items": [
+      {
+        "id": "1",
+        "content": "Verify build is green (baseline)",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "2",
+        "content": "Read interface_boltzmann_character_expansion — CONFIRMED hU : ∀ i, IsUnitaryRepresentation (ρ i) is provided",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "3",
+        "content": "Prove plaquetteContribution_bounded: |plaquetteContribution| ≤ 2|β| — DONE, 0 sorries",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "4",
+        "content": "Prove wilsonActionOSInterface_bounded: |S_int| ≤ C — DONE, 0 sorries",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "5",
+        "content": "Prove exp_neg_beta_S_int_lower_bound: exp(-β·S_int) ≥ m > 0",
+        "status": "InProgress",
+        "priority": "high"
+      },
+      {
+        "id": "6",
+        "content": "Prove character product boundedness: |Φ_w·Ψ_w·V_w| ≤ M_w (uses repCharacter_norm_le_dim + h_unitary)",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "7",
+        "content": "Prove integrability discharge lemma: hψ_int + action boundedness + char boundedness ⇒ h_int (via Integrable.mono)",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "8",
+        "content": "Update docs (design doc §8.11.12, README.md) + #print axioms checks",
+        "status": "Pending",
+        "priority": "medium"
+      }
+    ]
+  },
+  "show_todo": false,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 157235,
+  "estimated_full_at_request": 98938,
+  "token_correction_ratio": 1.5858017,
+  "thinking_mode": true,
+  "reasoning_effort": "medium",
+  "show_reasoning_inline": true,
+  "show_project_tasks": false,
+  "draft_input": "",
+  "looping_window": false
+}

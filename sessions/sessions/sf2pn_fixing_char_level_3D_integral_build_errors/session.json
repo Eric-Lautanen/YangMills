@@ -1,0 +1,58 @@
+{
+  "id": "sf2pn",
+  "label": "fixing_char_level_3D_integral_build_errors",
+  "created_at": 1786725261,
+  "next_message_id": 110,
+  "provider_label": "NVIDIA NIM",
+  "model": "z-ai/glm-5.2",
+  "todo_list": {
+    "title": "Session tasks",
+    "items": [
+      {
+        "id": "1",
+        "content": "Fix Error 1: swap indices in repMatrixElement_inv calls in hchar_t2/t3 — DONE",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "3",
+        "content": "Fix Error 3: Integrable.smul • vs * mismatch — wrapped last block in `by` — DONE (but untested in green build)",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "2",
+        "content": "Fix Error 2: simp distribution of 6 sums in hpt (line 3317) — ROOT CAUSE FOUND: simp with Finset.sum_mul/mul_sum breaks Matrix coercion instances on (ρ s1) g a1 ('function expected'). Fintype.sum_mul_sum partially distributes but gets stuck on scalar factors. NEXT: restructure hpt using verified single_site_3D_luscher_integral pattern (manual rw [Finset.sum_mul] + Finset.sum_congr navigation) OR one-character-at-a-time approach.",
+        "status": "InProgress",
+        "priority": "high"
+      },
+      {
+        "id": "4",
+        "content": "Build green: lake build YangMills.Proofs.PeterWeyl",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "5",
+        "content": "Verify: #print axioms char_level_single_site_3D_integral = [propext, Classical.choice, Quot.sound, characterOrthogonality] (NO sorryAx)",
+        "status": "Pending",
+        "priority": "high"
+      }
+    ]
+  },
+  "show_todo": true,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 118883,
+  "estimated_full_at_request": 154458,
+  "token_correction_ratio": 0.9327901,
+  "thinking_mode": true,
+  "reasoning_effort": "max",
+  "show_reasoning_inline": true,
+  "show_project_tasks": true,
+  "draft_input": "",
+  "looping_window": false
+}

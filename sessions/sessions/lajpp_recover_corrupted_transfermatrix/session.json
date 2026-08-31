@@ -1,0 +1,63 @@
+{
+  "id": "lajpp",
+  "label": "recover_corrupted_transfermatrix",
+  "created_at": 1784594155,
+  "next_message_id": 232,
+  "provider_label": "OpenCode Go",
+  "model": "deepseek-v4-flash",
+  "todo_list": {
+    "title": "Session tasks",
+    "items": [
+      {
+        "id": "1",
+        "content": "Fix encoding corruption in TransferMatrix.lean and related files",
+        "status": "Completed",
+        "priority": "medium"
+      },
+      {
+        "id": "2",
+        "content": "Build the project and identify remaining errors",
+        "status": "InProgress",
+        "priority": "medium"
+      },
+      {
+        "id": "3",
+        "content": "Write the proof of integral_G_thetaG_eq_inner_g_Tg",
+        "status": "Pending",
+        "priority": "medium"
+      },
+      {
+        "id": "4",
+        "content": "Write proof for measure_factorization' or other sorry blocks",
+        "status": "Pending",
+        "priority": "medium"
+      },
+      {
+        "id": "5",
+        "content": "Clean up temporary files and verify build",
+        "status": "Pending",
+        "priority": "medium"
+      }
+    ]
+  },
+  "show_todo": false,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 138458,
+  "temperature": 0.2,
+  "top_p": 1.0,
+  "frequency_penalty": 0.0,
+  "presence_penalty": 0.0,
+  "requests_per_hour": null,
+  "handoff_percent": 80,
+  "thinking_mode": true,
+  "reasoning_effort": "max",
+  "show_reasoning_inline": false,
+  "show_project_tasks": false,
+  "draft_input": "",
+  "token_correction_ratio": 1.3682544,
+  "looping_window": false
+}

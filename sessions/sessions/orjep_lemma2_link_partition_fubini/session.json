@@ -1,0 +1,76 @@
+{
+  "id": "orjep",
+  "label": "lemma2_link_partition_fubini",
+  "created_at": 1785597435,
+  "next_message_id": 139,
+  "provider_label": "NVIDIA NIM",
+  "model": "z-ai/glm-5.2",
+  "todo_list": {
+    "title": "Session tasks",
+    "items": [
+      {
+        "id": "1",
+        "content": "Verify lake build is GREEN (baseline)",
+        "status": "InProgress",
+        "priority": "high"
+      },
+      {
+        "id": "2",
+        "content": "Define plaquetteLinkIdx + prove plaquetteProduct_eq_linkVar (connects concrete plaquette product to abstract link-variable form)",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "3",
+        "content": "Define InterfacePlaquette subtype + InterfaceLink subtype + interfaceLinkAssign + surjectivity",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "4",
+        "content": "Define link partition (L_U/L_0/L_V for interface links) + prove hdisj + hcover",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "5",
+        "content": "Prove filter-product lemma: product over all plaquettes with if-condition = product over interface plaquettes",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "6",
+        "content": "Apply interface_kernel_character_expansion to concrete lattice (the main combinatorial lemma)",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "7",
+        "content": "Verify #print axioms on all new lemmas (0 sorries, 0 custom axioms)",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "8",
+        "content": "Update docs (design doc, README, Overview) with progress",
+        "status": "Pending",
+        "priority": "medium"
+      }
+    ]
+  },
+  "show_todo": false,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 99842,
+  "estimated_full_at_request": 107168,
+  "token_correction_ratio": 1.3162111,
+  "thinking_mode": true,
+  "reasoning_effort": "medium",
+  "show_reasoning_inline": false,
+  "show_project_tasks": false,
+  "draft_input": "",
+  "looping_window": false
+}

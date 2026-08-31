@@ -1,0 +1,58 @@
+{
+  "id": "c2eoy",
+  "label": "B2e3_ivb_crossing_psd",
+  "created_at": 1787354446,
+  "next_message_id": 112,
+  "provider_label": "NVIDIA NIM",
+  "model": "moonshotai/kimi-k3",
+  "todo_list": {
+    "title": "Session tasks",
+    "items": [
+      {
+        "id": "1",
+        "content": "Read isInterfacePlaquette + exp_neg_beta_wilsonActionOSInterface_eq_prod_abstract (PlaquetteStructure.lean)",
+        "status": "InProgress",
+        "priority": "medium"
+      },
+      {
+        "id": "2",
+        "content": "(iv-b1) Characterize crossing subset (signedTime=-1, μ=0, ν≠0) vs non-crossing",
+        "status": "Pending",
+        "priority": "medium"
+      },
+      {
+        "id": "3",
+        "content": "(iv-b2) Rewrite crossing factors via crossing_plaquette_boltzmann_eq_pd_kernel; PD via character expansion",
+        "status": "Pending",
+        "priority": "medium"
+      },
+      {
+        "id": "4",
+        "content": "Apply crossingPlaquette_kernel_psd to product; build GREEN; commit",
+        "status": "Pending",
+        "priority": "medium"
+      },
+      {
+        "id": "5",
+        "content": "(iv-c) Connect to RP quadratic form; replace transferMatrixPositivity_axiom",
+        "status": "Pending",
+        "priority": "medium"
+      }
+    ]
+  },
+  "show_todo": true,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 138891,
+  "estimated_full_at_request": 88518,
+  "token_correction_ratio": 1.5685859,
+  "thinking_mode": false,
+  "reasoning_effort": "medium",
+  "show_reasoning_inline": true,
+  "show_project_tasks": true,
+  "draft_input": "",
+  "looping_window": false
+}

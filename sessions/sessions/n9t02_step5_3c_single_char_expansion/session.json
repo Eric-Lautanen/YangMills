@@ -1,0 +1,82 @@
+{
+  "id": "n9t02",
+  "label": "step5_3c_single_char_expansion",
+  "created_at": 1786561954,
+  "next_message_id": 147,
+  "provider_label": "NVIDIA NIM",
+  "model": "z-ai/glm-5.2",
+  "todo_list": {
+    "title": "Session tasks",
+    "items": [
+      {
+        "id": "1",
+        "content": "Verify existing single-char lemmas (plaquette_boltzmann_single_char_expansion, plaquette_product_single_char_decomp) build + check axioms",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "2",
+        "content": "Read cascade infrastructure: luscher_key_identity, luscher_2site_cascade_coeff, chainIntegral_eq, luscher_3site_cascade_coeff",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "3",
+        "content": "Adversarial self-check: is the cascade approach a dead end given the 3-site constant obstruction?",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "4",
+        "content": "Understand full-lattice temporal link structure (bipartite graph) and determine cascade approach",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "5",
+        "content": "Document findings in docs/transfer_matrix_positivity_design.md §8.11.71",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "6",
+        "content": "Formalize conjugation integral lemma: ∫ χ_s(A·g⁻¹·M·g·B) dg = (1/d_s)·χ_s(M)·χ_s(A·B) — key building block for L=2 cascade",
+        "status": "InProgress",
+        "priority": "high"
+      },
+      {
+        "id": "7",
+        "content": "Build + verify the conjugation integral lemma (lake env lean PositiveDefinite.lean)",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "8",
+        "content": "Formalize step 4: L=2 cascade using conjugation integral → kernel Σ_s c_s·χ_s(W-product)·χ_s(V-product)",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "9",
+        "content": "Formalize step 5: apply character_kernel_integral_nonneg (sub-step 3d)",
+        "status": "Pending",
+        "priority": "high"
+      }
+    ]
+  },
+  "show_todo": true,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 163836,
+  "estimated_full_at_request": 165188,
+  "token_correction_ratio": 0.9896796,
+  "thinking_mode": true,
+  "reasoning_effort": "max",
+  "show_reasoning_inline": true,
+  "show_project_tasks": true,
+  "draft_input": "",
+  "looping_window": false
+}

@@ -1,0 +1,88 @@
+{
+  "id": "pblho",
+  "label": "PDKernel refactor  housekeeping",
+  "created_at": 1786444373,
+  "next_message_id": 224,
+  "provider_label": "NVIDIA NIM",
+  "model": "z-ai/glm-5.2",
+  "todo_list": {
+    "title": "Session tasks",
+    "items": [
+      {
+        "id": "1",
+        "content": "Fix PositiveDefiniteKernel.mul in mathlib_candidates/PositiveDefiniteKernelMathlibCandidate.lean (RCLike metavariable / sum-rewriting)",
+        "status": "InProgress",
+        "priority": "high"
+      },
+      {
+        "id": "2",
+        "content": "Verify candidate file compiles: lake env lean mathlib_candidates/PositiveDefiniteKernelMathlibCandidate.lean",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "3",
+        "content": "h6: Re-run #print axioms on all lemmas (expect propext, Classical.choice, Quot.sound); absence-verification grep",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "4",
+        "content": "h1: Verify docs organization is clean (all working docs in /docs)",
+        "status": "Pending",
+        "priority": "medium"
+      },
+      {
+        "id": "5",
+        "content": "h2: Rewrite README.md as standard 2-min top-level README; move working notes to /docs",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "6",
+        "content": "h3: Create /docs/GOALS.md restating project goals plainly",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "7",
+        "content": "h4: Delete old candidate .lean files in repo root; update MATHLIB_SUBMISSION.md to point to /mathlib_candidates/",
+        "status": "Pending",
+        "priority": "medium"
+      },
+      {
+        "id": "8",
+        "content": "h7: Investigate integralOperator_nonneg generalization beyond compact/continuous; write findings",
+        "status": "Pending",
+        "priority": "medium"
+      },
+      {
+        "id": "9",
+        "content": "h8: Commit + push via SSH (switch remote HTTPS→SSH first)",
+        "status": "Pending",
+        "priority": "medium"
+      },
+      {
+        "id": "10",
+        "content": "h9: Status summary (audit verdict, characterOrthogonality, next task)",
+        "status": "Pending",
+        "priority": "low"
+      }
+    ]
+  },
+  "show_todo": true,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 65213,
+  "estimated_full_at_request": 127462,
+  "token_correction_ratio": 0.9944631,
+  "thinking_mode": true,
+  "reasoning_effort": "medium",
+  "show_reasoning_inline": true,
+  "show_project_tasks": true,
+  "draft_input": "",
+  "looping_window": false
+}

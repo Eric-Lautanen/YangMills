@@ -1,0 +1,63 @@
+{
+  "id": "b35ej",
+  "label": "PeterWeyl_axiomatization",
+  "created_at": 1784918158,
+  "next_message_id": 82,
+  "provider_label": "NVIDIA NIM",
+  "model": "z-ai/glm-5.2",
+  "todo_list": {
+    "title": "Session tasks",
+    "items": [
+      {
+        "id": "1",
+        "content": "Read PositiveDefinite.lean, found_issues.md §3, ReflectionPositivity sorry region, TransferMatrix identity",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "2",
+        "content": "Create PeterWeyl.lean: axioms (Peter-Weyl + Clebsch-Gordan combined plaquette expansion) + PositiveDefinite.sum/sum' lemmas + charProduct4_PD + plaquetteBoltzmannPD theorem",
+        "status": "InProgress",
+        "priority": "high"
+      },
+      {
+        "id": "3",
+        "content": "Build PeterWeyl.lean standalone (lake env lean) and fix errors",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "4",
+        "content": "Wire plaquetteBoltzmannPD into ReflectionPositivity.lean:1437 (replace sorry) via an axiom for the transfer-matrix positivity step",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "5",
+        "content": "Full lake build green with 0 sorries",
+        "status": "Pending",
+        "priority": "high"
+      }
+    ]
+  },
+  "show_todo": false,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 79399,
+  "temperature": 0.2,
+  "top_p": 1.0,
+  "frequency_penalty": 0.0,
+  "presence_penalty": 0.0,
+  "requests_per_hour": 30,
+  "handoff_percent": 80,
+  "thinking_mode": true,
+  "reasoning_effort": "high",
+  "show_reasoning_inline": false,
+  "show_project_tasks": false,
+  "draft_input": "",
+  "token_correction_ratio": 1.041417,
+  "looping_window": false
+}

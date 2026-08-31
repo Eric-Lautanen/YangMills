@@ -1,0 +1,57 @@
+{
+  "id": "uvqpq",
+  "label": "fix_integralOperator_nonneg_build_errors",
+  "created_at": 1785118896,
+  "next_message_id": 452,
+  "provider_label": "NVIDIA NIM",
+  "model": "z-ai/glm-5.2",
+  "todo_list": {
+    "title": "Session tasks",
+    "items": [
+      {
+        "id": "1",
+        "content": "Investigate PosInterfaceConfig structure: does it have a group structure? What are the interface sites?",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "2",
+        "content": "Understand transferMatrixCorrect kernel: can it be written as φ(u⁻¹v) for some PD φ?",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "3",
+        "content": "Determine concrete sub-steps needed for the wiring; update project_task_list",
+        "status": "InProgress",
+        "priority": "high"
+      },
+      {
+        "id": "4",
+        "content": "If feasible, start implementing the wiring",
+        "status": "Pending",
+        "priority": "medium"
+      }
+    ]
+  },
+  "show_todo": false,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 146272,
+  "temperature": 0.2,
+  "top_p": 1.0,
+  "frequency_penalty": 0.0,
+  "presence_penalty": 0.0,
+  "requests_per_hour": 30,
+  "handoff_percent": 90,
+  "thinking_mode": true,
+  "reasoning_effort": "high",
+  "show_reasoning_inline": false,
+  "show_project_tasks": false,
+  "draft_input": "",
+  "token_correction_ratio": 0.59390724,
+  "looping_window": false
+}

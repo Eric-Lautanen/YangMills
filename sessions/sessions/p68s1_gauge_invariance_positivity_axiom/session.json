@@ -1,0 +1,70 @@
+{
+  "id": "p68s1",
+  "label": "gauge_invariance_positivity_axiom",
+  "created_at": 1786227760,
+  "next_message_id": 190,
+  "provider_label": "NVIDIA NIM",
+  "model": "z-ai/glm-5.2",
+  "todo_list": {
+    "title": "Session tasks",
+    "items": [
+      {
+        "id": "1",
+        "content": "Define gauge transformation on link variables (gaugeTransformLinkVariable) in Lattice.lean",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "2",
+        "content": "Prove Haar measure left/right multiplication invariance lemmas in LatticeMeasure.lean",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "3",
+        "content": "Prove gauge transformation is measure-preserving (gaugeTransformConfig_measurePreserving)",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "4",
+        "content": "Define IsGaugeInvariant predicate",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "6",
+        "content": "Add gauge invariance hypothesis to transferMatrixPositivity_axiom and fix downstream theorems",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "5",
+        "content": "Prove key lemma: matrix elements vanish for non-trivial reps under gauge invariance",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "7",
+        "content": "Build and verify GREEN, check axiom count",
+        "status": "Completed",
+        "priority": "high"
+      }
+    ]
+  },
+  "show_todo": true,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 149570,
+  "estimated_full_at_request": 115184,
+  "token_correction_ratio": 1.2941749,
+  "thinking_mode": true,
+  "reasoning_effort": "medium",
+  "show_reasoning_inline": true,
+  "show_project_tasks": true,
+  "draft_input": "",
+  "looping_window": false
+}

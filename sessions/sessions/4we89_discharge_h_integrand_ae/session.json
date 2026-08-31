@@ -1,0 +1,88 @@
+{
+  "id": "4we89",
+  "label": "discharge_h_integrand_ae",
+  "created_at": 1785720898,
+  "next_message_id": 202,
+  "provider_label": "NVIDIA NIM",
+  "model": "z-ai/glm-5.2",
+  "todo_list": {
+    "title": "Session tasks",
+    "items": [
+      {
+        "id": "1",
+        "content": "Verify build is green (baseline)",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "2",
+        "content": "Strengthen peterWeyl_clebschGordan_plaquette axiom: add hMeas : ∀ i, Measurable (repCharacter (ρ i)) field",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "3",
+        "content": "Update obtain sites: interface_product_character_expansion, interface_boltzmann_character_expansion (pass hMeas through)",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "4",
+        "content": "Prove measurable_restrictLinkVariable + measurable_reflectPosToNeg + measurable_extendToFullConfig_reflectPosToNeg",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "5",
+        "content": "Prove measurable_interfaceLinkVar (U.value projection, per l) in ReflectionPositivity.lean",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "7",
+        "content": "Prove measurable_integrand_char_factor + measurable_integrand_B (full character product B(V⁺) measurable)",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "9",
+        "content": "Prove integrand_A_ae (AEStronglyMeasurable of A from hψ_int via mul+inv+congr) + transfer_matrix_integrand_ae (discharge h_integrand_ae)",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "11",
+        "content": "Update docs: axiom_growth_audit.md (strengthening #6), design doc §8.11.14, README.md",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "12",
+        "content": "Final lake build GREEN (2972 jobs) + #print axioms = [propext, Classical.choice, Quot.sound]",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "10",
+        "content": "NEXT SESSION: Create combined lemma transfer_matrix_fubini_integrability_self (hψ_int + hMeas → Integrable, no h_integrand_ae)",
+        "status": "Pending",
+        "priority": "high"
+      }
+    ]
+  },
+  "show_todo": false,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 178777,
+  "estimated_full_at_request": 120273,
+  "token_correction_ratio": 1.487987,
+  "thinking_mode": true,
+  "reasoning_effort": "medium",
+  "show_reasoning_inline": true,
+  "show_project_tasks": false,
+  "draft_input": "",
+  "looping_window": false
+}

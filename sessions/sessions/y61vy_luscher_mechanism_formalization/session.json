@@ -1,0 +1,27 @@
+{
+  "id": "y61vy",
+  "label": "luscher_mechanism_formalization",
+  "created_at": 1785993411,
+  "next_message_id": 73,
+  "provider_label": "NVIDIA NIM",
+  "model": "z-ai/glm-5.2",
+  "todo_list": {
+    "title": "",
+    "items": []
+  },
+  "show_todo": false,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 150951,
+  "estimated_full_at_request": 117293,
+  "token_correction_ratio": 1.2749811,
+  "thinking_mode": true,
+  "reasoning_effort": "medium",
+  "show_reasoning_inline": true,
+  "show_project_tasks": false,
+  "draft_input": "",
+  "looping_window": false
+}

@@ -1,0 +1,64 @@
+{
+  "id": "bntbr",
+  "label": "fix_cgME_decomp_3fold",
+  "created_at": 1786024728,
+  "next_message_id": 106,
+  "provider_label": "NVIDIA NIM",
+  "model": "z-ai/glm-5.2",
+  "todo_list": {
+    "title": "Session tasks",
+    "items": [
+      {
+        "id": "1",
+        "content": "Fix cgME_decomp_3fold proof in PeterWeyl.lean (currently BROKEN — restore GREEN)",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "2",
+        "content": "Verify build is GREEN after fix (0 sorries, 0 new axioms, #print axioms clean)",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "3",
+        "content": "Update design doc §8.11.42 + README.md for cgME_decomp_3fold",
+        "status": "Completed",
+        "priority": "medium"
+      },
+      {
+        "id": "4",
+        "content": "Update project_task_list item 95 status",
+        "status": "Completed",
+        "priority": "medium"
+      },
+      {
+        "id": "5",
+        "content": "Prove cgME_decomp_3fold_conj (conjugate version for 3 barred MEs)",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "6",
+        "content": "Prove single_site_3D_luscher_integral (3 unbarred + 3 barred + Schur orthogonality)",
+        "status": "Pending",
+        "priority": "high"
+      }
+    ]
+  },
+  "show_todo": false,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 167978,
+  "estimated_full_at_request": 105803,
+  "token_correction_ratio": 1.5346369,
+  "thinking_mode": true,
+  "reasoning_effort": "medium",
+  "show_reasoning_inline": true,
+  "show_project_tasks": false,
+  "draft_input": "",
+  "looping_window": false
+}

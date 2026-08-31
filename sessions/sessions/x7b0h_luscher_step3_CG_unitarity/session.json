@@ -1,0 +1,58 @@
+{
+  "id": "x7b0h",
+  "label": "luscher_step3_CG_unitarity",
+  "created_at": 1786064662,
+  "next_message_id": 149,
+  "provider_label": "NVIDIA NIM",
+  "model": "z-ai/glm-5.2",
+  "todo_list": {
+    "title": "Session tasks",
+    "items": [
+      {
+        "id": "1",
+        "content": "Write general sum_comm_factor lemma (9-swap reordering + factoring) in PeterWeyl.lean",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "2",
+        "content": "Write cg_unitarity_nonneg lemma (diagonal case of single_site_3D_luscher_integral gives |C|² structure)",
+        "status": "InProgress",
+        "priority": "high"
+      },
+      {
+        "id": "3",
+        "content": "Build and verify (0 sorries, 0 new axioms, #print axioms check)",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "4",
+        "content": "Update design doc §8.11.41-42 with Step 3(a) progress",
+        "status": "Pending",
+        "priority": "medium"
+      },
+      {
+        "id": "5",
+        "content": "Update project_task_list with session 45 results",
+        "status": "Pending",
+        "priority": "medium"
+      }
+    ]
+  },
+  "show_todo": false,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 164673,
+  "estimated_full_at_request": 187663,
+  "token_correction_ratio": 0.87416905,
+  "thinking_mode": true,
+  "reasoning_effort": "medium",
+  "show_reasoning_inline": true,
+  "show_project_tasks": false,
+  "draft_input": "",
+  "looping_window": false
+}

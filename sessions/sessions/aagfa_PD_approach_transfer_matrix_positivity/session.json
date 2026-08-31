@@ -1,0 +1,27 @@
+{
+  "id": "aagfa",
+  "label": "PD_approach_transfer_matrix_positivity",
+  "created_at": 1786265941,
+  "next_message_id": 169,
+  "provider_label": "NVIDIA NIM",
+  "model": "z-ai/glm-5.2",
+  "todo_list": {
+    "title": "",
+    "items": []
+  },
+  "show_todo": true,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 118769,
+  "estimated_full_at_request": 79717,
+  "token_correction_ratio": 1.4918863,
+  "thinking_mode": true,
+  "reasoning_effort": "medium",
+  "show_reasoning_inline": true,
+  "show_project_tasks": true,
+  "draft_input": "",
+  "looping_window": false
+}

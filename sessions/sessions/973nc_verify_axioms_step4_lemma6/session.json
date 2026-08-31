@@ -1,0 +1,27 @@
+{
+  "id": "973nc",
+  "label": "verify_axioms_step4_lemma6",
+  "created_at": 1786147553,
+  "next_message_id": 151,
+  "provider_label": "NVIDIA NIM",
+  "model": "z-ai/glm-5.2",
+  "todo_list": {
+    "title": "",
+    "items": []
+  },
+  "show_todo": true,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 134314,
+  "estimated_full_at_request": 88164,
+  "token_correction_ratio": 1.5266178,
+  "thinking_mode": true,
+  "reasoning_effort": "medium",
+  "show_reasoning_inline": true,
+  "show_project_tasks": true,
+  "draft_input": "",
+  "looping_window": false
+}

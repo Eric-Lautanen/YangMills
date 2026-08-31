@@ -1,0 +1,99 @@
+{
+  "id": "49tr5",
+  "label": "integral_G_thetaG proof",
+  "created_at": 1784733506,
+  "next_message_id": 136,
+  "provider_label": "NVIDIA NIM",
+  "model": "z-ai/glm-5.2",
+  "todo_list": {
+    "title": "Session tasks",
+    "items": [
+      {
+        "id": "1",
+        "content": "Read target lemma and key defs",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "2",
+        "content": "Read G_thetaG_factorization and _clean",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "3",
+        "content": "Read measure_factorization' equiv e and properties",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "4",
+        "content": "Decide integrability handling; check Mathlib lemmas (integral_map, integral_prod, integral_const_mul)",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "5",
+        "content": "Add integrability hypothesis, verify statement accepted (sorry body)",
+        "status": "InProgress",
+        "priority": "high"
+      },
+      {
+        "id": "6",
+        "content": "Setup: obtain e from measure_factorization', construct reassociation equiv rho + MP",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "7",
+        "content": "CoV step + pointwise identity H(e x) = F(x) via G_thetaG_factorization",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "8",
+        "content": "Reassociate + Fubini (single integral_prod)",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "9",
+        "content": "Pull out g(merge) via integral_const_mul, recognize transferMatrixCorrect",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "10",
+        "content": "integral_map for haarMeasurePosInterface, match RHS",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "11",
+        "content": "Final build check, update project_task_list",
+        "status": "Pending",
+        "priority": "medium"
+      }
+    ]
+  },
+  "show_todo": false,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 73342,
+  "temperature": 0.2,
+  "top_p": 1.0,
+  "frequency_penalty": 0.0,
+  "presence_penalty": 0.0,
+  "requests_per_hour": 30,
+  "handoff_percent": 80,
+  "thinking_mode": true,
+  "reasoning_effort": "max",
+  "show_reasoning_inline": false,
+  "show_project_tasks": false,
+  "draft_input": "",
+  "token_correction_ratio": 1.0935175,
+  "looping_window": false
+}

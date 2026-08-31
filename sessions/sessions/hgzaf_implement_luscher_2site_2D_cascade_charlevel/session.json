@@ -1,0 +1,58 @@
+{
+  "id": "hgzaf",
+  "label": "implement_luscher_2site_2D_cascade_charlevel",
+  "created_at": 1786113128,
+  "next_message_id": 111,
+  "provider_label": "NVIDIA NIM",
+  "model": "z-ai/glm-5.2",
+  "todo_list": {
+    "title": "Session tasks",
+    "items": [
+      {
+        "id": "1",
+        "content": "Write luscher_2site_2D_cascade_charlevel lemma with full proof",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "2",
+        "content": "Insert lemma before end UnitaryRepresentation (line 1669)",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "3",
+        "content": "Build and fix any compilation errors",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "4",
+        "content": "Verify 0 sorries and #print axioms = [propext, Classical.choice, Quot.sound, characterOrthogonality]",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "5",
+        "content": "Update project_task_list and design doc",
+        "status": "InProgress",
+        "priority": "medium"
+      }
+    ]
+  },
+  "show_todo": false,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 150854,
+  "estimated_full_at_request": 127803,
+  "token_correction_ratio": 1.1951336,
+  "thinking_mode": true,
+  "reasoning_effort": "medium",
+  "show_reasoning_inline": true,
+  "show_project_tasks": false,
+  "draft_input": "",
+  "looping_window": false
+}

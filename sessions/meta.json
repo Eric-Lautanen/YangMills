@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "project_id": "gfwqe",
+  "project_name": "YangMills",
+  "root_path": "C:\\github\\YangMills",
+  "created_at": 1783818366,
+  "project_task_list": {
+    "title": "Project tasks",
+    "items": [
+      {
+        "id": "200",
+        "content": "HOUSEKEEPING PHASES 0-8: All COMPLETE (refactoring, verification).",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "130",
+        "content": "STEP 6: Replace transferMatrixPositivity_axiom with proved lemma, reducing axioms 6→5. Step A COMPLETE. Step B (3D off-diagonal cascade) IN PROGRESS.",
+        "status": "InProgress",
+        "priority": "high"
+      },
+      {
+        "id": "142",
+        "content": "B.2e.1 ABANDONED: 6-fold isometry is FALSE — fundamental dimension obstruction.",
+        "status": "Cancelled",
+        "priority": "high"
+      },
+      {
+        "id": "143",
+        "content": "B.2e.2 COMPLETE: provable core + c'≠conj(c) obstacle resolved (§8.11.97) + group-level OS machinery (PSDKernel.lean).",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "144",
+        "content": "B.2e.3 LATTICE BRIDGE: (i),(ii),(ii'),(iii),(iv-a),(iv-b1),(iv-b2') COMPLETE. (iv-b3') matrix-element σ-inversion lift COMPLETE (sessions 138-139: commits cb83bb5, 1fb1d5a, 115a146, 6e44015, 1c12a41). Rest-product word evaluations COMPLETE: family (a) reversed crossings (ccd211f), family (b) degenerate (0e3af43), family (c) wraparound (1924589), family (d) reversed wraparound (6e44015). κ-bridging step 1 COMPLETE: matrixElement_pairing_two_link_decomp + helpers (ac7df81) + crossing_pairing_per_link_decomp lattice instantiation (64a2b13). REMAINING: κ-bridging steps 2-4 (per-link weight reindexing, σ-inversion pairing, interface Schur orthogonality), (iv-c) final assembly.",
+        "status": "InProgress",
+        "priority": "high"
+      },
+      {
+        "id": "145",
+        "content": "B.2e.4: Replace transferMatrixPositivity_axiom with proved lemma, reducing axioms 6→5. PENDING.",
+        "status": "Pending",
+        "priority": "high"
+      }
+    ]
+  },
+  "project_thinking_mode": true,
+  "project_reasoning_effort": "high",
+  "project_show_reasoning_inline": true
+}

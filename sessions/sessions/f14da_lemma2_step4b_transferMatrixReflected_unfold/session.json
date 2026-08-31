@@ -1,0 +1,27 @@
+{
+  "id": "f14da",
+  "label": "lemma2_step4b_transferMatrixReflected_unfold",
+  "created_at": 1785671953,
+  "next_message_id": 157,
+  "provider_label": "NVIDIA NIM",
+  "model": "z-ai/glm-5.2",
+  "todo_list": {
+    "title": "",
+    "items": []
+  },
+  "show_todo": false,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 107509,
+  "estimated_full_at_request": 126025,
+  "token_correction_ratio": 0.892685,
+  "thinking_mode": true,
+  "reasoning_effort": "medium",
+  "show_reasoning_inline": true,
+  "show_project_tasks": false,
+  "draft_input": "",
+  "looping_window": false
+}

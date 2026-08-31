@@ -1,0 +1,64 @@
+{
+  "id": "x5pae",
+  "label": "generalize_luscher_cascade_multiplaquette",
+  "created_at": 1786203619,
+  "next_message_id": 221,
+  "provider_label": "NVIDIA NIM",
+  "model": "z-ai/glm-5.2",
+  "todo_list": {
+    "title": "Session tasks",
+    "items": [
+      {
+        "id": "1",
+        "content": "Prove char_product_integrable: standalone integrability lemma",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "2",
+        "content": "Prove luscher_3site_cascade_coeff: 3-site cascade with arbitrary non-neg coefficients",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "3",
+        "content": "Fix build errors in luscher_3site_cascade_integral_nonneg (hKernel rewrite + final congr)",
+        "status": "InProgress",
+        "priority": "high"
+      },
+      {
+        "id": "4",
+        "content": "Build and verify full build, check 0 sorries and axiom count",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "5",
+        "content": "Update design doc with new lemmas (§8.11.49)",
+        "status": "Pending",
+        "priority": "medium"
+      },
+      {
+        "id": "6",
+        "content": "Update project_task_list with progress",
+        "status": "Pending",
+        "priority": "medium"
+      }
+    ]
+  },
+  "show_todo": true,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 158936,
+  "estimated_full_at_request": 164963,
+  "token_correction_ratio": 0.95732254,
+  "thinking_mode": true,
+  "reasoning_effort": "medium",
+  "show_reasoning_inline": true,
+  "show_project_tasks": true,
+  "draft_input": "",
+  "looping_window": false
+}

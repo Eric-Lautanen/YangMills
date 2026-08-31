@@ -1,0 +1,58 @@
+{
+  "id": "us4f2",
+  "label": "B2e3_ivb3_matrix_elem_lift",
+  "created_at": 1787707746,
+  "next_message_id": 247,
+  "provider_label": "NVIDIA NIM",
+  "model": "moonshotai/kimi-k3",
+  "todo_list": {
+    "title": "Session tasks",
+    "items": [
+      {
+        "id": "1",
+        "content": "(iv-b3') lift + Fourier identity + sigma-invisibility pairing — DONE (cb83bb5, 1fb1d5a, 115a146)",
+        "status": "Completed",
+        "priority": "medium"
+      },
+      {
+        "id": "2",
+        "content": "Family (a) reversed crossings — DONE (ccd211f); family (b) degenerate — DONE (0e3af43)",
+        "status": "Completed",
+        "priority": "medium"
+      },
+      {
+        "id": "3",
+        "content": "Family (c): wraparound word eval + factorization — code written, build + verify axioms",
+        "status": "InProgress",
+        "priority": "medium"
+      },
+      {
+        "id": "4",
+        "content": "Doc §8.11.107 update (factorization note), commit",
+        "status": "Pending",
+        "priority": "medium"
+      },
+      {
+        "id": "5",
+        "content": "Handoff: remaining = reversed wraparound (ν,0), κ-bridging, Schur orthogonality, (iv-c)",
+        "status": "Pending",
+        "priority": "medium"
+      }
+    ]
+  },
+  "show_todo": true,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 193709,
+  "thinking_mode": true,
+  "reasoning_effort": "high",
+  "show_reasoning_inline": true,
+  "show_project_tasks": true,
+  "draft_input": "",
+  "draft_attachments": [],
+  "looping_window": false,
+  "agent": null
+}

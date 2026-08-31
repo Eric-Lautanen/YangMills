@@ -1,0 +1,27 @@
+{
+  "id": "83zw0",
+  "label": "YangMills session start",
+  "created_at": 1785580436,
+  "next_message_id": 244,
+  "provider_label": "NVIDIA NIM",
+  "model": "z-ai/glm-5.2",
+  "todo_list": {
+    "title": "",
+    "items": []
+  },
+  "show_todo": false,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 164403,
+  "estimated_full_at_request": 170354,
+  "token_correction_ratio": 0.9612379,
+  "thinking_mode": true,
+  "reasoning_effort": "medium",
+  "show_reasoning_inline": false,
+  "show_project_tasks": false,
+  "draft_input": "",
+  "looping_window": false
+}

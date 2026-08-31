@@ -1,0 +1,32 @@
+{
+  "id": "x3h51",
+  "label": "Sx3h51",
+  "created_at": 1785229228,
+  "next_message_id": 18,
+  "provider_label": "NVIDIA NIM",
+  "model": "z-ai/glm-5.2",
+  "todo_list": {
+    "title": "",
+    "items": []
+  },
+  "show_todo": false,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": false,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 0,
+  "temperature": 0.2,
+  "top_p": 1.0,
+  "frequency_penalty": 0.0,
+  "presence_penalty": 0.0,
+  "requests_per_hour": 30,
+  "handoff_percent": 80,
+  "thinking_mode": true,
+  "reasoning_effort": "high",
+  "show_reasoning_inline": true,
+  "show_project_tasks": false,
+  "draft_input": "",
+  "token_correction_ratio": 1.1225777,
+  "looping_window": false
+}

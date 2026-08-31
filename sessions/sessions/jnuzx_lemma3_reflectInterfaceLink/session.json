@@ -1,0 +1,82 @@
+{
+  "id": "jnuzx",
+  "label": "lemma3_reflectInterfaceLink",
+  "created_at": 1785796229,
+  "next_message_id": 134,
+  "provider_label": "NVIDIA NIM",
+  "model": "z-ai/glm-5.2",
+  "todo_list": {
+    "title": "Session tasks",
+    "items": [
+      {
+        "id": "1",
+        "content": "Prove isInterfacePlaquette_reflect",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "2",
+        "content": "Define reflectInterfaceLink using plaquetteLinkIdx_reflect",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "3",
+        "content": "Prove reflectInterfaceLink_involution",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "4",
+        "content": "Prove reflectInterfaceLink maps pos ↔ neg",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "5",
+        "content": "Prove reflectInterfaceLink maps int → int",
+        "status": "Completed",
+        "priority": "medium"
+      },
+      {
+        "id": "6",
+        "content": "Build reflectInterfaceLinkPosNegEquiv (bijection pos ↔ neg)",
+        "status": "Completed",
+        "priority": "medium"
+      },
+      {
+        "id": "7",
+        "content": "Read charFactorPos/Neg + fourierCoeffPos/Neg + reflectPosToNeg + sigma definitions in TransferMatrix.lean",
+        "status": "InProgress",
+        "priority": "high"
+      },
+      {
+        "id": "8",
+        "content": "Define reindexing theta and prove pointwise char identity (needs dual involutivity for spatial case)",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "9",
+        "content": "Prove Fourier coeff identity fourierCoeffNeg(theta w, u0) = star(fourierCoeffPos(w, sigma u0))",
+        "status": "Pending",
+        "priority": "high"
+      }
+    ]
+  },
+  "show_todo": false,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 121632,
+  "estimated_full_at_request": 75917,
+  "token_correction_ratio": 1.6037103,
+  "thinking_mode": true,
+  "reasoning_effort": "medium",
+  "show_reasoning_inline": true,
+  "show_project_tasks": false,
+  "draft_input": "",
+  "looping_window": false
+}

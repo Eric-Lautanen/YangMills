@@ -1,0 +1,27 @@
+{
+  "id": "k0xc0",
+  "label": "lemma5_step4a_character_approach",
+  "created_at": 1785892600,
+  "next_message_id": 75,
+  "provider_label": "NVIDIA NIM",
+  "model": "z-ai/glm-5.2",
+  "todo_list": {
+    "title": "",
+    "items": []
+  },
+  "show_todo": false,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 168150,
+  "estimated_full_at_request": 106673,
+  "token_correction_ratio": 1.5849425,
+  "thinking_mode": true,
+  "reasoning_effort": "medium",
+  "show_reasoning_inline": true,
+  "show_project_tasks": false,
+  "draft_input": "",
+  "looping_window": false
+}

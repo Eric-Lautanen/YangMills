@@ -1,0 +1,64 @@
+{
+  "id": "wac7s",
+  "label": "lemma5_temporal_expansion",
+  "created_at": 1785909450,
+  "next_message_id": 100,
+  "provider_label": "NVIDIA NIM",
+  "model": "z-ai/glm-5.2",
+  "todo_list": {
+    "title": "Session tasks",
+    "items": [
+      {
+        "id": "1",
+        "content": "Read §8.11.32 analysis and key code infrastructure (DONE)",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "2",
+        "content": "Define interfaceLinkTemporal/interfaceLinkSpatial + partition + product split lemma (DONE, builds GREEN)",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "3",
+        "content": "Prove sigmaInterface_apply: σ inverts temporal (μ=0), keeps spatial (μ≠0) (DONE, builds GREEN)",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "4",
+        "content": "Document the full proof strategy in the design doc (§8.11.33)",
+        "status": "InProgress",
+        "priority": "medium"
+      },
+      {
+        "id": "5",
+        "content": "Verify full build stays GREEN (DONE - 2891 jobs)",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "6",
+        "content": "Plan next session: Peter-Weyl expansion of ψ in temporal links + triple product integral application",
+        "status": "Pending",
+        "priority": "medium"
+      }
+    ]
+  },
+  "show_todo": false,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 148936,
+  "estimated_full_at_request": 95873,
+  "token_correction_ratio": 1.5534438,
+  "thinking_mode": true,
+  "reasoning_effort": "medium",
+  "show_reasoning_inline": true,
+  "show_project_tasks": false,
+  "draft_input": "",
+  "looping_window": false
+}

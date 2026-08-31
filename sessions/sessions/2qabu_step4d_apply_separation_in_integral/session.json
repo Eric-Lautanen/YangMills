@@ -1,0 +1,58 @@
+{
+  "id": "2qabu",
+  "label": "step4d_apply_separation_in_integral",
+  "created_at": 1785748518,
+  "next_message_id": 93,
+  "provider_label": "NVIDIA NIM",
+  "model": "z-ai/glm-5.2",
+  "todo_list": {
+    "title": "Session tasks",
+    "items": [
+      {
+        "id": "1",
+        "content": "Lemma 1: transfer_matrix_fubini_character_expansion_separated — apply charTripleProduct_separate pointwise in the V⁺ integrand",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "2",
+        "content": "Lemma 2: transfer_matrix_fubini_character_expansion_separated_pull — pull charFactorPos/charFactorInt out of V⁺ integral via integral_const_mul",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "3",
+        "content": "Lemma 3: transfer_matrix_fubini_integrated — integrate over u, change of variables u=merge(U⁺,u⁰), simplify restrict-after-merge",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "4",
+        "content": "Lemma 4: factor the (U⁺, u⁰) integral via integral_prod + pull U⁺-independent constants out — NEXT SESSION (requires Integrable of full integrand w.r.t. μ⁺×μ⁰)",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "5",
+        "content": "Update docs (§8.11.18) and README to reflect new lemmas",
+        "status": "Completed",
+        "priority": "medium"
+      }
+    ]
+  },
+  "show_todo": false,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 139137,
+  "estimated_full_at_request": 90076,
+  "token_correction_ratio": 1.5470077,
+  "thinking_mode": true,
+  "reasoning_effort": "medium",
+  "show_reasoning_inline": true,
+  "show_project_tasks": false,
+  "draft_input": "",
+  "looping_window": false
+}

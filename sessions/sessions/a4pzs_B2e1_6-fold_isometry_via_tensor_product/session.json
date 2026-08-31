@@ -1,0 +1,70 @@
+{
+  "id": "a4pzs",
+  "label": "B2e1 6-fold isometry via tensor product",
+  "created_at": 1787081650,
+  "next_message_id": 84,
+  "provider_label": "NVIDIA NIM",
+  "model": "z-ai/glm-5.2",
+  "todo_list": {
+    "title": "Session tasks",
+    "items": [
+      {
+        "id": "1",
+        "content": "Adversarial self-check: verify the 6-fold isometry is actually TRUE before formalizing",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "3",
+        "content": "Prove the 6-fold isometry (cgME_3fold_isometry_full_normSq) — ABANDONED (FALSE)",
+        "status": "Cancelled",
+        "priority": "high"
+      },
+      {
+        "id": "5",
+        "content": "Update design doc with the FALSE finding (§8.11.94)",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "6",
+        "content": "Update project task list with revised B.2e plan",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "7",
+        "content": "Clean up temp files",
+        "status": "Completed",
+        "priority": "low"
+      },
+      {
+        "id": "8",
+        "content": "Preliminary analysis of alternative approaches for B.2e",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "9",
+        "content": "Verify build still GREEN (no code changes, should be fine)",
+        "status": "Completed",
+        "priority": "medium"
+      }
+    ]
+  },
+  "show_todo": true,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 119800,
+  "estimated_full_at_request": 98072,
+  "token_correction_ratio": 1.221342,
+  "thinking_mode": true,
+  "reasoning_effort": "high",
+  "show_reasoning_inline": true,
+  "show_project_tasks": true,
+  "draft_input": "",
+  "looping_window": false
+}

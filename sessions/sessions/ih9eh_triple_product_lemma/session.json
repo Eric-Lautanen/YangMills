@@ -1,0 +1,70 @@
+{
+  "id": "ih9eh",
+  "label": "triple_product_lemma",
+  "created_at": 1785850438,
+  "next_message_id": 115,
+  "provider_label": "NVIDIA NIM",
+  "model": "z-ai/glm-5.2",
+  "todo_list": {
+    "title": "Session tasks",
+    "items": [
+      {
+        "id": "1",
+        "content": "Read PeterWeyl.lean and PositiveDefinite.lean for key axioms",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "3",
+        "content": "Write triple_product_character_matrix_integral statement + sorry, verify compiles",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "4",
+        "content": "Fill in proof: Schur orthogonality, character=trace, pointwise identity",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "5",
+        "content": "Fill in proof: exchange sums with integral (integrability discharge)",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "6",
+        "content": "Fill in proof: apply Schur orthogonality + simplify to final form",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "7",
+        "content": "Verify 0 sorries, run #print axioms (expect propext, Classical.choice, Quot.sound)",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "8",
+        "content": "Run full lake build to verify GREEN",
+        "status": "InProgress",
+        "priority": "high"
+      }
+    ]
+  },
+  "show_todo": false,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 164609,
+  "estimated_full_at_request": 166639,
+  "token_correction_ratio": 0.9833365,
+  "thinking_mode": true,
+  "reasoning_effort": "medium",
+  "show_reasoning_inline": true,
+  "show_project_tasks": false,
+  "draft_input": "",
+  "looping_window": false
+}

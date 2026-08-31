@@ -1,0 +1,58 @@
+{
+  "id": "fktk3",
+  "label": "prove transfer_matrix_fubini_integrability",
+  "created_at": 1785713750,
+  "next_message_id": 115,
+  "provider_label": "NVIDIA NIM",
+  "model": "z-ai/glm-5.2",
+  "todo_list": {
+    "title": "Session tasks",
+    "items": [
+      {
+        "id": "1",
+        "content": "Write transfer_matrix_fubini_integrability lemma (domination argument) taking hψ_int + h_integrand_ae + h_unitary + character data",
+        "status": "InProgress",
+        "priority": "high"
+      },
+      {
+        "id": "2",
+        "content": "Build and iterate until 0 errors, 0 sorries",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "3",
+        "content": "Verify #print axioms = [propext, Classical.choice, Quot.sound]",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "4",
+        "content": "Update docs (design doc §8.11, README.md) to reflect integrability discharge",
+        "status": "Pending",
+        "priority": "medium"
+      },
+      {
+        "id": "5",
+        "content": "Update project_task_list with progress",
+        "status": "Pending",
+        "priority": "medium"
+      }
+    ]
+  },
+  "show_todo": false,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 163560,
+  "estimated_full_at_request": 117180,
+  "token_correction_ratio": 1.395977,
+  "thinking_mode": true,
+  "reasoning_effort": "medium",
+  "show_reasoning_inline": true,
+  "show_project_tasks": false,
+  "draft_input": "",
+  "looping_window": false
+}

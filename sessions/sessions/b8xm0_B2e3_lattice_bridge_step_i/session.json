@@ -1,0 +1,58 @@
+{
+  "id": "b8xm0",
+  "label": "B2e3_lattice_bridge_step_i",
+  "created_at": 1787333770,
+  "next_message_id": 184,
+  "provider_label": "NVIDIA NIM",
+  "model": "moonshotai/kimi-k3",
+  "todo_list": {
+    "title": "Session tasks",
+    "items": [
+      {
+        "id": "2",
+        "content": "Step (i): per-plaquette word evaluation — DONE (bffa9b6)",
+        "status": "Completed",
+        "priority": "medium"
+      },
+      {
+        "id": "4",
+        "content": "Step (ii): group-level matrix-element factorization — DONE (c623c47)",
+        "status": "Completed",
+        "priority": "medium"
+      },
+      {
+        "id": "6",
+        "content": "Step (ii'): per-plaquette lattice factorization — DONE (cdf9701)",
+        "status": "Completed",
+        "priority": "medium"
+      },
+      {
+        "id": "7",
+        "content": "Step (iii): thread hcoeff non-negativity (character expansion of crossing-plaquette Boltzmann weight with c_R ≥ 0)",
+        "status": "InProgress",
+        "priority": "medium"
+      },
+      {
+        "id": "8",
+        "content": "Step (iv): assembly (σ-inversion, Schur orthogonality, integrated_kernel_psd)",
+        "status": "Pending",
+        "priority": "medium"
+      }
+    ]
+  },
+  "show_todo": true,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 108668,
+  "estimated_full_at_request": 69945,
+  "token_correction_ratio": 1.5540866,
+  "thinking_mode": false,
+  "reasoning_effort": "medium",
+  "show_reasoning_inline": true,
+  "show_project_tasks": true,
+  "draft_input": "",
+  "looping_window": false
+}

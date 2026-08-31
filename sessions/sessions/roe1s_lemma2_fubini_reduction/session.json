@@ -1,0 +1,82 @@
+{
+  "id": "roe1s",
+  "label": "lemma2_fubini_reduction",
+  "created_at": 1785652535,
+  "next_message_id": 149,
+  "provider_label": "NVIDIA NIM",
+  "model": "z-ai/glm-5.2",
+  "todo_list": {
+    "title": "Session tasks",
+    "items": [
+      {
+        "id": "1",
+        "content": "Orient: read design doc, character expansion chain, transfer matrix, bridge lemmas",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "2",
+        "content": "Analyze U-dependence of character expansion data — CONFIRMED all U-independent; need uniform versions for Fubini",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "3",
+        "content": "Refactor plaquette_product_separable_decomp → ∀ g inside [PeterWeyl.lean] DONE",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "4",
+        "content": "Refactor interface_kernel_character_expansion → ∀ g inside [PeterWeyl.lean] DONE",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "5",
+        "content": "Refactor interface_product_character_expansion → ∀ U inside [ReflectionPositivity.lean] DONE",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "6",
+        "content": "Refactor interface_boltzmann_eq_abstract_product + interface_boltzmann_character_expansion → ∀ U inside DONE. Full build GREEN, 0 sorryAx.",
+        "status": "Completed",
+        "priority": "high"
+      },
+      {
+        "id": "7",
+        "content": "Step 4: Prove ℂ-valued integrand substitution + Fubini exchange using uniform expansion",
+        "status": "InProgress",
+        "priority": "high"
+      },
+      {
+        "id": "8",
+        "content": "Step 5-6: Split integral + identify Fourier coefficients A_w, B_w",
+        "status": "Pending",
+        "priority": "high"
+      },
+      {
+        "id": "9",
+        "content": "Update docs (design doc, README, Overview) + #print axioms verification",
+        "status": "Pending",
+        "priority": "medium"
+      }
+    ]
+  },
+  "show_todo": false,
+  "todo_user_dismissed": false,
+  "handoff_enabled": true,
+  "session_named": true,
+  "show_explorer": true,
+  "settings_open": false,
+  "actual_tokens_used": 137643,
+  "estimated_full_at_request": 114835,
+  "token_correction_ratio": 1.1925032,
+  "thinking_mode": true,
+  "reasoning_effort": "medium",
+  "show_reasoning_inline": false,
+  "show_project_tasks": false,
+  "draft_input": "",
+  "looping_window": false
+}
