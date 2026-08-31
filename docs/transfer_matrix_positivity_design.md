@@ -9861,3 +9861,29 @@ index swap on time-like links).
    `∑_{k,l} (ρ (crossingWordInt ...))_{kl}·conj((ρ (crossingWordPos ...))_{kl})` to the
    per-link `matrixElemFactorPos`/`Neg` products.  Then generalize to the other three
    families (a)–(d) via their half-word structures.
+
+**Step 1 DONE (same session, commit ac7df81, CascadeNonneg.lean, 0 sorries, axioms
+[propext, Classical.choice, Quot.sound]).**  The group-level per-link decomposition is
+now formalized:
+
+- `matrixElement_mul`: `(ρ (a·b))_{kl} = ∑_m (ρ a)_{km}·(ρ b)_{ml}` (`map_mul` +
+  `Matrix.mul_apply`).
+- `matrixElement_mul_inv`: `(ρ (a·b⁻¹))_{kl} = ∑_m (ρ a)_{km}·conj((ρ b)_{lm})`
+  (`matrixElement_mul` + `repMatrixElement_inv`).
+- **`matrixElement_pairing_two_link_decomp`**: the per-plaquette pairing of the two
+  half-words `a·b⁻¹` (interface) and `c·d` (positive) decomposes into a sum over
+  per-link matrix elements:
+  `∑_{k,l} (ρ (a·b⁻¹))_{kl}·conj((ρ (c·d))_{kl}) =
+   ∑_{k,l,m,m'} (ρ a)_{km}·conj((ρ b)_{lm})·conj((ρ c)_{km'})·conj((ρ d)_{m'l}`.
+  Proof: `matrixElement_mul_inv` + `matrixElement_mul` + `map_sum`/`map_mul` (conj
+  distributes) + `Finset.sum_mul`/`Finset.mul_sum` (expand the product of the two inner
+  sums) + `mul_assoc`.  The RHS sum order is the natural expansion order
+  `∑_k ∑_l ∑_m ∑_m'` (no reordering needed).
+
+This is exactly the group-level content of the κ-bridge: the per-plaquette `(k,l)` pair
+expands into per-link index pairs `(k,m)`, `(l,m)`, `(k,m')`, `(m',l)` on the four
+constituent links.  Remaining for step 1: instantiate this at the lattice level
+(`a = u_{n+e₀,ν}`, `b = u_{n+e₀+e_ν,0}`, `c = V⁺_{θn,0}`, `d = V⁺_{θ(n+e_ν),ν}` for the
+crossing family) and connect to `matrixElemFactorPos`/`Neg`; then generalize to families
+(a)–(d).  Steps 2–4 (per-link weight reindexing, σ-inversion pairing, interface Schur
+orthogonality) remain as designed.
